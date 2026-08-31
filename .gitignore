@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build output — never commit (§7: Pages builds from source)
+dist/
+dist-ssr/
+
+# Secrets — never commit (§3.1)
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.local
+
+# Logs
+*.log
+
+# Tauri (managed on its own branch; see README)
+src-tauri/target/
