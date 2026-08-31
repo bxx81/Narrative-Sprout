@@ -445,6 +445,7 @@ const migrations: Record<number, (tx: Transaction) => Promise<void>> = {
   - globPatterns に webp を入れない（初回インストール激重の再来を防ぐ）
 - Cloudflare Pages デプロイ継続。**GitHub 連携で push 検知 → 自動ビルド・デプロイ**（Workers 知識・CLI 不要、`main` push で本番 / PR でプレビュー発行）。新リポジトリに Pages プロジェクトを再作成して接続する
 - 環境変数（`VITE_GOOGLE_API_KEY` 等）は **Pages ダッシュボードで管理**し、リポジトリには置かない（§3.1 と整合）
+- Pages のビルドイメージの Bun は古いため、`BUN_VERSION` 環境変数をダッシュボードで設定し **`package.json` の `packageManager` と一致させる**（例: `1.4.0`）。ローカル/CI/Pages の3者で Bun を揃える運用ルールとする
 - **`dist/` はリポジトリにコミットしない**（全ブランチの `.gitignore` で除外）。Pages がソースからビルドするためコミット不要。現行版の「dev ブランチに dist を追跡 → tauri-build へのマージで毎回手作業除外」という運用事故を構造的に解消する（特に §3.4 の Tauri ビルドブランチ化運用との相性が悪かった）
 - **Pages Functions を利用する場合、ソースはリポジトリルートの `functions/` ディレクトリに置くこと**（Pages 側はルート直下の `functions/` のみを Functions として認識する。移動や命名で機能しなくなるため、将来サーバレス処理を足す場合もこの場所を固定とする）
 - **静的ファイルは Vite 標準の `public/`（ルート直下）** に置く。現行版は `src/public` に置いて `vite.config.ts` で参照を調整していたが、標準から外れる必然性がなく ignore 設定等の事故要因になるため、新リポジトリでは `public/` に正規化

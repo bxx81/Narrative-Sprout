@@ -5,6 +5,7 @@
   "type": "module",
   "description": "An AI-powered interactive visual novel that runs entirely in your browser.",
   "license": "MIT",
+  "packageManager": "bun@1.4.0",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
