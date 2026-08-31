@@ -277,11 +277,12 @@ interface StoryNodeRecord {
   parentNodeId: string | null;
   turnNumber: number; // 1 始まり
   choiceText: string | null; // このノードに至った選択肢
-  scene: SceneContent; // 旧 sceneData
+  scene: SceneContent; // 旧 sceneData（メモリを含まない表示用コンテンツ）
   promptSent: string; // 旧 userContent（送ったプロンプト）
   // 画像は assets ストアが nodeId キーで保持（§5.3）。ノード側に参照フィールドは持たない
-  memorySnapshot: MemoryState; // notes + storyLog（この時点のスナップショット）
-  metadata: NodeMetadata; // cost, model, flags, リファイン情報
+  memory: MemoryState; // notes + storyLog の蓄積（この時点までの長期記憶）
+  memoryDelta: MemoryDelta; // このターンのメモリ差分（notes 更新 + sceneSummary。再送信用）
+  metadata: NodeMetadata; // generationCost, modelName, flags, リファイン情報
   createdAt: string;
 }
 ```
@@ -290,6 +291,7 @@ interface StoryNodeRecord {
 
 - `latestNode`(サマリへのネスト)を廃止し、`latestNodeId` 参照のみ。現行の「サマリと詳細の二重管理」を解消
 - `userContent` → `promptSent`、「何を送ったか」が一目で分かる命名。なお一見「送信後は死にデータ」に見えるが、実際には**次ターンのプロンプト組み立て時に過去5ターンの擬似会話履歴をこの値から再構築する**（現行 `promptService.ts` の `buildHistoryForPrompt` 相当）ため永続化が必須。ルート開始時の指示文や、リファイン時の修正指示（対象シーン JSON 埋め込み）は `choiceText` から再計算できないため、フィールド削除は不可——再配慮の際に誤って消されないよう本設計書に根拠を記録する
+- 旧版は `sceneData.internalMonologue` にメモリを内包していたが、新設計では `memory`（累積）と `memoryDelta`（当該ターン差分）をノード直下に分離。`scene` は純粋な表示コンテンツのみになる（実装: `src/types/game.ts`）
 - リファインは `refinedFromNodeId` / `refinePrompt` を `metadata` に含める（現行と同等の sibling 分岐表現で継承）
 
 ### 5.3 画像の保存方式（nodeId 1:1 キー + GC）
