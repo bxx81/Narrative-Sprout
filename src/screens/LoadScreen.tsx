@@ -1,0 +1,226 @@
+import React, { useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router";
+import { useGameStore } from "../store/gameStore";
+import type { GameRecord } from "../types";
+import { useLazyNodeImage } from "../hooks/useLazyNodeImage";
+import { useNode } from "../hooks/useNode";
+import StoryCard from "../components/StoryCard";
+import BackButton from "../components/ui/BackButton";
+import { ROUTES } from "../app/routes";
+import Button from "../components/ui/Button";
+import { LOAD_SCREEN_FALLBACK_URL } from "../components/game/imageFallbacks";
+import { useConfirm } from "../hooks/useConfirm";
+
+/**
+ * A card component for displaying a saved game.
+ */
+const GameLogCard: React.FC<{ game: GameRecord }> = ({ game }) => {
+  const navigate = useNavigate();
+  const confirm = useConfirm();
+  const openGame = useGameStore((s) => s.openGame);
+  const deleteSave = useGameStore((s) => s.deleteSave);
+
+  const latestNode = useNode(game.latestNodeId);
+
+  const {
+    elementRef,
+    imageUrl,
+    isLoading: isLoadingImage,
+  } = useLazyNodeImage(game.latestNodeId, {
+    fallbackUrl: LOAD_SCREEN_FALLBACK_URL,
+  });
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    if (e.currentTarget.src !== LOAD_SCREEN_FALLBACK_URL) {
+      e.currentTarget.src = LOAD_SCREEN_FALLBACK_URL;
+    }
+  };
+
+  const handleLoadGame = async () => {
+    await openGame(game.id);
+    navigate(ROUTES.HISTORY, { viewTransition: true });
+  };
+
+  const handleDelete = async () => {
+    const result = await confirm({
+      title: "Delete Save",
+      message: `Delete "${game.title}" and all of its scenes and images? This cannot be undone.`,
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+      isDestructive: true,
+      icon: "delete_forever",
+    });
+    if (result !== true) return;
+    await deleteSave(game.id);
+  };
+
+  const formattedDate = new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(game.lastPlayedAt));
+
+  const scenePreviewText = latestNode
+    ? latestNode.scene.sceneText +
+      (latestNode.scene.isStoryOver ? " - " : "") +
+      latestNode.scene.storyClosingText
+    : "";
+
+  const timeContent = (
+    <p className="support-text-color text-xs">
+      Last Played: <time dateTime={game.lastPlayedAt}>{formattedDate}</time>
+    </p>
+  );
+
+  const cardActions = (
+    <div className="flex">
+      <Button
+        onClick={() => void handleLoadGame()}
+        intent="secondary"
+        size="small"
+        className="w-full"
+      >
+        History
+      </Button>
+    </div>
+  );
+
+  return (
+    <article ref={elementRef} className="h-full">
+      <StoryCard
+        imageUrl={imageUrl}
+        imageAlt={game.title}
+        isLoadingImage={isLoadingImage}
+        onImageError={handleImageError}
+        actions={cardActions}
+        onImageClick={() => void handleLoadGame()}
+        onMenuClick={() => void handleDelete()}
+        menuText="Delete"
+        mainText={game.title}
+        subText={scenePreviewText}
+        timeText={timeContent}
+      />
+    </article>
+  );
+};
+
+/**
+ * The screen for loading a saved game. Also accepts ns-save ZIP imports
+ * via drag & drop.
+ */
+const LoadScreen: React.FC = () => {
+  const games = useGameStore((s) => s.games);
+  const importSaveFromFile = useGameStore((s) => s.importSaveFromFile);
+  const sortedGames = useMemo(
+    () =>
+      [...games].sort(
+        (a, b) => new Date(b.lastPlayedAt).getTime() - new Date(a.lastPlayedAt).getTime(),
+      ),
+    [games],
+  );
+  const dropZoneRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!dropZoneRef.current?.contains(e.relatedTarget as Node)) {
+      setIsDragging(false);
+    }
+  };
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    handleFiles(e.dataTransfer.files);
+  };
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    await handleFiles(e.target.files);
+    e.target.value = "";
+  };
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setImportError(null);
+    try {
+      for (const file of Array.from(files)) {
+        const result = await importSaveFromFile(file);
+        if (!result.restoredGameCount && !result.restoredNodeCount) {
+          setImportError("No importable save data found in the file.");
+        }
+      }
+    } catch (error) {
+      setImportError(error instanceof Error ? error.message : "Import failed.");
+    }
+  };
+
+  return (
+    <main
+      ref={dropZoneRef}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className="flex w-full flex-col items-center"
+    >
+      {isDragging && (
+        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-lime-500/20 backdrop-blur-sm">
+          <div className="rounded-lg border-4 border-dashed border-white bg-black/50 p-12 text-center text-white">
+            <p className="text-2xl font-bold">Drop files here</p>
+          </div>
+        </div>
+      )}
+      <div className="mx-auto mb-20 max-w-384">
+        <header className="text-center">
+          <h1 className="font-serif-display text-3xl font-bold md:text-4xl">Load Saved Story</h1>
+        </header>
+        <div className="mb-8 flex justify-center pb-4">
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="peer sr-only"
+            accept=".zip"
+            onChange={handleFileChange}
+            multiple
+            hidden
+          />
+          <Button
+            intent="tertiary"
+            size="small"
+            onClick={() => {
+              fileInputRef.current?.click();
+            }}
+          >
+            Load Save Data
+          </Button>
+        </div>
+
+        {importError && (
+          <p className="mb-4 text-center text-sm font-semibold text-danger">{importError}</p>
+        )}
+
+        {sortedGames.length > 0 ? (
+          <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {sortedGames.map((game) => (
+              <li key={game.id}>
+                <GameLogCard game={game} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="bg-body-bg rounded-lg px-6 py-20 text-center shadow-md">
+            <p className="support-text-color text-xl">No saved games found.</p>
+          </div>
+        )}
+        <BackButton />
+      </div>
+    </main>
+  );
+};
+
+export default LoadScreen;

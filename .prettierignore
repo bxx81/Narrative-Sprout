@@ -1,3 +1,5 @@
 # Markdown tables get force-aligned by Prettier (no per-element option exists),
 # which churns hand-edited tables for no benefit. Skip markdown entirely.
 *.md
+public/
+

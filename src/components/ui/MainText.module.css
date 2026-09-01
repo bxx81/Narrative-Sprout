@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+.main-text {
+  @apply space-y-8 text-[18px] leading-[2.2] whitespace-pre-wrap;
+
+  & p {
+    text-indent: 0;
+
+    :lang(ja) & {
+      text-indent: 1em;
+    }
+
+    &.bracket-start {
+      text-indent: 0;
+
+      :lang(ja) & {
+        text-indent: 0.5em;
+      }
+    }
+  }
+}

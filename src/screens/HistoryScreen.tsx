@@ -1,0 +1,165 @@
+import React, { useMemo } from "react";
+import { useNavigate } from "react-router";
+import { useGameStore } from "../store/gameStore";
+import type { StoryNodeRecord } from "../types";
+import { useLazyNodeImage } from "../hooks/useLazyNodeImage";
+import StoryCard from "../components/StoryCard";
+import BackButton from "../components/ui/BackButton";
+import { ROUTES } from "../app/routes";
+import Button from "../components/ui/Button";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
+import { LOAD_SCREEN_FALLBACK_URL } from "../components/game/imageFallbacks";
+import { useConfirm } from "../hooks/useConfirm";
+
+/**
+ * A card component for displaying an end (leaf) node.
+ */
+const EndNodeCard: React.FC<{ node: StoryNodeRecord }> = ({ node }) => {
+  const navigate = useNavigate();
+  const confirm = useConfirm();
+  const resumeStoryAtNode = useGameStore((s) => s.resumeStoryAtNode);
+  const setChronicleTargetNode = useGameStore((s) => s.setChronicleTargetNode);
+  const deleteBranch = useGameStore((s) => s.deleteBranch);
+
+  const {
+    elementRef,
+    imageUrl,
+    isLoading: isLoadingImage,
+  } = useLazyNodeImage(node.id, {
+    fallbackUrl: LOAD_SCREEN_FALLBACK_URL,
+  });
+
+  // Legacy rewind semantics: the playhead moves to this leaf so that
+  // Back/Forward navigation walks its branch from the play screen.
+  const handleRewind = () => {
+    resumeStoryAtNode(node.id, node.id);
+    navigate(ROUTES.PLAY, { viewTransition: true });
+  };
+
+  const handleViewChronicle = () => {
+    setChronicleTargetNode(node.id);
+    navigate(ROUTES.CHRONICLE, { viewTransition: true });
+  };
+
+  const handleDelete = async () => {
+    const result = await confirm({
+      title: "Delete Branch",
+      message:
+        "Delete this branch? The scene and all of its descendants (including images) will be removed. This cannot be undone.",
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+      isDestructive: true,
+      icon: "delete_forever",
+    });
+    if (result !== true) return;
+    const { gameDeleted } = await deleteBranch(node.id);
+    if (gameDeleted) {
+      navigate(ROUTES.LOAD, { viewTransition: true });
+    }
+  };
+
+  const scenePreviewText =
+    node.scene.sceneText + (node.scene.isStoryOver ? " - " : "") + node.scene.storyClosingText;
+
+  const cardActions = (
+    <div className="flex flex-col gap-2 sm:flex-row">
+      <Button onClick={handleViewChronicle} intent="secondary" size="small" className="flex-1">
+        <p className="line-clamp-3">View Full Story</p>
+      </Button>
+      <Button onClick={handleRewind} intent="primary" size="small" className="flex-1">
+        <p className="line-clamp-3">Resume Here</p>
+      </Button>
+    </div>
+  );
+
+  return (
+    <article ref={elementRef} className="h-full">
+      <StoryCard
+        imageUrl={imageUrl}
+        imageAlt={node.scene.imagePrompt}
+        isLoadingImage={isLoadingImage}
+        actions={cardActions}
+        onImageClick={handleRewind}
+        onMenuClick={() => void handleDelete()}
+        menuText="Delete"
+        mainText={node.choiceText ? `Your Choice: "${node.choiceText}"` : "The story begins."}
+        subText={scenePreviewText}
+      />
+    </article>
+  );
+};
+
+/**
+ * The history screen: every ending / branching point of the active game.
+ */
+const HistoryScreen: React.FC = () => {
+  const activeGame = useGameStore((s) => s.activeGame);
+  const nodes = useGameStore((s) => s.nodes);
+  const exportSave = useGameStore((s) => s.exportSave);
+  const [isExporting, setIsExporting] = React.useState(false);
+  const [exportError, setExportError] = React.useState<string | null>(null);
+
+  const endNodes = useMemo(() => {
+    const parentIds = new Set(nodes.flatMap((n) => (n.parentNodeId ? [n.parentNodeId] : [])));
+    return nodes
+      .filter((node) => !parentIds.has(node.id))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [nodes]);
+
+  const handleExport = async () => {
+    if (!activeGame || isExporting) return;
+    setIsExporting(true);
+    setExportError(null);
+    try {
+      await exportSave(activeGame.id);
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : "Export failed.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  if (!activeGame) {
+    return (
+      <div className="bg-body-bg flex h-screen items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  return (
+    <main className="mx-auto mb-20 max-w-384">
+      <header className="text-center">
+        <h1 className="font-serif-display text-3xl font-bold md:text-4xl">Story Endings</h1>
+        <p className="support-text-color mx-auto my-2 max-w-3xl text-lg">
+          These are the various endings and branching points your story has reached. Choose one to
+          view the story or resume play from that point.
+        </p>
+      </header>
+      <div className="mb-12 flex justify-center">
+        <Button
+          size="small"
+          intent="tertiary"
+          onClick={() => void handleExport()}
+          isWorking={isExporting}
+          disabled={isExporting}
+        >
+          Download Save Data
+        </Button>
+      </div>
+      {exportError && (
+        <p className="mb-4 text-center text-sm font-semibold text-danger">{exportError}</p>
+      )}
+      <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        {endNodes.map((node) => (
+          <li key={node.id}>
+            <EndNodeCard node={node} />
+          </li>
+        ))}
+      </ul>
+      <BackButton />
+    </main>
+  );
+};
+
+export default HistoryScreen;

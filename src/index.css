@@ -1,1 +1,271 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+@theme {
+  --shadow-dialog: 0 4px 16px rgba(0, 0, 0, 0.2);
+  --radius-dialog: 24px;
+  --spacing-dialog: 24px;
+  --color-body-text: #27272a;
+  --color-text-text: #27272a;
+  --color-body-bg: #f6f7f8;
+  --color-text-bg: #ffffff;
+  --color-text-border: #dddddd;
+  --color-text-support: #6a7282;
+  --color-text-disable: #6a728280;
+  --color-border: #6a7282;
+  --color-primary: oklch(64.33% 0.17075 131.639);
+  --color-primary-text: #ffffff;
+  --color-secondary: #d5d7db;
+  --color-secondary-text: #1e2939;
+  --color-tertiary: #4a654e;
+  --color-tertiary-text: #ffffff;
+  --color-alt: #f3d470;
+  --color-alt-text: #250325;
+  --color-danger: oklch(55.398% 0.20029 24.776);
+  --color-danger-text: #ffffff;
+  --color-warning: oklch(79.5% 0.184 86.047);
+  --color-warning-text: #ffffff;
+  --color-navigator: #364153;
+  --color-navigator-text: #ffffff;
+  --color-disable: #99a1af;
+  --color-disable-text: #dee1e7;
+
+  --color-divider: #a1a1a1;
+  --color-title-text: #e5e7eb;
+  --color-title-text-support: #d1d5dc;
+
+  --color-primary-light: oklch(from var(--color-primary) calc(l + 0.1) c h);
+  --color-primary-dark: oklch(from var(--color-primary) calc(l - 0.1) c h);
+  --color-secondary-light: oklch(from var(--color-secondary) calc(l + 0.1) c h);
+  --color-secondary-dark: oklch(from var(--color-secondary) calc(l - 0.1) c h);
+  --color-tertiary-light: oklch(from var(--color-tertiary) calc(l + 0.1) c h);
+  --color-tertiary-dark: oklch(from var(--color-tertiary) calc(l - 0.1) c h);
+  --color-alt-light: oklch(from var(--color-alt) calc(l + 0.1) c h);
+  --color-alt-dark: oklch(from var(--color-alt) calc(l - 0.1) c h);
+  --color-danger-light: oklch(from var(--color-danger) calc(l + 0.1) c h);
+  --color-danger-dark: oklch(from var(--color-danger) calc(l - 0.1) c h);
+  --color-warning-light: oklch(from var(--color-warning) calc(l + 0.1) c h);
+  --color-warning-dark: oklch(from var(--color-warning) calc(l - 0.1) c h);
+  --color-navigator-light: oklch(from var(--color-primary) calc(l + 0.1) c h);
+  --color-navigator-dark: oklch(from var(--color-navigator) calc(l - 0.1) c h);
+  --value-hover: -0.1;
+}
+.dark {
+  --color-body-text: #e4e4e7;
+  --color-text-text: #e4e4e7;
+  --color-body-bg: #101012;
+  --color-text-bg: #09090b;
+  --color-text-border: #202022;
+  --color-text-support: #99a1af;
+  --color-text-disable: #99a1af;
+  --color-border: #99a1af;
+  --color-primary: oklch(57.311% 0.16172 133.156);
+  --color-secondary: #364153;
+  --color-secondary-text: #ffffff;
+  --color-navigator: #1e2939;
+  --color-disable: #1d2228;
+  --color-disable-text: #111213;
+  --color-divider: #737373;
+
+  --value-hover: 0.1;
+}
+
+@layer base {
+  body {
+    @apply bg-body-bg text-body-text transition-colors duration-300;
+
+    font-family: "Inter", "Noto Sans", sans-serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+    text-wrap: pretty;
+
+    &:lang(ja) {
+      font-family: "BIZ UDPGothic", sans-serif;
+    }
+  }
+  * {
+    font-family: inherit;
+  }
+
+  .text-bg-color {
+    @apply bg-text-bg;
+  }
+
+  .support-text-color,
+  .explanation-text-style,
+  .legend-text-style {
+    @apply text-text-support;
+  }
+
+  .body-bg-color,
+  body {
+    @apply bg-body-bg;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out forwards;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  .animate-fade-out {
+    animation: fadeOut 0.3s ease-in-out forwards;
+  }
+
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+    }
+  }
+
+  .molle-regular-italic,
+  .dividers-style {
+    font-family: "Molle", cursive;
+    font-weight: 400;
+    font-style: italic;
+  }
+
+  .dividers-style {
+    @apply text-divider my-4 text-center text-[8pt];
+  }
+
+  .h2-style {
+    @apply border-text-border mb-4 border-b pb-2 text-lg font-semibold;
+  }
+
+  .explanation-text-style {
+    @apply mx-1 mt-2 mb-4 text-sm;
+  }
+
+  .legend-text-style {
+    @apply text-sm;
+  }
+
+  a.explanation-text-style {
+    @apply text-primary hover:underline;
+  }
+}
+
+@layer components {
+  .form-style {
+    @apply bg-text-bg text-body-text placeholder-text-support border-text-border w-full rounded-lg border-2 p-3 transition duration-300;
+    outline-style: solid;
+    outline-offset: -1px;
+    outline-width: thin;
+    outline-color: transparent;
+  }
+  .form-style:focus {
+    outline-color: var(--color-text-border);
+    outline-offset: -3px;
+  }
+
+  .form-style-valid {
+    direction: ltr;
+  }
+
+  .form-style-invalid {
+    @apply border-danger focus:ring-danger-light;
+    direction: ltr;
+  }
+
+  .form-style-small-text {
+    @apply font-mono text-sm;
+  }
+
+  .choice-style {
+    @apply border-border disabled:text-text-disable focus:outline-border disabled:border-border/0 w-full rounded-lg border border-solid p-3 text-left text-base font-semibold -outline-offset-2 transition-all duration-300 focus:outline-1 focus:outline-offset-[-5px];
+  }
+
+  .choice-form-style {
+    @apply border-border focus-within:outline-border flex overflow-hidden rounded-lg border border-solid -outline-offset-2 transition-all duration-300 focus-within:outline-1 focus-within:outline-offset-[-5px];
+
+    & .choice-input {
+      @apply disabled:text-text-disable w-full grow rounded-l-lg p-3 outline-none;
+    }
+
+    & .choice-button {
+      @apply bg-primary text-primary-text disabled:bg-disable disabled:text-disable-text cursor-pointer p-3 transition-all duration-300 disabled:cursor-default;
+      background-color: oklch(from var(--color-primary) l c h);
+    }
+
+    & .choice-button:hover:not(:disabled) {
+      background-color: oklch(from var(--color-primary) calc(l + var(--value-hover)) c h);
+    }
+
+    & .choice-button:active:not(:disabled) {
+      background-color: oklch(from var(--color-primary) calc(l - var(--value-hover) / 2) c h);
+    }
+  }
+
+  .form-layout-style {
+    @apply flex gap-2;
+  }
+
+  dialog {
+    @apply shadow-dialog rounded-dialog p-dialog mx-auto my-auto min-w-80 border-0 bg-white text-zinc-800 md:max-w-120 dark:bg-black dark:text-zinc-200;
+
+    animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    & h2 {
+      @apply text-gray-800 dark:text-gray-200;
+    }
+
+    &::backdrop {
+      background-color: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  /**/
+  .document-link {
+    @apply text-title-text-support text-xs underline drop-shadow-sm;
+  }
+  .version-link {
+    @apply text-title-text-support mt-2 text-xs drop-shadow-sm;
+  }
+}
+
+@layer utilities {
+  .font-serif-display {
+    font-family: "Cormorant Garamond", "Noto Serif", serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+    line-height: 1.8;
+
+    &:lang(ja) {
+      font-family: "BIZ UDPMincho", serif;
+    }
+  }
+}
