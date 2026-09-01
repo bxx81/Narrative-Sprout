@@ -22,16 +22,16 @@
 
 ## 進捗（REDESIGN.md §9 のフェーズ計画に対応）
 
-| Phase | 状態 | 内容 |
-|-------|------|------|
-| 0 | ✅ 完了 | 骨組み・CI・gitleaks・AGENTS.md・LICENSE（MIT）。PR #1 一部含む |
-| 1 | ✅ 完了（PR #1 merged） | `src/types/*`（Zod→型導出、新命名）と `src/db/`（Dexie 5 ストア、schemaVersion=1 + 空移行チェーン + 将来バージョン非破壊拒否） |
-| 2 | ✅ 完了（PR #2 merged） | ゲームループ最小構成：テーマ入力 → 生成 → 選択肢 → 永続化 → 再開。システムプロンプトは旧版から全文移植済み |
-| 3 | 🔜 **次はここ** | 画像生成（HF Spaces / A1111 / ComfyUI、WebP 変換・保存、assets ストア）＋ メモリ強化（split / compaction）＋ 添付（YAML front matter、§4.4）＋ リファイン |
-| 4 | 未着手 | 複数セーブ管理、ZIP エクスポート（新形式 manifest.json + nodes + assets）、データ全消去 |
-| 5 | 未着手 | 暗号化バックアップ（AES-GCM、§3.3）+ Google Drive |
-| 6 | 未着手 | i18n（5言語 + AI 動的翻訳）、オートプレイ、ストリーミング、PWA 完成度上げ |
-| 7 | 未着手 | Tauri 版（`src-tauri` 専用ブランチ、stronghold 導入、dist は全ブランチ ignore 済み） |
+| Phase | 状態                    | 内容                                                                                                                                                      |
+| ----- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0     | ✅ 完了                 | 骨組み・CI・gitleaks・AGENTS.md・LICENSE（MIT）。PR #1 一部含む                                                                                           |
+| 1     | ✅ 完了（PR #1 merged） | `src/types/*`（Zod→型導出、新命名）と `src/db/`（Dexie 5 ストア、schemaVersion=1 + 空移行チェーン + 将来バージョン非破壊拒否）                            |
+| 2     | ✅ 完了（PR #2 merged） | ゲームループ最小構成：テーマ入力 → 生成 → 選択肢 → 永続化 → 再開。システムプロンプトは旧版から全文移植済み                                                |
+| 3     | 🔜 **次はここ**         | 画像生成（HF Spaces / A1111 / ComfyUI、WebP 変換・保存、assets ストア）＋ メモリ強化（split / compaction）＋ 添付（YAML front matter、§4.4）＋ リファイン |
+| 4     | 未着手                  | 複数セーブ管理、ZIP エクスポート（新形式 manifest.json + nodes + assets）、データ全消去                                                                   |
+| 5     | 未着手                  | 暗号化バックアップ（AES-GCM、§3.3）+ Google Drive                                                                                                         |
+| 6     | 未着手                  | i18n（5言語 + AI 動的翻訳）、オートプレイ、ストリーミング、PWA 完成度上げ                                                                                 |
+| 7     | 未着手                  | Tauri 版（`src-tauri` 専用ブランチ、stronghold 導入、dist は全ブランチ ignore 済み）                                                                      |
 
 ## Phase 2 の実機確認方法（自分で試すには）
 

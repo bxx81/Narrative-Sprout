@@ -71,16 +71,16 @@ function closeTagLength(kind: BlockKind, spec: string): number {
 
 function findMatchingClose(content: string, kind: BlockKind, spec: string): number {
   const closeTag = `</${kind}:${spec}>`;
-  const openPrefix = `<${kind}:`;
+  const openTag = `<${kind}:${spec}>`;
   let depth = 1;
   let i = 0;
   for (;;) {
-    const nextOpen = content.indexOf(openPrefix, i);
+    const nextOpen = content.indexOf(openTag, i);
     const nextClose = content.indexOf(closeTag, i);
     if (nextClose === -1) return -1;
     if (nextOpen !== -1 && nextOpen < nextClose) {
       depth += 1;
-      i = nextOpen + openPrefix.length;
+      i = nextOpen + openTag.length;
     } else {
       depth -= 1;
       if (depth === 0) return nextClose;
