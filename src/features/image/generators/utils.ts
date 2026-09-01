@@ -10,9 +10,9 @@ export function parseJsonConfig<T>(json: string, label: string): T {
 }
 
 export function escapePromptWeights(prompt: string): string {
-  // Escape parentheses and brackets that Stable Diffusion treats as attention weights,
-  // unless they are already part of a weight syntax.
-  return prompt.replace(/([()[\]])/g, "\\$1");
+  // Escape backslashes first, then parentheses and brackets that Stable Diffusion
+  // treats as attention weights.
+  return prompt.replace(/\\/g, "\\\\").replace(/([()[\]])/g, "\\$1");
 }
 
 export function blobToDataUrl(blob: Blob): Promise<string> {
