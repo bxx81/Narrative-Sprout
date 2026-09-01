@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { MemoryDelta, SceneContent } from "../../types/scene";
 
 /**
  * Wire schema: the JSON the narrator model is asked to output each turn.
@@ -48,6 +49,56 @@ export const narratorSceneResponseSchema = z.object({
     ),
 });
 export type NarratorSceneResponse = z.infer<typeof narratorSceneResponseSchema>;
+
+/** Shape of a past turn replayed to the model as an assistant message. */
+export interface SceneWireResponse {
+  sceneText: string;
+  locationContext: string;
+  imagePrompt: string;
+  negativeImagePrompt: string;
+  choice1: string;
+  choice2: string;
+  choice3: string;
+  isStoryOver: boolean;
+  finalEndingPassage: string;
+  sceneSummary?: string;
+  notes?: Record<string, string | null>;
+}
+
+/**
+ * Rebuilds the wire-format JSON of a past turn from its stored record, for
+ * replaying it in the conversation history.
+ *
+ * History MUST be shown in the exact shape the model is asked to output:
+ * on providers without strict json_schema enforcement the model imitates the
+ * history instead, so a stored-shape replay (`choices` array, `sceneWordCount`,
+ * ...) makes the next response fail validation. Legacy equivalent:
+ * `stored2work` ("LLMの出力と同じ型にしないと汚染されるので揃える").
+ */
+export function sceneToWireResponse(
+  scene: SceneContent,
+  memoryDelta?: MemoryDelta,
+  options?: { omitMemoryFields?: boolean },
+): SceneWireResponse {
+  const includeMemory = memoryDelta !== undefined && !options?.omitMemoryFields;
+  return {
+    sceneText: scene.sceneText,
+    locationContext: scene.locationContext,
+    imagePrompt: scene.imagePrompt,
+    negativeImagePrompt: scene.negativeImagePrompt,
+    choice1: scene.choices[0] ?? "",
+    choice2: scene.choices[1] ?? "",
+    choice3: scene.choices[2] ?? "",
+    isStoryOver: scene.isStoryOver,
+    finalEndingPassage: scene.storyClosingText,
+    ...(includeMemory && memoryDelta.sceneSummary
+      ? { sceneSummary: memoryDelta.sceneSummary }
+      : {}),
+    ...(includeMemory && Object.keys(memoryDelta.notes).length > 0
+      ? { notes: memoryDelta.notes }
+      : {}),
+  };
+}
 
 /** JSON Schema for the OpenAI `response_format` (OpenRouter structured output). */
 export function buildNarratorResponseFormat() {

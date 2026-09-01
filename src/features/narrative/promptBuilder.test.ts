@@ -124,6 +124,41 @@ describe("buildTurnPrompt", () => {
     // So total should be 13 (2 memory +10 history +1 final)
     expect(messages).toHaveLength(13);
   });
+
+  test("replays history in the wire format (choice1..3, not the stored choices array)", () => {
+    const root = makeNode("root", null, 1, "root prompt");
+    const { messages } = buildTurnPrompt({
+      theme: "t",
+      language: "Japanese",
+      sceneTextLength: "medium",
+      ancestorNodes: [root],
+      memory: { notes: {}, storyLog: [] },
+      choiceText: "next",
+    });
+    const assistantMessages = messages.filter((m) => m.role === "assistant");
+    const historyJson = assistantMessages[assistantMessages.length - 1].content;
+    expect(historyJson).toContain('"choice1"');
+    expect(historyJson).not.toContain('"choices"');
+    expect(historyJson).not.toContain("sceneWordCount");
+  });
+
+  test("omitMemoryFields hides notes/sceneSummary from history (split scene call)", () => {
+    const node = makeNode("root", null, 1, "root prompt");
+    node.memoryDelta = { notes: { "flag:x": "1" }, sceneSummary: "summary text" };
+    const { messages } = buildTurnPrompt({
+      theme: "t",
+      language: "Japanese",
+      sceneTextLength: "medium",
+      ancestorNodes: [node],
+      memory: { notes: {}, storyLog: [] },
+      choiceText: "next",
+      omitMemoryFields: true,
+    });
+    const assistantMessages = messages.filter((m) => m.role === "assistant");
+    const historyJson = assistantMessages[assistantMessages.length - 1].content;
+    expect(historyJson).not.toContain('"notes"');
+    expect(historyJson).not.toContain("summary text");
+  });
 });
 
 describe("buildMemoryUpdatePrompt", () => {

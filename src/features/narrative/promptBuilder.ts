@@ -1,6 +1,7 @@
 import type { ChatMessage } from "../../lib/openAiClient";
 import type { MemoryState, StoryNodeRecord } from "../../types";
 import { buildNarratorSystemPrompt } from "./systemPrompt";
+import { sceneToWireResponse } from "./sceneSchema";
 import { createFlagMap, resolveConditionalText } from "../attachments/conditionalText";
 
 /** How many past turns of conversation are replayed to the model. */
@@ -88,6 +89,12 @@ export function buildTurnPrompt(params: {
   memory: MemoryState;
   choiceText: string;
   attachmentTexts?: string[];
+  /**
+   * Split-strategy scene call: past turns must not show notes/sceneSummary —
+   * those come from the memory keeper call, and the narrator must not mimic
+   * them in its scene-only output.
+   */
+  omitMemoryFields?: boolean;
 }): { system: string; messages: ChatMessage[] } {
   const system = buildNarratorSystemPrompt(params.theme, params.language);
   const historyPairs = params.ancestorNodes
@@ -95,7 +102,14 @@ export function buildTurnPrompt(params: {
     .reverse()
     .flatMap((node): ChatMessage[] => [
       { role: "user", content: node.promptSent },
-      { role: "assistant", content: JSON.stringify(node.scene) },
+      {
+        role: "assistant",
+        content: JSON.stringify(
+          sceneToWireResponse(node.scene, node.memoryDelta, {
+            omitMemoryFields: params.omitMemoryFields,
+          }),
+        ),
+      },
     ]);
 
   const attachmentMessages = buildAttachmentMessages(
