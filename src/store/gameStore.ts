@@ -9,6 +9,23 @@ import { db } from "../db/database";
 import { choosePath, refineScene, startGame } from "../features/gameplay/turnService";
 import { collectAncestors } from "../features/storytree/api";
 import { downloadBlob, exportGameAsZip } from "../features/export/api";
+import {
+  clearDriveAccessToken,
+  createBackupFile,
+  DriveUnauthorizedError,
+  hasDriveAccessToken,
+  importSaveFromZipBytes,
+  listDriveBackups,
+  requestDriveAccessToken,
+  restoreBackupFromDrive,
+  restoreBackupFromEnvelopeText,
+  revokeDriveAccessToken,
+  uploadBackupToDrive,
+  deleteDriveBackup,
+  type DriveFileMetadata,
+  type RestoreSummaryWithManifest,
+  type SaveImportResult,
+} from "../features/backup/api";
 import type { GameRecord, SettingsRecord, StoryNodeRecord } from "../types";
 import type { AssetRecord } from "../types/asset";
 import type { AsyncOperation } from "./asyncOperation";
@@ -33,6 +50,8 @@ interface GameState {
   assets: Record<string, AssetRecord>; // nodeId -> AssetRecord
   viewingNodeId: string | null;
   generation: AsyncOperation<GenerationPayload, never>;
+  driveConnected: boolean;
+  driveBackups: DriveFileMetadata[];
 
   // actions (the ONLY legal way to mutate; REDESIGN §4.3.1)
   bootstrap: () => Promise<void>;
@@ -48,6 +67,18 @@ interface GameState {
   exportSave: (gameId: string) => Promise<void>;
   wipeAllData: () => Promise<void>;
   setViewingNode: (nodeId: string) => void;
+  downloadEncryptedBackup: (passphrase: string) => Promise<void>;
+  restoreBackupFromFile: (file: File, passphrase: string) => Promise<RestoreSummaryWithManifest>;
+  importSaveFromFile: (file: File) => Promise<SaveImportResult>;
+  connectGoogleDrive: () => Promise<void>;
+  disconnectGoogleDrive: () => Promise<void>;
+  uploadBackupToGoogleDrive: (passphrase: string) => Promise<{ fileName: string }>;
+  refreshGoogleDriveBackups: () => Promise<void>;
+  restoreGoogleDriveBackup: (
+    fileId: string,
+    passphrase: string,
+  ) => Promise<RestoreSummaryWithManifest>;
+  deleteGoogleDriveBackup: (fileId: string) => Promise<void>;
 }
 
 async function loadAssetsForNodes(nodeIds: string[]): Promise<Record<string, AssetRecord>> {
@@ -80,6 +111,10 @@ export const useGameStore = create<GameState>()(
       assets: {},
       viewingNodeId: null,
       generation: { phase: "idle" },
+      // The Drive access token lives only in memory (googleAuth), so a fresh
+      // page load always starts disconnected.
+      driveConnected: hasDriveAccessToken(),
+      driveBackups: [],
 
       bootstrap: async () => {
         const [settings, apiKey, games] = await Promise.all([
@@ -324,6 +359,110 @@ export const useGameStore = create<GameState>()(
         // Full reload guarantees no stale in-memory state over an empty DB;
         // bootstrap() rebuilds defaults on the next boot.
         window.location.reload();
+      },
+
+      downloadEncryptedBackup: async (passphrase) => {
+        const { fileName, blob } = await createBackupFile(passphrase);
+        downloadBlob(blob, fileName);
+      },
+
+      restoreBackupFromFile: async (file, passphrase) => {
+        const summary = await restoreBackupFromEnvelopeText(await file.text(), passphrase);
+        const [games, settings] = await Promise.all([
+          gameRepository.listGames(),
+          settingsRepository.get(),
+        ]);
+        set({ games, settings });
+        return summary;
+      },
+
+      importSaveFromFile: async (file) => {
+        const result = await importSaveFromZipBytes(new Uint8Array(await file.arrayBuffer()));
+        set({ games: await gameRepository.listGames() });
+        return result;
+      },
+
+      connectGoogleDrive: async () => {
+        const accessToken = await requestDriveAccessToken();
+        set({ driveConnected: true, driveBackups: [] });
+        try {
+          // Metadata only (names/sizes/dates) — one cheap API call, no
+          // backup contents are downloaded until the user restores one.
+          set({ driveBackups: await listDriveBackups(accessToken) });
+        } catch (error) {
+          if (error instanceof DriveUnauthorizedError) {
+            clearDriveAccessToken();
+            set({ driveConnected: false });
+          }
+          throw error;
+        }
+      },
+
+      disconnectGoogleDrive: async () => {
+        await revokeDriveAccessToken();
+        set({ driveConnected: false, driveBackups: [] });
+      },
+
+      uploadBackupToGoogleDrive: async (passphrase) => {
+        // Token first: GIS needs the user gesture, and key derivation is slow.
+        const accessToken = await requestDriveAccessToken();
+        try {
+          const { fileName } = await uploadBackupToDrive(accessToken, passphrase);
+          set({ driveConnected: true, driveBackups: await listDriveBackups(accessToken) });
+          return { fileName };
+        } catch (error) {
+          if (error instanceof DriveUnauthorizedError) {
+            clearDriveAccessToken();
+            set({ driveConnected: false });
+          }
+          throw error;
+        }
+      },
+
+      refreshGoogleDriveBackups: async () => {
+        const accessToken = await requestDriveAccessToken();
+        try {
+          set({ driveConnected: true, driveBackups: await listDriveBackups(accessToken) });
+        } catch (error) {
+          if (error instanceof DriveUnauthorizedError) {
+            clearDriveAccessToken();
+            set({ driveConnected: false });
+          }
+          throw error;
+        }
+      },
+
+      restoreGoogleDriveBackup: async (fileId, passphrase) => {
+        const accessToken = await requestDriveAccessToken();
+        try {
+          const summary = await restoreBackupFromDrive(accessToken, fileId, passphrase);
+          const [games, settings] = await Promise.all([
+            gameRepository.listGames(),
+            settingsRepository.get(),
+          ]);
+          set({ games, settings });
+          return summary;
+        } catch (error) {
+          if (error instanceof DriveUnauthorizedError) {
+            clearDriveAccessToken();
+            set({ driveConnected: false });
+          }
+          throw error;
+        }
+      },
+
+      deleteGoogleDriveBackup: async (fileId) => {
+        const accessToken = await requestDriveAccessToken();
+        try {
+          await deleteDriveBackup(accessToken, fileId);
+          set({ driveBackups: get().driveBackups.filter((backup) => backup.fileId !== fileId) });
+        } catch (error) {
+          if (error instanceof DriveUnauthorizedError) {
+            clearDriveAccessToken();
+            set({ driveConnected: false });
+          }
+          throw error;
+        }
       },
     })),
     { name: "game" },
