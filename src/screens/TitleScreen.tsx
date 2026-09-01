@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useGameStore } from "../store/gameStore";
+import { BackupSection } from "../components/BackupSection";
 import type { GameRecord } from "../types";
 
 function SaveListItem({ game }: { game: GameRecord }) {
@@ -117,6 +118,8 @@ export function TitleScreen() {
           </ul>
         </section>
       )}
+
+      <BackupSection />
 
       <section className="rounded border border-red-900/60 p-4">
         <h2 className="mb-1 text-sm font-semibold text-red-300">Danger zone</h2>
