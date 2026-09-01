@@ -31,6 +31,11 @@ const AttachmentPreview: React.FC<{ file: File; onRemove: () => void }> = ({ fil
     <div className="group animate-fade-in bg-text-bg text-body-text relative flex w-full items-center justify-between rounded-lg p-2 text-left">
       <div className="flex items-center gap-3 overflow-hidden">
         {previewUrl ? (
+          // codeql[js/xss-through-dom] False positive: React escapes attribute
+          // values, src is an app-created blob: URL (never a user-supplied
+          // URL), and the file name is also rendered as escaped plain text
+          // below. The source is the user's own file picker; nothing crosses a
+          // trust boundary.
           <img
             src={previewUrl}
             alt={file.name}
