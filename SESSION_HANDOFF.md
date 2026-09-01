@@ -33,7 +33,8 @@
 | 5     | ✅ 完了（PR #8 merged）  | 暗号化バックアップ（AES-GCM、§3.3、`ns-backup`/`.nsbak`）+ Google Drive（`drive.file` スコープ + `NarrativeSproutBackup` フォルダ）+ ns-save インポート。完了条件「平文が外部に出ないことをテストで証明」は `plaintextLeak.test.ts` で達成 |
 | 5.5   | ✅ 完了（PR #9 merged）  | UI 移植：Legacy から全画面を移植（react-router 導入、Tailwind テーマ/ボタン体系、Load/History/Chronicle/Settings/Starting/DeletionComplete、ゲーム画面 2 ペイン + nav + overlay、画像再生成 action） |
 | 6     | ✅ 完了（PR #10 merged） | i18n（5言語バンドル + AI 動的翻訳 + 言語セレクタ）、オートプレイ（reasoning チェーン永続化）、SSE ストリーミング（live 本文表示 + per-model opt-out）、PWA 修正（SW registration + manifest アイコン）。実機確認済み（言語切替・翻訳・ストリーミング・オートプレイ動作）。UI 差分（Legacy との見た目の違い）は後に回す判断 |
-| 7     | 未着手                  | Tauri 版（`src-tauri` 専用ブランチ、stronghold 導入、dist は全ブランチ ignore 済み）                                                                      |
+| 6.5   | ✅ 完了（PR #11 merged） | モデル文字列オプション完全対応（`--BaseURL` で NIM 等のカスタムエンドポイント接続を実機確認済み）+ OpenRouter PKCE キー自動取得（credentials ストアへの保存を実機確認済み） |
+| 7     | 未着手（PWA 版完成後に着手の方針） | Tauri 版（`src-tauri` 専用ブランチ、stronghold 導入、dist は全ブランチ ignore 済み）                                                                      |
 
 ## Phase 2 の実機確認方法（自分で試すには）
 
@@ -43,7 +44,7 @@
 
 既知の制約（Phase 6 実装後）: 画像生成は 4プロバイダ対応（HF/A1111/ComfyUI/NIM、無効時はフォールバックSVG）。UI は Legacy 見た目を移植済み。UI 言語は Settings > Language で選択可能（5言語 + AI翻訳）。物語本文の言語は `settings.language`（プロンプトに注入）。未移植の Legacy 機能: 本文手動編集・テーマ自動生成（Generate Idea）。
 
-## Phase 6.5（モデル詳細設定 + PKCE）の要点（未コミット時は feature ブランチ参照）
+## Phase 6.5（モデル詳細設定 + PKCE、PR #11）の要点
 
 - **モデルオプション完全対応** (`src/lib/modelOptions.ts` 書き直し): Legacy modelutils.ts の全オプションを移植 — `--BaseURL`（http/https 検証）、`--reasoning`（true/false/effort レベル）、`--reasoning_effort`、`--temperature`、`--top_p`、`--top_k`、`--frequency_penalty`、`--presence_penalty`、`--repetition_penalty`、`--min_p`、`--top_a`、`--max_tokens`、`--timeout`、`--kwargs_reasoning`、`--only`、`--strict`、`--stream`。`isValid` フラグで無効オプション検出。`buildSamplingParams` が legacy `getParams` 相当のリクエストボディ生成（max_tokens → max_completion_tokens、reasoning → {effort}、kwargs_reasoning → chat_template_kwargs、only → provider.only）。
 - **配線** (`generateScene.ts` の `callChatCompletion`): 全ナラティブ呼び出し（start/choice/refine/split/compaction）で `parseTextModelOptions` を解釈し、baseUrl・タイムアウト（`AbortSignal.any([signal, timeout])`）・サンプリングを適用。`--strict=false` 時は `json_object` レスポンス形式にフォールバックし、スキーマを system プロンプトに埋め込み。`autoplayService.ts` / `translateService.ts` も同様に配線。response_format ビルダー（`buildNarratorResponseFormat` 等4種）は未使用になったため削除し、schema は `callChatCompletion` 内で `responseSchema` + `responseSchemaName` として渡す設計に変更。
