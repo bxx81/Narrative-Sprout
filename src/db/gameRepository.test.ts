@@ -158,6 +158,7 @@ describe("wipeRepository", () => {
     await db.settings.put({
       key: "app",
       language: "Japanese",
+      uiLanguage: "English",
       sceneTextLength: "medium",
       textModel: "openai/gpt-4o-mini",
       imageGenerator: "disabled",
@@ -172,6 +173,9 @@ describe("wipeRepository", () => {
       webpCompression: "normal",
       memoryStrategy: "single",
       enableStoryLogCompaction: true,
+      enableStreaming: true,
+      aiTranslations: {},
+      aiLanguageMappings: {},
     });
     await db.credentials.put({ key: "openrouterApiKey", value: "sk-or-test" });
 

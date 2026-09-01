@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getInitialUiLanguage } from "../features/i18n/api";
 
 /**
  * Global application settings (REDESIGN.md §5.4).
@@ -121,13 +122,70 @@ export const DEFAULT_NIM_CONFIG = JSON.stringify(
   2,
 );
 
+/**
+ * AI-translated UI bundles are validated language-by-language (REDESIGN
+ * §5.7): a corrupted language record is dropped with a warning instead of
+ * failing the whole settings record. Missing input (old records) normalizes
+ * to an empty table.
+ */
+const aiTranslationsSchema = z
+  .record(z.string(), z.unknown())
+  .optional()
+  .transform((value) => {
+    const result: Record<string, Record<string, string>> = {};
+    if (value === undefined) return result;
+    for (const [languageName, texts] of Object.entries(value)) {
+      if (!texts || typeof texts !== "object") {
+        console.warn("[settings] invalid AI translation bundle skipped", languageName);
+        continue;
+      }
+      const textsRecord = texts as Record<string, unknown>;
+      const textsResult: Record<string, string> = {};
+      for (const [translationKey, translationValue] of Object.entries(textsRecord)) {
+        const parsed = z.string().safeParse(translationValue);
+        if (parsed.success) {
+          textsResult[translationKey] = parsed.data;
+        } else {
+          console.warn(
+            "[settings] invalid translation value skipped",
+            languageName,
+            translationKey,
+          );
+        }
+      }
+      result[languageName] = textsResult;
+    }
+    return result;
+  });
+
+/** Language display name → IETF tag table for AI-translated languages. */
+const aiLanguageMappingsSchema = z
+  .record(z.string(), z.unknown())
+  .optional()
+  .transform((value) => {
+    const result: Record<string, string> = {};
+    if (value === undefined) return result;
+    for (const [languageName, languageCode] of Object.entries(value)) {
+      const parsed = z.string().safeParse(languageCode);
+      if (parsed.success) result[languageName] = parsed.data;
+      else console.warn("[settings] invalid language mapping skipped", languageName);
+    }
+    return result;
+  });
+
 export const settingsRecordSchema = z.object({
   key: z.literal(SETTINGS_RECORD_KEY),
   /** Narrative language (e.g. "Japanese"). */
   language: z.string(),
+  /** UI display language (native name, e.g. "English" — see features/i18n). */
+  uiLanguage: z.string().default(getInitialUiLanguage()),
   /** Target prose length order (e.g. "short" | "medium" | "long"). */
   sceneTextLength: z.string(),
-  /** OpenRouter model id used for narrative text generation. */
+  /**
+   * OpenRouter model id used for narrative text generation. May carry
+   * trailing per-model options (e.g. "provider/model --stream=false"), see
+   * lib/modelOptions.
+   */
   textModel: z.string(),
   /** Image generator selection. */
   imageGenerator: imageGeneratorTypeSchema.default("disabled"),
@@ -155,6 +213,12 @@ export const settingsRecordSchema = z.object({
   memoryStrategy: memoryStrategySchema.default("single"),
   /** Whether storyLog compaction (archivist) is enabled. */
   enableStoryLogCompaction: z.boolean().default(true),
+  /** Live text streaming from the narrative model (per-model opt-out possible). */
+  enableStreaming: z.boolean().default(true),
+  /** AI-translated UI bundles keyed by the user-typed language name. */
+  aiTranslations: aiTranslationsSchema,
+  /** IETF tags for AI-translated languages (display name → tag). */
+  aiLanguageMappings: aiLanguageMappingsSchema,
 });
 export type SettingsRecord = z.infer<typeof settingsRecordSchema>;
 

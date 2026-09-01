@@ -1,6 +1,7 @@
 import LoadingSpinner from "../ui/LoadingSpinner";
+import { useTranslation } from "react-i18next";
 
-export type SpinnerState = "Scene" | "Image" | "Choice" | null;
+export type SpinnerState = "Scene" | "Image" | "Choice" | "Autoplay" | null;
 
 interface LoadingOverlayProps {
   isPageLoading: boolean;
@@ -20,6 +21,7 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
   error,
   suppressed = false,
 }) => {
+  const { t } = useTranslation();
   const isVisible = isPageLoading && !error && !suppressed;
 
   const nowProgress =
@@ -28,6 +30,15 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
     imageGenerationProgress !== null;
 
   if (!isVisible) return null;
+
+  const spinnerLabel =
+    spinnerState === "Scene"
+      ? t("loadingScene")
+      : spinnerState === "Image"
+        ? t("loadingImage")
+        : spinnerState === "Choice"
+          ? t("loadingChoice")
+          : t("loadingAutoplay");
 
   return (
     <div className="animate-fade-in pointer-events-none fixed inset-0 z-110 flex items-center justify-center will-change-auto">
@@ -45,8 +56,7 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
         </div>
         <div className="flex flex-col items-center gap-1.5">
           <div className="text-text-text animate-pulse font-[Inter] text-xs tracking-[0.2em]">
-            Generating{" "}
-            {spinnerState === "Scene" ? "Scene" : spinnerState === "Image" ? "Image" : "Choice"}
+            {spinnerLabel}
           </div>
         </div>
       </div>

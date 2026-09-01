@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { useGameStore } from "../store/gameStore";
 import type { StoryNodeRecord } from "../types";
@@ -16,6 +17,7 @@ import { useConfirm } from "../hooks/useConfirm";
  */
 const EndNodeCard: React.FC<{ node: StoryNodeRecord }> = ({ node }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const confirm = useConfirm();
   const resumeStoryAtNode = useGameStore((s) => s.resumeStoryAtNode);
   const setChronicleTargetNode = useGameStore((s) => s.setChronicleTargetNode);
@@ -43,11 +45,10 @@ const EndNodeCard: React.FC<{ node: StoryNodeRecord }> = ({ node }) => {
 
   const handleDelete = async () => {
     const result = await confirm({
-      title: "Delete Branch",
-      message:
-        "Delete this branch? The scene and all of its descendants (including images) will be removed. This cannot be undone.",
-      confirmLabel: "Delete",
-      cancelLabel: "Cancel",
+      title: t("deleteBranchConfirmTitle"),
+      message: t("deleteBranchConfirm"),
+      confirmLabel: t("deleteButton"),
+      cancelLabel: t("cancelButton"),
       isDestructive: true,
       icon: "delete_forever",
     });
@@ -64,10 +65,10 @@ const EndNodeCard: React.FC<{ node: StoryNodeRecord }> = ({ node }) => {
   const cardActions = (
     <div className="flex flex-col gap-2 sm:flex-row">
       <Button onClick={handleViewChronicle} intent="secondary" size="small" className="flex-1">
-        <p className="line-clamp-3">View Full Story</p>
+        <p className="line-clamp-3">{t("historyViewStoryButton")}</p>
       </Button>
       <Button onClick={handleRewind} intent="primary" size="small" className="flex-1">
-        <p className="line-clamp-3">Resume Here</p>
+        <p className="line-clamp-3">{t("historyContinueButton")}</p>
       </Button>
     </div>
   );
@@ -81,8 +82,12 @@ const EndNodeCard: React.FC<{ node: StoryNodeRecord }> = ({ node }) => {
         actions={cardActions}
         onImageClick={handleRewind}
         onMenuClick={() => void handleDelete()}
-        menuText="Delete"
-        mainText={node.choiceText ? `Your Choice: "${node.choiceText}"` : "The story begins."}
+        menuText={t("deleteButton")}
+        mainText={
+          node.choiceText
+            ? t("historyChoicePrefixText", { choice: node.choiceText })
+            : t("historyInitialEntry")
+        }
         subText={scenePreviewText}
       />
     </article>
@@ -93,6 +98,7 @@ const EndNodeCard: React.FC<{ node: StoryNodeRecord }> = ({ node }) => {
  * The history screen: every ending / branching point of the active game.
  */
 const HistoryScreen: React.FC = () => {
+  const { t } = useTranslation();
   const activeGame = useGameStore((s) => s.activeGame);
   const nodes = useGameStore((s) => s.nodes);
   const exportSave = useGameStore((s) => s.exportSave);
@@ -113,7 +119,7 @@ const HistoryScreen: React.FC = () => {
     try {
       await exportSave(activeGame.id);
     } catch (error) {
-      setExportError(error instanceof Error ? error.message : "Export failed.");
+      setExportError(error instanceof Error ? error.message : t("exportFailed"));
     } finally {
       setIsExporting(false);
     }
@@ -130,10 +136,11 @@ const HistoryScreen: React.FC = () => {
   return (
     <main className="mx-auto mb-20 max-w-384">
       <header className="text-center">
-        <h1 className="font-serif-display text-3xl font-bold md:text-4xl">Story Endings</h1>
+        <h1 className="font-serif-display text-3xl font-bold md:text-4xl">
+          {t("historyScreenTitle")}
+        </h1>
         <p className="support-text-color mx-auto my-2 max-w-3xl text-lg">
-          These are the various endings and branching points your story has reached. Choose one to
-          view the story or resume play from that point.
+          {t("historyScreenDescription")}
         </p>
       </header>
       <div className="mb-12 flex justify-center">
@@ -144,7 +151,7 @@ const HistoryScreen: React.FC = () => {
           isWorking={isExporting}
           disabled={isExporting}
         >
-          Download Save Data
+          {t("downloadSavedataButton")}
         </Button>
       </div>
       {exportError && (

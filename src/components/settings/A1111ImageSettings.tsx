@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useDebouncedExternalState } from "../../hooks/useDebouncedExternalState";
 import HelpTooltip from "../ui/HelpTooltip";
 
@@ -17,6 +18,7 @@ const A1111ImageSettingsComponent: React.FC<A1111ImageSettingsProps> = ({
   setConfigJson,
   loading,
 }) => {
+  const { t } = useTranslation();
   const [localEndpoint, setLocalEndpoint] = useDebouncedExternalState(endpoint, setEndpoint);
   const [localConfigJson, setLocalConfigJson] = useDebouncedExternalState(
     configJson,
@@ -37,24 +39,24 @@ const A1111ImageSettingsComponent: React.FC<A1111ImageSettingsProps> = ({
     <div className="animate-fade-in mt-4 space-y-4">
       <div>
         <label htmlFor="a1111-endpoint" className="sr-only">
-          A1111 API Endpoint
+          {t("a1111EndpointLabel")}
         </label>
         <input
           type="text"
           id="a1111-endpoint"
           value={localEndpoint}
           onChange={(e) => setLocalEndpoint(e.target.value)}
-          placeholder="A1111 API Endpoint"
+          placeholder={t("a1111EndpointLabel")}
           className="form-style"
           disabled={loading}
         />
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">
-          Ensure the server is running with CORS enabled (e.g., `--cors-allow-origins=*`).
+          {t("a1111EndpointHelp")}
         </div>
       </div>
       <div>
         <label htmlFor="a1111-config" className="sr-only">
-          A1111/Stable Diffusion Parameters (JSON)
+          {t("a1111ConfigLabel")}
         </label>
         <textarea
           id="a1111-config"
@@ -63,15 +65,14 @@ const A1111ImageSettingsComponent: React.FC<A1111ImageSettingsProps> = ({
           rows={8}
           className={`form-style form-style-small-text ${isJsonValid ? "form-style-valid" : "form-style-invalid"}`}
           disabled={loading}
-          placeholder="A1111/Stable Diffusion Parameters (JSON)"
+          placeholder={t("a1111ConfigLabel")}
         />
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">
-          Specify the JSON object for the txt2img API. The 'prompt' in this object will be appended
-          to the AI-generated prompt. Invalid JSON will be ignored and defaults used.
-          <HelpTooltip content="Specify preferred default parameters for the txt2img API in a JSON object. These settings (sampler, steps, etc.) will be merged with the AI-generated prompt." />
+          {t("a1111ConfigHelp")}
+          <HelpTooltip content={t("helpA1111Config")} />
         </div>
         {!isJsonValid && (
-          <p className="mt-1 text-xs font-semibold text-red-500">Invalid JSON format.</p>
+          <p className="mt-1 text-xs font-semibold text-red-500">{t("invalidJsonFormat")}</p>
         )}
       </div>
     </div>

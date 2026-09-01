@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import Button from "../ui/Button";
 import { Icon } from "../ui/Icon";
 
@@ -14,6 +15,7 @@ interface RefineDialogProps {
  * v2 creates the refined scene as a sibling branch).
  */
 const RefineDialog: React.FC<RefineDialogProps> = ({ isOpen, onClose, onSubmit, isBusy }) => {
+  const { t } = useTranslation();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -45,18 +47,13 @@ const RefineDialog: React.FC<RefineDialogProps> = ({ isOpen, onClose, onSubmit, 
         onClose();
       }}
     >
-      <h2 className="h2-style">Refine Scene with AI</h2>
-      <p className="explanation-text-style">
-        Describe what needs to be corrected and how. Be specific. The refined scene is added as a
-        sibling branch of the current scene.
-      </p>
+      <h2 className="h2-style">{t("refineSceneButtonLabel")}</h2>
+      <p className="explanation-text-style">{t("refineScenePromptLabel")}</p>
       <textarea
         ref={inputRef}
         className="border-text-border m-0 w-full resize-y border-2 text-sm"
         rows={4}
-        placeholder={
-          'e.g. "The response contains English text despite being set to Japanese. Rewrite all non-Japanese parts in Japanese."'
-        }
+        placeholder={t("refineScenePlaceholder")}
         disabled={isBusy}
       ></textarea>
       <div className="mt-4 flex items-center justify-end gap-2">
@@ -64,8 +61,8 @@ const RefineDialog: React.FC<RefineDialogProps> = ({ isOpen, onClose, onSubmit, 
           intent="circle"
           onClick={onClose}
           disabled={isBusy}
-          title="Cancel"
-          aria-label="Cancel"
+          title={t("cancelButton")}
+          aria-label={t("cancelButton")}
         >
           <Icon iconName="close" />
         </Button>
@@ -73,8 +70,8 @@ const RefineDialog: React.FC<RefineDialogProps> = ({ isOpen, onClose, onSubmit, 
           intent="circle"
           onClick={handleSubmit}
           disabled={isBusy}
-          title="Send to AI"
-          aria-label="Send to AI"
+          title={t("refineSceneSubmitLabel")}
+          aria-label={t("refineSceneSubmitLabel")}
         >
           <Icon iconName="auto_awesome_mosaic" />
         </Button>

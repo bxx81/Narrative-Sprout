@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useDebouncedExternalState } from "../../hooks/useDebouncedExternalState";
 import HelpTooltip from "../ui/HelpTooltip";
 
@@ -21,6 +22,7 @@ const HuggingFaceImageSettingsComponent: React.FC<HuggingFaceImageSettingsProps>
   setConfigJson,
   loading,
 }) => {
+  const { t } = useTranslation();
   const [localSpaceId, setLocalSpaceId] = useDebouncedExternalState(spaceId, setSpaceId);
   const [localToken, setLocalToken] = useDebouncedExternalState(token ?? "", setToken);
   const [localConfigJson, setLocalConfigJson] = useDebouncedExternalState(
@@ -42,25 +44,25 @@ const HuggingFaceImageSettingsComponent: React.FC<HuggingFaceImageSettingsProps>
     <div className="animate-fade-in mt-4 space-y-4">
       <div>
         <label htmlFor="huggingface-space-id" className="sr-only">
-          Hugging Face Space ID
+          {t("huggingFaceSpaceIdLabel")}
         </label>
         <input
           type="text"
           id="huggingface-space-id"
           value={localSpaceId}
           onChange={(e) => setLocalSpaceId(e.target.value)}
-          placeholder="Hugging Face Space ID"
+          placeholder={t("huggingFaceSpaceIdLabel")}
           className="form-style"
           disabled={loading}
         />
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">
-          Hugging Face Space ID for image generation (e.g., 'black-forest-labs/FLUX.1-schnell')
-          <HelpTooltip content="Specify the identifier for a public or private image generation Space on Hugging Face in the format 'organization/space-name' (e.g., 'stabilityai/stable-diffusion-3-medium')." />
+          {t("huggingFaceSpaceIdHelp")}
+          <HelpTooltip content={t("helpHuggingFaceSpaceId")} />
         </div>
       </div>
       <div>
         <label htmlFor="huggingface-token" className="sr-only">
-          Hugging Face Token
+          {t("huggingFaceTokenLabel")}
         </label>
         <input
           type="password"
@@ -68,19 +70,18 @@ const HuggingFaceImageSettingsComponent: React.FC<HuggingFaceImageSettingsProps>
           id="huggingface-token"
           value={localToken}
           onChange={(e) => setLocalToken(e.target.value)}
-          placeholder="Hugging Face Token"
+          placeholder={t("huggingFaceTokenLabel")}
           className="form-style"
           disabled={loading}
         />
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">
-          Optional. Required for private or gated Hugging Face Spaces. Stored locally in the
-          credentials store only.
-          <HelpTooltip content="A Hugging Face User Access Token is required to use private or gated Spaces. You can get one from your Hugging Face account settings." />
+          {t("huggingFaceTokenHelp")}
+          <HelpTooltip content={t("helpHuggingFaceToken")} />
         </div>
       </div>
       <div>
         <label htmlFor="huggingface-config" className="sr-only">
-          Hugging Face API Parameters (JSON)
+          {t("huggingFaceConfigLabel")}
         </label>
         <textarea
           id="huggingface-config"
@@ -89,15 +90,14 @@ const HuggingFaceImageSettingsComponent: React.FC<HuggingFaceImageSettingsProps>
           rows={8}
           className={`form-style form-style-small-text ${isJsonValid ? "form-style-valid" : "form-style-invalid"}`}
           disabled={loading}
-          placeholder="Hugging Face API Parameters (JSON)"
+          placeholder={t("huggingFaceConfigLabel")}
         />
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">
-          Specify the JSON object for the Space's `/infer` API. 'prompt' will be appended to the
-          AI-generated prompt. Keys with value "delete" will be removed. Invalid JSON is ignored.
-          <HelpTooltip content="Specify default parameters for the Space's API in a JSON object. This is unique to each Space. Check the Space's API documentation for available options." />
+          {t("huggingFaceConfigHelp")}
+          <HelpTooltip content={t("helpHuggingFaceConfig")} />
         </div>
         {!isJsonValid && (
-          <p className="mt-1 text-xs font-semibold text-red-500">Invalid JSON format.</p>
+          <p className="mt-1 text-xs font-semibold text-red-500">{t("invalidJsonFormat")}</p>
         )}
       </div>
     </div>

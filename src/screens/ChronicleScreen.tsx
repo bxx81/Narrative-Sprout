@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import { useGameStore } from "../store/gameStore";
 import MainText from "../components/ui/MainText";
 import Button from "../components/ui/Button";
@@ -19,6 +20,7 @@ const ChronicleNode: React.FC<{
   branchEndNodeId: string;
 }> = React.memo(({ node, choiceText, branchEndNodeId }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const resumeStoryAtNode = useGameStore((s) => s.resumeStoryAtNode);
   const { elementRef, imageUrl, isLoading } = useLazyNodeImage(node.id);
 
@@ -56,11 +58,11 @@ const ChronicleNode: React.FC<{
           )}
         </div>
         <Button onClick={handleRewind} intent="primary" size="medium">
-          Resume Here
+          {t("historyContinueButton")}
         </Button>
         {choiceText && (
           <div className="border-text-border mt-6 border-t border-dashed pt-4 text-center">
-            <p className="support-text-color text-sm">Your Choice:</p>
+            <p className="support-text-color text-sm">{t("historyChoicePrefix")}</p>
             <p className="font-semibold">{`"${choiceText}"`}</p>
           </div>
         )}
@@ -75,6 +77,7 @@ ChronicleNode.displayName = "ChronicleNode";
  * selected ending node.
  */
 const ChronicleScreen: React.FC = () => {
+  const { t } = useTranslation();
   const nodes = useGameStore((s) => s.nodes);
   const chronicleTargetNodeId = useGameStore((s) => s.chronicleTargetNodeId);
 
@@ -93,7 +96,7 @@ const ChronicleScreen: React.FC = () => {
     return (
       <div className="flex h-screen w-full flex-col items-center justify-center">
         <LoadingSpinner />
-        <p className="font-serif-display mt-4 text-lg">Loading history...</p>
+        <p className="font-serif-display mt-4 text-lg">{t("loadingHistory")}</p>
       </div>
     );
   }
@@ -101,11 +104,9 @@ const ChronicleScreen: React.FC = () => {
   return (
     <main className="mx-auto mb-20 max-w-384">
       <header className="text-center">
-        <h1 className="font-serif-display text-3xl font-bold md:text-4xl">
-          Chronicle of the Story
-        </h1>
+        <h1 className="font-serif-display text-3xl font-bold md:text-4xl">{t("chronicleTitle")}</h1>
         <p className="support-text-color mx-auto my-2 max-w-3xl text-lg">
-          The complete record of your story leading up to this point.
+          {t("chronicleDescription")}
         </p>
       </header>
 

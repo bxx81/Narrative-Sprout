@@ -4,9 +4,11 @@ import styles from "./MainText.module.css";
 interface MainTextProps {
   text: string;
   className?: string;
+  /** When true, appends a blinking cursor (live streaming display). */
+  streamingCursor?: boolean;
 }
 
-const MainText = ({ text, className }: MainTextProps) => {
+const MainText = ({ text, className, streamingCursor = false }: MainTextProps) => {
   if (!text) return null;
 
   const lines = text.split("\n");
@@ -38,6 +40,11 @@ const MainText = ({ text, className }: MainTextProps) => {
               }
               return part;
             })}
+            {streamingCursor && lineIndex === lines.length - 1 && (
+              <span className="animate-pulse" aria-hidden="true">
+                ▍
+              </span>
+            )}
           </p>
         );
       })}

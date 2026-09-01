@@ -57,6 +57,12 @@ export const nodeMetadataSchema = z.object({
   refinePrompt: z.string().nullable(),
   /** Sibling node this node refines, if any. */
   refinedFromNodeId: storyNodeIdSchema.nullable(),
+  /**
+   * Autoplay player-AI reasoning memo that produced this turn's choice.
+   * Optional (not `.default()`) so records saved before autoplay arrived
+   * still parse (REDESIGN §5.7); new nodes always set it explicitly.
+   */
+  autoplayReasoning: z.string().nullable().optional(),
 });
 export type NodeMetadata = z.infer<typeof nodeMetadataSchema>;
 

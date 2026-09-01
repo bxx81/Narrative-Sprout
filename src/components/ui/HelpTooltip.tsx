@@ -1,4 +1,5 @@
 import React, { useId } from "react";
+import { useTranslation } from "react-i18next";
 import { Icon } from "./Icon";
 import Button from "./Button";
 import styles from "./HelpTooltip.module.css";
@@ -10,6 +11,7 @@ interface HelpTooltipProps {
 }
 
 const HelpTooltipComponent: React.FC<HelpTooltipProps> = ({ content, learnMoreUrl, className }) => {
+  const { t } = useTranslation();
   const popId = useId();
 
   return (
@@ -18,7 +20,7 @@ const HelpTooltipComponent: React.FC<HelpTooltipProps> = ({ content, learnMoreUr
         intent="secondary"
         size="help"
         className={[styles["trigger"], className].join(" ")}
-        aria-label="More info"
+        aria-label={t("moreInfoLabel")}
         popoverTarget={popId}
         style={{ "--anchor-name": `--anchor-${popId}` } as React.CSSProperties}
       >
@@ -38,7 +40,7 @@ const HelpTooltipComponent: React.FC<HelpTooltipProps> = ({ content, learnMoreUr
             rel="noopener noreferrer"
             className="text-primary mt-2 inline-block text-sm hover:underline"
           >
-            Learn More
+            {t("learnMoreLink")}
           </a>
         )}
       </div>

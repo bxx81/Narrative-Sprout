@@ -2,6 +2,7 @@ import Button from "./ui/Button";
 import { Icon } from "./ui/Icon";
 import LoadingSpinner from "./ui/LoadingSpinner";
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 // LoadScreenとHistoryScreenの共通パーツ
 
@@ -27,11 +28,13 @@ const StoryCard: React.FC<StoryCardProps> = ({
   onImageError,
   onImageClick,
   onMenuClick,
-  menuText = "Delete",
+  menuText,
   mainText,
   subText,
   timeText,
 }) => {
+  const { t } = useTranslation();
+  const resolvedMenuText = menuText ?? t("deleteButton");
   return (
     <div className="text-bg-color flex h-full flex-col overflow-hidden rounded-lg shadow-lg transition-all duration-300 hover:shadow-xl">
       <div className="bg-text-bg relative">
@@ -53,8 +56,8 @@ const StoryCard: React.FC<StoryCardProps> = ({
           intent="overlay-circle"
           className="absolute top-1 right-1"
           onClick={onMenuClick}
-          title={menuText}
-          aria-label={menuText}
+          title={resolvedMenuText}
+          aria-label={resolvedMenuText}
         >
           <Icon iconName="more_horiz" className="text-white" />
         </Button>

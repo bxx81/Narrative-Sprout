@@ -1,11 +1,12 @@
 import React, { useCallback, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { ConfirmationContext, type ConfirmationOptions } from "../hooks/useConfirm";
 import Button from "../components/ui/Button";
 import { Icon } from "../components/ui/Icon";
 
 /**
  * Promise-based confirmation dialog (native <dialog> + showModal()).
- * Ported from the legacy ConfirmationContext, without i18n.
+ * Ported from the legacy ConfirmationContext.
  */
 export const ConfirmationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [config, setConfig] = useState<
@@ -46,6 +47,7 @@ const ConfirmationDialog: React.FC<{
   onCancel: () => void;
   onDismiss: () => void;
 }> = ({ options, onConfirm, onCancel, onDismiss }) => {
+  const { t } = useTranslation();
   const dialogRef = React.useRef<HTMLDialogElement>(null);
 
   React.useEffect(() => {
@@ -83,7 +85,7 @@ const ConfirmationDialog: React.FC<{
       <p className="support-text-color whitespace-pre-wrap">{options.message}</p>
       <div className="mt-6 flex flex-row justify-end gap-2">
         <Button intent="tertiary" size="small" onClick={onCancel}>
-          {options.cancelLabel || "Cancel"}
+          {options.cancelLabel || t("cancelButton")}
         </Button>
         {!options.onlyInfo && (
           <Button
@@ -92,7 +94,7 @@ const ConfirmationDialog: React.FC<{
             className={`${options.isDestructive ? "bg-[#ff3b30]" : ""}`}
             onClick={onConfirm}
           >
-            {options.confirmLabel || "OK"}
+            {options.confirmLabel || t("okButton")}
           </Button>
         )}
       </div>

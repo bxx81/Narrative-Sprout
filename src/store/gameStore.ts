@@ -9,6 +9,11 @@ import { wipeRepository } from "../db/wipeRepository";
 import { db } from "../db/database";
 import { choosePath, refineScene, startGame } from "../features/gameplay/turnService";
 import { collectAncestors } from "../features/storytree/api";
+import { decideAutoplayTurn } from "../features/autoplay/api";
+import { englishUiTexts } from "../features/i18n/api";
+import { translateUIText } from "../features/i18n/translateService";
+import { streamStore } from "./streamStore";
+import { isStreamingEnabledForSettings } from "../lib/modelOptions";
 import { downloadBlob, exportGameAsZip } from "../features/export/api";
 import {
   clearDriveAccessToken,
@@ -42,6 +47,15 @@ interface GenerationPayload {
   kind: "start" | "choice" | "refine";
   choiceText?: string;
   refinePrompt?: string;
+  autoplayReasoning?: string;
+}
+
+interface AutoplayDecisionPayload {
+  kind: "decision";
+}
+
+interface UiTranslationPayload {
+  languageName: string;
 }
 
 interface ImageRegenerationPayload {
@@ -70,6 +84,15 @@ interface GameState {
   imageRegeneration: AsyncOperation<ImageRegenerationPayload, never>;
   /** Progress (0..1) of the running image generation, when reportable. */
   imageGenerationProgress: number | null;
+  /** Autoplay driver: the player AI keeps choosing while true (session-only). */
+  autoplay: boolean;
+  /** Retrospective player-AI comment shown once when an autoplay run ends. */
+  autoplayEndingComment: string | null;
+  autoplayTurn: AsyncOperation<AutoplayDecisionPayload, never>;
+  /** AI dynamic UI translation progress operation. */
+  uiTranslation: AsyncOperation<UiTranslationPayload, never>;
+  /** Progress (0..1) of the running UI translation. */
+  uiTranslationProgress: number | null;
   driveConnected: boolean;
   driveBackups: DriveFileMetadata[];
 
@@ -81,7 +104,10 @@ interface GameState {
   goToTitle: () => Promise<void>;
   startNewGame: (theme: string, attachmentFiles?: File[]) => Promise<void>;
   openGame: (gameId: string) => Promise<void>;
-  choose: (choiceText: string) => Promise<void>;
+  choose: (
+    choiceText: string,
+    options?: { autoplayReasoning?: string; autoplayCost?: number },
+  ) => Promise<void>;
   refine: (nodeId: string, refinePrompt: string) => Promise<void>;
   regenerateImage: (nodeId: string) => Promise<void>;
   deleteBranch: (nodeId: string) => Promise<{ gameDeleted: boolean }>;
@@ -92,6 +118,15 @@ interface GameState {
   /** Resumes play: sets the viewed node and moves the playhead (branch end). */
   resumeStoryAtNode: (nodeId: string, branchEndNodeId: string) => void;
   setChronicleTargetNode: (nodeId: string) => void;
+  toggleAutoplay: () => void;
+  /** One autoplay step: ask the player AI, then feed its choice into `choose`. */
+  runAutoplayTurn: () => Promise<void>;
+  dismissAutoplayEndingComment: () => void;
+  /** Aborts the in-flight generation (text + image) via the stream signal. */
+  cancelGeneration: () => void;
+  setUiLanguage: (languageName: string) => Promise<void>;
+  translateUi: (languageName: string) => Promise<void>;
+  deleteAiTranslation: (languageName: string) => Promise<void>;
   downloadEncryptedBackup: (passphrase: string) => Promise<void>;
   restoreBackupFromFile: (file: File, passphrase: string) => Promise<RestoreSummaryWithManifest>;
   importSaveFromFile: (file: File) => Promise<SaveImportResult>;
@@ -141,6 +176,11 @@ export const useGameStore = create<GameState>()(
       generation: { phase: "idle" },
       imageRegeneration: { phase: "idle" },
       imageGenerationProgress: null,
+      autoplay: false,
+      autoplayEndingComment: null,
+      autoplayTurn: { phase: "idle" },
+      uiTranslation: { phase: "idle" },
+      uiTranslationProgress: null,
       // The Drive access token lives only in memory (googleAuth), so a fresh
       // page load always starts disconnected.
       driveConnected: hasDriveAccessToken(),
@@ -206,6 +246,7 @@ export const useGameStore = create<GameState>()(
           currentNodeId: null,
           chronicleTargetNodeId: null,
           generation: { phase: "idle" },
+          autoplay: false,
         });
       },
 
@@ -216,6 +257,7 @@ export const useGameStore = create<GameState>()(
         set({
           generation: { phase: "running", payload, startedAt: new Date().toISOString() },
         });
+        streamStore.begin(isStreamingEnabledForSettings(settings));
         try {
           let resolvedTheme = theme;
           let attachmentTexts: string[] = [];
@@ -225,18 +267,22 @@ export const useGameStore = create<GameState>()(
             attachmentTexts = processed.attachmentTexts;
           }
           const imageGenConfig = await buildImageConfigForSettings(settings);
-          const { game, rootNode } = await startGame({
-            apiKey: openrouterApiKey,
-            model: settings.textModel,
-            theme: resolvedTheme,
-            language: settings.language,
-            sceneTextLength: settings.sceneTextLength,
-            attachmentTexts,
-            imageGenConfig,
-            webpCompression: settings.webpCompression,
-            memoryStrategy: settings.memoryStrategy,
-            enableStoryLogCompaction: settings.enableStoryLogCompaction,
-          });
+          const { game, rootNode } = await startGame(
+            {
+              apiKey: openrouterApiKey,
+              model: settings.textModel,
+              theme: resolvedTheme,
+              language: settings.language,
+              sceneTextLength: settings.sceneTextLength,
+              attachmentTexts,
+              imageGenConfig,
+              webpCompression: settings.webpCompression,
+              memoryStrategy: settings.memoryStrategy,
+              enableStoryLogCompaction: settings.enableStoryLogCompaction,
+              onSceneTextDelta: (accumulatedText) => streamStore.pushDelta(accumulatedText),
+            },
+            { signal: streamStore.getSignal() ?? undefined },
+          );
           const assets = await loadAssetsForNodes([rootNode.id]);
           set({
             activeGame: game,
@@ -248,6 +294,8 @@ export const useGameStore = create<GameState>()(
           });
         } catch (error) {
           set({ generation: { phase: "failed", payload, error: error as Error } });
+        } finally {
+          streamStore.end();
         }
       },
 
@@ -265,14 +313,23 @@ export const useGameStore = create<GameState>()(
           assets,
           viewingNodeId: playhead,
           currentNodeId: playhead,
+          autoplay: false,
         });
       },
 
-      choose: async (choiceText) => {
+      choose: async (choiceText, options) => {
         const state = get();
         const { settings, openrouterApiKey, activeGame, viewingNodeId } = state;
         if (!settings || !openrouterApiKey || !activeGame || !viewingNodeId) return;
-        if (state.generation.phase === "running") return;
+        const isAutoplayChain = options?.autoplayReasoning !== undefined;
+        // Autoplay was toggled off while the player AI was deciding: discard
+        // the in-flight chain call (legacy onChoice guard).
+        if (isAutoplayChain && !state.autoplay) return;
+        // Only the autoplay chain itself (carrying its reasoning token) may
+        // generate while autoplay is active; manual clicks are rejected.
+        if (state.autoplay && !isAutoplayChain) return;
+        // Manual double-generation guard; the autoplay chain bypasses it.
+        if (state.generation.phase === "running" && !isAutoplayChain) return;
 
         const parentNode = state.nodes.find((n) => n.id === viewingNodeId);
         if (!parentNode) return;
@@ -280,27 +337,38 @@ export const useGameStore = create<GameState>()(
         const byId = new Map(state.nodes.map((n) => [n.id, n]));
         const ancestors = collectAncestors(byId, viewingNodeId, true);
 
-        const payload: GenerationPayload = { kind: "choice", choiceText };
+        const payload: GenerationPayload = {
+          kind: "choice",
+          choiceText,
+          autoplayReasoning: options?.autoplayReasoning,
+        };
         set({
           generation: { phase: "running", payload, startedAt: new Date().toISOString() },
         });
+        streamStore.begin(isStreamingEnabledForSettings(settings));
         try {
           const imageGenConfig = await buildImageConfigForSettings(settings);
-          const node = await choosePath({
-            apiKey: openrouterApiKey,
-            model: settings.textModel,
-            game: activeGame,
-            parentNode,
-            ancestors,
-            choiceText,
-            language: settings.language,
-            sceneTextLength: settings.sceneTextLength,
-            attachmentTexts: activeGame.attachmentTexts ?? [],
-            imageGenConfig,
-            webpCompression: settings.webpCompression,
-            memoryStrategy: settings.memoryStrategy,
-            enableStoryLogCompaction: settings.enableStoryLogCompaction,
-          });
+          const node = await choosePath(
+            {
+              apiKey: openrouterApiKey,
+              model: settings.textModel,
+              game: activeGame,
+              parentNode,
+              ancestors,
+              choiceText,
+              language: settings.language,
+              sceneTextLength: settings.sceneTextLength,
+              attachmentTexts: activeGame.attachmentTexts ?? [],
+              imageGenConfig,
+              webpCompression: settings.webpCompression,
+              memoryStrategy: settings.memoryStrategy,
+              enableStoryLogCompaction: settings.enableStoryLogCompaction,
+              autoplayReasoning: options?.autoplayReasoning,
+              autoplayCost: options?.autoplayCost,
+              onSceneTextDelta: (accumulatedText) => streamStore.pushDelta(accumulatedText),
+            },
+            { signal: streamStore.getSignal() ?? undefined },
+          );
           const updatedNodes = [...get().nodes, node];
           const updatedGame = {
             ...activeGame,
@@ -318,6 +386,8 @@ export const useGameStore = create<GameState>()(
           });
         } catch (error) {
           set({ generation: { phase: "failed", payload, error: error as Error } });
+        } finally {
+          streamStore.end();
         }
       },
 
@@ -336,24 +406,29 @@ export const useGameStore = create<GameState>()(
         const ancestors = parentNode ? collectAncestors(byId, parentNode.id, true) : [];
         const payload: GenerationPayload = { kind: "refine", refinePrompt };
         set({ generation: { phase: "running", payload, startedAt: new Date().toISOString() } });
+        streamStore.begin(isStreamingEnabledForSettings(settings));
         try {
           const imageGenConfig = await buildImageConfigForSettings(settings);
-          const node = await refineScene({
-            apiKey: openrouterApiKey,
-            model: settings.textModel,
-            game: activeGame,
-            targetNode,
-            parentNode,
-            ancestors,
-            refinePrompt,
-            language: settings.language,
-            sceneTextLength: settings.sceneTextLength,
-            attachmentTexts: activeGame.attachmentTexts ?? [],
-            imageGenConfig,
-            webpCompression: settings.webpCompression,
-            memoryStrategy: settings.memoryStrategy,
-            enableStoryLogCompaction: settings.enableStoryLogCompaction,
-          });
+          const node = await refineScene(
+            {
+              apiKey: openrouterApiKey,
+              model: settings.textModel,
+              game: activeGame,
+              targetNode,
+              parentNode,
+              ancestors,
+              refinePrompt,
+              language: settings.language,
+              sceneTextLength: settings.sceneTextLength,
+              attachmentTexts: activeGame.attachmentTexts ?? [],
+              imageGenConfig,
+              webpCompression: settings.webpCompression,
+              memoryStrategy: settings.memoryStrategy,
+              enableStoryLogCompaction: settings.enableStoryLogCompaction,
+              onSceneTextDelta: (accumulatedText) => streamStore.pushDelta(accumulatedText),
+            },
+            { signal: streamStore.getSignal() ?? undefined },
+          );
           const updatedNodes = [...get().nodes, node];
           const updatedGame = {
             ...activeGame,
@@ -371,6 +446,8 @@ export const useGameStore = create<GameState>()(
           });
         } catch (error) {
           set({ generation: { phase: "failed", payload, error: error as Error } });
+        } finally {
+          streamStore.end();
         }
       },
 
@@ -447,6 +524,7 @@ export const useGameStore = create<GameState>()(
             viewingNodeId: null,
             currentNodeId: null,
             chronicleTargetNodeId: null,
+            autoplay: false,
           });
           return { gameDeleted: true };
         }
@@ -462,6 +540,7 @@ export const useGameStore = create<GameState>()(
           assets: freshAssets,
           viewingNodeId: playhead,
           currentNodeId: playhead,
+          autoplay: false,
         });
         void assetRepository.collectGarbage().catch(() => {});
         return { gameDeleted: false };
@@ -475,10 +554,117 @@ export const useGameStore = create<GameState>()(
         // Both endpoints must be nodes of the active game.
         const knownIds = new Set<string>(nodes.map((n) => n.id));
         if (!knownIds.has(nodeId) || !knownIds.has(branchEndNodeId)) return;
-        set({ viewingNodeId: nodeId, currentNodeId: branchEndNodeId });
+        // Rewinding stops the autoplay chain (legacy REWIND behavior).
+        set({ viewingNodeId: nodeId, currentNodeId: branchEndNodeId, autoplay: false });
       },
 
       setChronicleTargetNode: (nodeId) => set({ chronicleTargetNodeId: nodeId }),
+
+      toggleAutoplay: () => {
+        if (!get().activeGame) return;
+        set({ autoplay: !get().autoplay });
+      },
+
+      runAutoplayTurn: async () => {
+        const state = get();
+        const { settings, openrouterApiKey, activeGame, nodes, viewingNodeId, autoplay } = state;
+        if (!autoplay || !settings || !openrouterApiKey || !activeGame || !viewingNodeId) return;
+        if (state.generation.phase !== "idle") return;
+        if (state.autoplayTurn.phase !== "idle") return;
+
+        const payload: AutoplayDecisionPayload = { kind: "decision" };
+        set({
+          autoplayTurn: { phase: "running", payload, startedAt: new Date().toISOString() },
+        });
+        try {
+          const decision = await decideAutoplayTurn({
+            apiKey: openrouterApiKey,
+            textModel: settings.textModel,
+            game: activeGame,
+            nodes,
+            viewingNodeId,
+            narrativeLanguage: settings.language,
+          });
+          if (decision.storyOver) {
+            // Ending reached: hold the comment for the UI dialog and stop.
+            set({
+              autoplayTurn: { phase: "idle" },
+              autoplay: false,
+              autoplayEndingComment: decision.reasoning,
+            });
+            return;
+          }
+          if (!get().autoplay) {
+            // Toggled off while deciding: drop the decision.
+            set({ autoplayTurn: { phase: "idle" } });
+            return;
+          }
+          set({ autoplayTurn: { phase: "idle" } });
+          await get().choose(decision.choice, {
+            autoplayReasoning: decision.reasoning,
+            autoplayCost: decision.generationCost ?? 0,
+          });
+        } catch (error) {
+          set({
+            autoplayTurn: { phase: "failed", payload, error: error as Error },
+            autoplay: false,
+          });
+        }
+      },
+
+      dismissAutoplayEndingComment: () => set({ autoplayEndingComment: null }),
+
+      cancelGeneration: () => streamStore.cancel(),
+
+      setUiLanguage: async (languageName) => {
+        await get().updateSettings({ uiLanguage: languageName });
+      },
+
+      translateUi: async (languageName) => {
+        const state = get();
+        const { settings, openrouterApiKey } = state;
+        if (!settings || !openrouterApiKey) throw new Error("Setup incomplete.");
+        if (state.uiTranslation.phase === "running") return;
+        const payload: UiTranslationPayload = { languageName };
+        set({
+          uiTranslation: { phase: "running", payload, startedAt: new Date().toISOString() },
+          uiTranslationProgress: null,
+        });
+        try {
+          const { translation, languageCode } = await translateUIText({
+            apiKey: openrouterApiKey,
+            textModel: settings.textModel,
+            targetLanguage: languageName,
+            englishTexts: englishUiTexts,
+            onProgress: (progress) => set({ uiTranslationProgress: progress }),
+          });
+          await get().updateSettings({
+            aiTranslations: { ...get().settings?.aiTranslations, [languageName]: translation },
+            aiLanguageMappings: {
+              ...get().settings?.aiLanguageMappings,
+              [languageName]: languageCode,
+            },
+            uiLanguage: languageName,
+          });
+          set({ uiTranslation: { phase: "idle" }, uiTranslationProgress: null });
+        } catch (error) {
+          set({
+            uiTranslation: { phase: "failed", payload, error: error as Error },
+            uiTranslationProgress: null,
+          });
+        }
+      },
+
+      deleteAiTranslation: async (languageName) => {
+        const settings = get().settings;
+        if (!settings) return;
+        const aiTranslations = { ...settings.aiTranslations };
+        const aiLanguageMappings = { ...settings.aiLanguageMappings };
+        delete aiTranslations[languageName];
+        delete aiLanguageMappings[languageName];
+        const uiLanguage = settings.uiLanguage === languageName ? "English" : settings.uiLanguage;
+        await get().updateSettings({ aiTranslations, aiLanguageMappings, uiLanguage });
+      },
 
       deleteSave: async (gameId) => {
         await gameRepository.deleteGame(gameId);

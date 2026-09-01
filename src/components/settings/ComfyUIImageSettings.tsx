@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useDebouncedExternalState } from "../../hooks/useDebouncedExternalState";
 import HelpTooltip from "../ui/HelpTooltip";
 
@@ -17,6 +18,7 @@ const ComfyUIImageSettingsComponent: React.FC<ComfyUIImageSettingsProps> = ({
   setWorkflowJson,
   loading,
 }) => {
+  const { t } = useTranslation();
   const [localEndpoint, setLocalEndpoint] = useDebouncedExternalState(endpoint, setEndpoint);
   const [localWorkflowJson, setLocalWorkflowJson] = useDebouncedExternalState(
     workflowJson,
@@ -37,26 +39,25 @@ const ComfyUIImageSettingsComponent: React.FC<ComfyUIImageSettingsProps> = ({
     <div className="animate-fade-in mt-4 space-y-4">
       <div>
         <label htmlFor="comfyui-endpoint" className="sr-only">
-          ComfyUI API Endpoint
+          {t("comfyuiEndpointLabel")}
         </label>
         <input
           type="text"
           id="comfyui-endpoint"
           value={localEndpoint}
           onChange={(e) => setLocalEndpoint(e.target.value)}
-          placeholder="ComfyUI API Endpoint"
+          placeholder={t("comfyuiEndpointLabel")}
           className="form-style"
           disabled={loading}
         />
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">
-          e.g., http://127.0.0.1:8188. Ensure the server is running with CORS enabled (e.g.,
-          --enable-cors-header).
-          <HelpTooltip content="Enter the full URL of your ComfyUI server, including 'http://' or 'https://'. The server must be started with CORS enabled (e.g., '--enable-cors-header')." />
+          {t("comfyuiEndpointHelp")}
+          <HelpTooltip content={t("helpComfyUIEndpoint")} />
         </div>
       </div>
       <div>
         <label htmlFor="comfyui-workflow" className="sr-only">
-          ComfyUI Workflow (JSON)
+          {t("comfyuiWorkflowLabel")}
         </label>
         <textarea
           id="comfyui-workflow"
@@ -65,15 +66,14 @@ const ComfyUIImageSettingsComponent: React.FC<ComfyUIImageSettingsProps> = ({
           rows={8}
           className={`form-style form-style-small-text ${isJsonValid ? "form-style-valid" : "form-style-invalid"}`}
           disabled={loading}
-          placeholder="ComfyUI Workflow (JSON)"
+          placeholder={t("comfyuiWorkflowLabel")}
         />
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">
-          Paste your API-format workflow here. ##prompt## and ##negative_prompt## will be replaced.
-          The number 1234567890 will be replaced with a random seed.
-          <HelpTooltip content="Paste the 'API Format' JSON of your ComfyUI workflow. Placeholders ##prompt##, ##negative_prompt##, and seed number 1234567890 will be automatically replaced during generation." />
+          {t("comfyuiWorkflowHelp")}
+          <HelpTooltip content={t("helpComfyUIWorkflow")} />
         </div>
         {!isJsonValid && (
-          <p className="mt-1 text-xs font-semibold text-red-500">Invalid JSON format.</p>
+          <p className="mt-1 text-xs font-semibold text-red-500">{t("invalidJsonFormat")}</p>
         )}
       </div>
     </div>

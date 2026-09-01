@@ -31,8 +31,8 @@
 | 3.1   | ✅ 完了                 | PR #5 レビュー指摘（deleteBranch 孤児化 / テスト重複 / attachmentTexts .default / GC Blob ロード）はマージ時に対応済み                                            |
 | 4     | ✅ 完了（PR #6 merged、#7 で履歴ワイヤ形式修正） | セーブ管理（一覧は既存・削除追加）、ZIP エクスポート（新形式 `ns-save`: manifest.json + nodes/*.json + assets/<nodeId>.<ext>）、データ全消去                     |
 | 5     | ✅ 完了（PR #8 merged）  | 暗号化バックアップ（AES-GCM、§3.3、`ns-backup`/`.nsbak`）+ Google Drive（`drive.file` スコープ + `NarrativeSproutBackup` フォルダ）+ ns-save インポート。完了条件「平文が外部に出ないことをテストで証明」は `plaintextLeak.test.ts` で達成 |
-| 5.5   | 🚧 実装完了・未コミット  | UI 移植：Legacy から全画面を移植（react-router 導入、Tailwind テーマ/ボタン体系、Load/History/Chronicle/Settings/Starting/DeletionComplete、ゲーム画面 2 ペイン + nav + overlay、画像再生成 action）。i18n は未導入で文言は英語ハードコード |
-| 6     | 未着手                  | i18n（5言語 + AI 動的翻訳）、オートプレイ、ストリーミング、PWA 完成度上げ                                                                 |
+| 5.5   | ✅ 完了（PR #9 merged）  | UI 移植：Legacy から全画面を移植（react-router 導入、Tailwind テーマ/ボタン体系、Load/History/Chronicle/Settings/Starting/DeletionComplete、ゲーム画面 2 ペイン + nav + overlay、画像再生成 action） |
+| 6     | 🚧 実装完了・未コミット（feature/phase6-i18n-autoplay-streaming） | i18n（5言語バンドル + AI 動的翻訳 + 言語セレクタ）、オートプレイ（reasoning チェーン永続化）、SSE ストリーミング（live 本文表示 + per-model opt-out）、PWA 修正（SW registration + manifest アイコン） |
 | 7     | 未着手                  | Tauri 版（`src-tauri` 専用ブランチ、stronghold 導入、dist は全ブランチ ignore 済み）                                                                      |
 
 ## Phase 2 の実機確認方法（自分で試すには）
@@ -41,7 +41,18 @@
 2. New Game → テーマを入れて Start → 導入シーンが生成される。
 3. 3 択を選ぶと次ターン生成。タイトルに戻って Continue から再開できる。
 
-既知の制約（Phase 5.5 UI 移植後）: 画像生成は 4プロバイダ対応（HF/A1111/ComfyUI/NIM、無効時はフォールバックSVG）。UI は Legacy 見た目を移植済み（タイトル/テーマ設定/生成待ち/ゲーム/ロード/ヒストリー/クロニクル/設定/削除完了）。言語は settings のデフォルト固定（Japanese）のまま（i18n は Phase 6）。Drive を使うには `VITE_GOOGLE_CLIENT_ID` の設定と Google Cloud 側の OAuth 設定が必要（README > Google Drive setup）。未移植の Legacy 機能: 本文手動編集・オートプレイ・ストリーミング・テーマ自動生成（Generate Idea）・OpenRouter PKCE 取得（Phase 6 以降で対応）。
+既知の制約（Phase 6 実装後）: 画像生成は 4プロバイダ対応（HF/A1111/ComfyUI/NIM、無効時はフォールバックSVG）。UI は Legacy 見た目を移植済み。UI 言語は Settings > Language で選択可能（5言語 + AI翻訳）。物語本文の言語は `settings.language`（プロンプトに注入）。未移植の Legacy 機能: 本文手動編集・テーマ自動生成（Generate Idea）・OpenRouter PKCE 取得。
+
+## Phase 6（i18n / オートプレイ / ストリーミング / PWA）の要点
+
+- **i18n 基盤** (`src/features/i18n/`): i18next + react-i18next（依存は既存）。5言語（en/ja/zh/zh-tw/ko）は `locales/*.json` をビルド時にバンドル（Legacy の http-backend は不使用 → PWA precache に入りオフラインでも動く）。`config.ts` で init、`index.ts` に `getLanguageCode` / `getInitialUiLanguage`（zh-tw を zh より先に判定する Legacy バグ修正済み）/ `applyLanguageDocumentEffects`（html lang + RTL dir + 言語別フォント CSS 読み込み）。全画面・主要コンポーネントの文言を `t()` 化。言語は native 表示名（"English" / "日本語"…）で settings に保存し、コードが必要な場所のみ `getLanguageCode` で変換。
+- **AI 動的翻訳** (`translateService.ts`): 英語 UI 文言（`englishUiTexts`）を 30キーずつ順次チャンクで翻訳（500ms ポリテネス遅延、進捗 0..1 通知）。言語タグ検出は built-in チェック → 30言語テーブル → LLM 呼び出し（正規検証、失敗時は言語名をそのままキー使用）。結果は settings の `aiTranslations`（言語名→バンドル）/ `aiLanguageMappings`（言語名→IETFタグ）に永続化。削除も可（表示中の AI 言語を削除したら English に戻る）。Settings に Language セクション新設（ビルトインは AI オーバーライドで非表示、AI 言語は optgroup に "(AI)" 付き表示）。
+- **オートプレイ** (`src/features/autoplay/`): Legacy computerPlayerService を翻訳。`buildAutoplayLog`（純粋関数）が表示ノードから親を辿りテーマ＋全シーン＋選択＋reasoning チェーンを 1 テキストにコンパイル → `decideAutoplayTurn` がプレイヤー AI に次の行動を問う（json_schema strict、非ストリーミング）。store は `autoplay` フラグ + `runAutoplayTurn` + `toggleAutoplay`。ガード設計は Legacy 準拠: (1) GameScreen の effect が `autoplay && idle` で駆動、(2) `choose` に渡す `autoplayReasoning`（= capability token）が chaining 中の再入を許可し、手動クリックは拒否、(3) autoplay OFF 切替中の in-flight 決定は破棄、(4) 終端検出（isStoryOver）で回顧コメントをダイアログ表示して停止、(5) 失敗時は autoplay 解除。reasoning は `nodeMetadata.autoplayReasoning` に永続化（optional、旧セーブもパース可）され、次回のログ再構築で木から再導出される。決定呼び出しのコストは当該ターンの総コストに加算。resume/deleteBranch/openGame/goToTitle で autoplay を解除（Legacy REWIND 相当）。
+- **ストリーミング**: `lib/openAiClient.ts` に `createStreamingChatCompletion` を追加（`stream: true` + `stream_options.include_usage`、手書き SSE パーサ（CRLF 正規化・`data:` 抽出・[DONE]・mid-stream error・reasoning 分離）、本文受信開始後のみ 60s idle タイムアウト、最後に通常形 response を組んで下流のパースを共通化）。`generateScene.ts` の `callChatCompletion` が `onDelta` 指定時にストリーミングし、`ApiError(400/404/415/422)`（= stream 拒否）で 1 回だけ bulk にフォールバック。`turnService` は `onSceneTextDelta` を全 3 フローに配線、AbortSignal は `streamStore.getSignal()` から供給（初めて生成キャンセルが可能になった）。表示は `src/store/streamStore.ts`（useSyncExternalStore 専用ストア、蓄積全文から `scanSceneText` で sceneText を抽出、100ms トレーリングバッチ）。GameScreen はストリーミング中 LoadingOverlay を抑制して本文ライブ表示（`MainText` に `streamingCursor` 追加）、選択肢は pulse スケルトン、Stop で `cancelGeneration`。per-model opt-out は `lib/modelOptions.ts`（`--stream=false` を textModel 文字列から解析、`isStreamingEnabledForSettings` = グローバル設定 AND per-model）。
+- **settings 拡張** (`types/settings.ts`): `uiLanguage`（default はブラウザ検出）、`enableStreaming`（default true）、`aiTranslations` / `aiLanguageMappings`（要素単位 safeParse + スキップ + 警告、AGENTS ルール4準拠、旧レコードは欠損 OK）。`App.tsx` の effect が settings 変化を検知して `addResourceBundle`（overlap+deep）→ `changeLanguage` → ドキュメント効果を適用。
+- **PWA**: `main.tsx` で `registerSW({ immediate: true })`（virtual:pwa-register、vite-env.d.ts に client types 追加）。manifest の icons 参照を実際に存在する `android-chrome-192/512.png` に修正（旧参照 `pwa-192.png` は実ファイルなしで壊れていた）。precache にロケールが含まれる（json は globPatterns 済み）。
+- **テスト**: `lib/modelOptions.test.ts`（パース + ストリーミング判定）、`store/streamStore.test.ts`（scanSceneText のエスケープ/後方キー採用）、`features/autoplay/autoplayService.test.ts`（ログ構築・reasoning チェーン・終端検出）。全 173 テスト + tsc + lint + prettier グリーン。
+- **意図的に未実装**（後続フェーズ）: テーマ自動生成（Generate Idea）、OpenRouter PKCE、本文手動編集、開発者オプション、react-hot-toast。
 
 ## Phase 5.5（UI 移植）の要点
 

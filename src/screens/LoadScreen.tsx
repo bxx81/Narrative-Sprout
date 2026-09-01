@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import { useGameStore } from "../store/gameStore";
 import type { GameRecord } from "../types";
 import { useLazyNodeImage } from "../hooks/useLazyNodeImage";
@@ -16,6 +17,7 @@ import { useConfirm } from "../hooks/useConfirm";
  */
 const GameLogCard: React.FC<{ game: GameRecord }> = ({ game }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const confirm = useConfirm();
   const openGame = useGameStore((s) => s.openGame);
   const deleteSave = useGameStore((s) => s.deleteSave);
@@ -43,10 +45,13 @@ const GameLogCard: React.FC<{ game: GameRecord }> = ({ game }) => {
 
   const handleDelete = async () => {
     const result = await confirm({
-      title: "Delete Save",
-      message: `Delete "${game.title}" and all of its scenes and images? This cannot be undone.`,
-      confirmLabel: "Delete",
-      cancelLabel: "Cancel",
+      title: t("deleteConfirmTitle"),
+      message: t("deleteSaveConfirmMessage", {
+        title: game.title,
+        defaultValue: `Delete "${game.title}" and all of its scenes and images? This cannot be undone.`,
+      }),
+      confirmLabel: t("deleteButton"),
+      cancelLabel: t("cancelButton"),
       isDestructive: true,
       icon: "delete_forever",
     });
@@ -67,7 +72,7 @@ const GameLogCard: React.FC<{ game: GameRecord }> = ({ game }) => {
 
   const timeContent = (
     <p className="support-text-color text-xs">
-      Last Played: <time dateTime={game.lastPlayedAt}>{formattedDate}</time>
+      {t("loadScreenTimestampLabel")} <time dateTime={game.lastPlayedAt}>{formattedDate}</time>
     </p>
   );
 
@@ -79,7 +84,7 @@ const GameLogCard: React.FC<{ game: GameRecord }> = ({ game }) => {
         size="small"
         className="w-full"
       >
-        History
+        {t("loadButton")}
       </Button>
     </div>
   );
@@ -94,7 +99,7 @@ const GameLogCard: React.FC<{ game: GameRecord }> = ({ game }) => {
         actions={cardActions}
         onImageClick={() => void handleLoadGame()}
         onMenuClick={() => void handleDelete()}
-        menuText="Delete"
+        menuText={t("deleteButton")}
         mainText={game.title}
         subText={scenePreviewText}
         timeText={timeContent}
@@ -108,6 +113,7 @@ const GameLogCard: React.FC<{ game: GameRecord }> = ({ game }) => {
  * via drag & drop.
  */
 const LoadScreen: React.FC = () => {
+  const { t } = useTranslation();
   const games = useGameStore((s) => s.games);
   const importSaveFromFile = useGameStore((s) => s.importSaveFromFile);
   const sortedGames = useMemo(
@@ -152,11 +158,11 @@ const LoadScreen: React.FC = () => {
       for (const file of Array.from(files)) {
         const result = await importSaveFromFile(file);
         if (!result.restoredGameCount && !result.restoredNodeCount) {
-          setImportError("No importable save data found in the file.");
+          setImportError(t("noImportableSaveData"));
         }
       }
     } catch (error) {
-      setImportError(error instanceof Error ? error.message : "Import failed.");
+      setImportError(error instanceof Error ? error.message : t("importFailed"));
     }
   };
 
@@ -171,13 +177,15 @@ const LoadScreen: React.FC = () => {
       {isDragging && (
         <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-lime-500/20 backdrop-blur-sm">
           <div className="rounded-lg border-4 border-dashed border-white bg-black/50 p-12 text-center text-white">
-            <p className="text-2xl font-bold">Drop files here</p>
+            <p className="text-2xl font-bold">{t("dropFilesHere")}</p>
           </div>
         </div>
       )}
       <div className="mx-auto mb-20 max-w-384">
         <header className="text-center">
-          <h1 className="font-serif-display text-3xl font-bold md:text-4xl">Load Saved Story</h1>
+          <h1 className="font-serif-display text-3xl font-bold md:text-4xl">
+            {t("loadScreenTitle")}
+          </h1>
         </header>
         <div className="mb-8 flex justify-center pb-4">
           <input
@@ -196,7 +204,7 @@ const LoadScreen: React.FC = () => {
               fileInputRef.current?.click();
             }}
           >
-            Load Save Data
+            {t("loadSavedataButton")}
           </Button>
         </div>
 
@@ -214,7 +222,7 @@ const LoadScreen: React.FC = () => {
           </ul>
         ) : (
           <div className="bg-body-bg rounded-lg px-6 py-20 text-center shadow-md">
-            <p className="support-text-color text-xl">No saved games found.</p>
+            <p className="support-text-color text-xl">{t("loadScreenNoSaves")}</p>
           </div>
         )}
         <BackButton />

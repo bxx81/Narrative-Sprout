@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import Button from "./Button";
 import { Icon } from "./Icon";
 
@@ -11,6 +12,7 @@ interface BackButtonProps {
 
 const BackButton: React.FC<BackButtonProps> = ({ onClick, ariaLabel, disabled = false }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleBackClick = () => {
     if (disabled) return;
@@ -21,7 +23,7 @@ const BackButton: React.FC<BackButtonProps> = ({ onClick, ariaLabel, disabled = 
     }
   };
 
-  const label = ariaLabel || "Back";
+  const label = ariaLabel || t("backButton");
 
   return (
     <Button

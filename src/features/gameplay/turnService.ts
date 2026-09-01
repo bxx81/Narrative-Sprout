@@ -41,6 +41,8 @@ export interface StartGameParams {
   webpCompression?: WebpCompression;
   memoryStrategy?: MemoryStrategy;
   enableStoryLogCompaction?: boolean;
+  /** Live SSE deltas of the narration (streaming display). */
+  onSceneTextDelta?: (accumulatedText: string) => void;
 }
 
 async function maybeCompactMemory(params: {
@@ -113,6 +115,7 @@ export async function startGame(
       system,
       messages,
       signal: options?.signal,
+      onDelta: params.onSceneTextDelta,
     });
     scene = generated.scene;
     memoryDelta = generated.memoryDelta;
@@ -125,6 +128,7 @@ export async function startGame(
       system,
       messages,
       signal: options?.signal,
+      onDelta: params.onSceneTextDelta,
     });
     scene = sceneOnly.scene;
     notesDraft = sceneOnly.notesDraft;
@@ -194,6 +198,7 @@ export async function startGame(
       discardHistoryContext: false,
       refinePrompt: null,
       refinedFromNodeId: null,
+      autoplayReasoning: null,
     },
     createdAt: now,
   };
@@ -242,6 +247,12 @@ export interface ChoosePathParams {
   webpCompression?: WebpCompression;
   memoryStrategy?: MemoryStrategy;
   enableStoryLogCompaction?: boolean;
+  /** Live text streaming from the narrative model (per-model opt-out possible). */
+  onSceneTextDelta?: (accumulatedText: string) => void;
+  /** Autoplay player-AI reasoning memo persisted with the produced node. */
+  autoplayReasoning?: string;
+  /** Autoplay decision call cost carried into this turn's total cost. */
+  autoplayCost?: number;
 }
 
 /** Generates the next scene after a player choice and persists it. */
@@ -276,6 +287,7 @@ export async function choosePath(
       system,
       messages,
       signal: options?.signal,
+      onDelta: params.onSceneTextDelta,
     });
     scene = generated.scene;
     memoryDelta = generated.memoryDelta;
@@ -288,6 +300,7 @@ export async function choosePath(
       system,
       messages,
       signal: options?.signal,
+      onDelta: params.onSceneTextDelta,
     });
     scene = sceneOnly.scene;
     generationCost = sceneOnly.generationCost;
@@ -346,11 +359,14 @@ export async function choosePath(
     memory: memory!,
     memoryDelta: memoryDelta!,
     metadata: {
-      generationCost,
+      // The autoplay decision call's cost rides on this turn's total (legacy
+      // textCost += autoPlayCost).
+      generationCost: (generationCost ?? 0) + (params.autoplayCost ?? 0) || null,
       modelName,
       discardHistoryContext: false,
       refinePrompt: null,
       refinedFromNodeId: null,
+      autoplayReasoning: params.autoplayReasoning ?? null,
     },
     createdAt: new Date().toISOString(),
   };
@@ -396,6 +412,8 @@ export interface RefineSceneParams {
   webpCompression?: WebpCompression;
   memoryStrategy?: MemoryStrategy;
   enableStoryLogCompaction?: boolean;
+  /** Live SSE deltas of the narration (streaming display). */
+  onSceneTextDelta?: (accumulatedText: string) => void;
 }
 
 /**
@@ -469,6 +487,7 @@ export async function refineScene(
       system,
       messages,
       signal: options?.signal,
+      onDelta: params.onSceneTextDelta,
     });
     scene = generated.scene;
     memoryDelta = generated.memoryDelta;
@@ -481,6 +500,7 @@ export async function refineScene(
       system,
       messages,
       signal: options?.signal,
+      onDelta: params.onSceneTextDelta,
     });
     scene = sceneOnly.scene;
     generationCost = sceneOnly.generationCost;
@@ -545,6 +565,7 @@ export async function refineScene(
       discardHistoryContext: false,
       refinePrompt: params.refinePrompt,
       refinedFromNodeId: params.targetNode.id as StoryNodeId,
+      autoplayReasoning: null,
     },
     createdAt: new Date().toISOString(),
   };

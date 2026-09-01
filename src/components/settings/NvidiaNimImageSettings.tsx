@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useDebouncedExternalState } from "../../hooks/useDebouncedExternalState";
 import HelpTooltip from "../ui/HelpTooltip";
 
@@ -21,6 +22,7 @@ const NvidiaNimImageSettingsComponent: React.FC<NvidiaNimImageSettingsProps> = (
   setConfigJson,
   loading,
 }) => {
+  const { t } = useTranslation();
   const [localEndpoint, setLocalEndpoint] = useDebouncedExternalState(endpoint, setEndpoint);
   const [localToken, setLocalToken] = useDebouncedExternalState(token ?? "", setToken);
   const [localConfigJson, setLocalConfigJson] = useDebouncedExternalState(
@@ -42,26 +44,25 @@ const NvidiaNimImageSettingsComponent: React.FC<NvidiaNimImageSettingsProps> = (
     <div className="animate-fade-in mt-4 space-y-4">
       <div>
         <label htmlFor="nim-endpoint" className="sr-only">
-          NVIDIA NIM Endpoint
+          {t("nimEndpointLabel")}
         </label>
         <input
           type="text"
           id="nim-endpoint"
           value={localEndpoint}
           onChange={(e) => setLocalEndpoint(e.target.value)}
-          placeholder="NVIDIA NIM Endpoint"
+          placeholder={t("nimEndpointLabel")}
           className="form-style"
           disabled={loading}
         />
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">
-          The full URL of the NIM inference endpoint, e.g.
-          https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux.2-klein-4b
-          <HelpTooltip content="Enter the full inference URL. The NVIDIA NIM hosted API does not support CORS in the browser, so you will need a CORS proxy or the Tauri desktop app to use it." />
+          {t("nimEndpointHelp")}
+          <HelpTooltip content={t("helpNimEndpoint")} />
         </div>
       </div>
       <div>
         <label htmlFor="nim-token" className="sr-only">
-          NVIDIA NIM Token
+          {t("nimTokenLabel")}
         </label>
         <input
           type="password"
@@ -69,19 +70,18 @@ const NvidiaNimImageSettingsComponent: React.FC<NvidiaNimImageSettingsProps> = (
           id="nim-token"
           value={localToken}
           onChange={(e) => setLocalToken(e.target.value)}
-          placeholder="NVIDIA NIM Token"
+          placeholder={t("nimTokenLabel")}
           className="form-style"
           disabled={loading}
         />
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">
-          Optional. Your NGC API key if the NIM endpoint requires authentication. Stored locally in
-          the credentials store only.
-          <HelpTooltip content="If hosted on NVIDIA's API (build.nvidia.com), use your NGC API key. For self-hosted NIM, a token may not be needed." />
+          {t("nimTokenHelp")}
+          <HelpTooltip content={t("helpNimToken")} />
         </div>
       </div>
       <div>
         <label htmlFor="nim-config" className="sr-only">
-          NVIDIA NIM Parameters (JSON)
+          {t("nimConfigLabel")}
         </label>
         <textarea
           id="nim-config"
@@ -90,15 +90,14 @@ const NvidiaNimImageSettingsComponent: React.FC<NvidiaNimImageSettingsProps> = (
           rows={8}
           className={`form-style form-style-small-text ${isJsonValid ? "form-style-valid" : "form-style-invalid"}`}
           disabled={loading}
-          placeholder="NVIDIA NIM Parameters (JSON)"
+          placeholder={t("nimConfigLabel")}
         />
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">
-          Specify the JSON parameters for the NIM inference API. Common fields: seed, steps, width,
-          height. Model-specific fields vary; unsupported fields cause errors.
-          <HelpTooltip content="Specify default parameters for the NIM inference API as a JSON object. These are merged with the AI-generated prompt. Check the model's API reference for supported parameters." />
+          {t("nimConfigHelp")}
+          <HelpTooltip content={t("helpNimConfig")} />
         </div>
         {!isJsonValid && (
-          <p className="mt-1 text-xs font-semibold text-red-500">Invalid JSON format.</p>
+          <p className="mt-1 text-xs font-semibold text-red-500">{t("invalidJsonFormat")}</p>
         )}
       </div>
     </div>

@@ -1,4 +1,5 @@
-import { OpenAiCompatibleClient } from "../../lib/openAiClient";
+import { OpenAiCompatibleClient, ApiError } from "../../lib/openAiClient";
+import type { ChatCompletionRequest } from "../../lib/openAiClient";
 import type { MemoryDelta, SceneContent } from "../../types";
 import {
   buildCompactionResponseFormat,
@@ -10,6 +11,12 @@ import {
   narratorSceneResponseSchema,
   storyLogCompactionResponseSchema,
 } from "./sceneSchema";
+
+/**
+ * Statuses that mean the provider rejected streaming itself (legacy
+ * STREAM_REJECT_STATUSES); the call then falls back to bulk delivery once.
+ */
+const STREAM_REJECT_STATUSES = new Set([400, 404, 415, 422]);
 
 /** CJK characters: kana, CJK ideographs and punctuation, fullwidth forms. */
 const CJK_CHAR_PATTERN =
@@ -76,16 +83,33 @@ async function callChatCompletion(params: {
   messages: { role: "system" | "user" | "assistant"; content: string }[];
   responseFormat: Record<string, unknown>;
   signal?: AbortSignal;
+  /** When present, the narration is delivered via SSE with live deltas. */
+  onDelta?: (accumulatedText: string) => void;
 }) {
   const client = new OpenAiCompatibleClient(params.apiKey);
-  const response = await client.createChatCompletion(
-    {
-      model: params.model,
-      messages: [{ role: "system", content: params.system }, ...params.messages],
-      response_format: params.responseFormat as never,
-    },
-    { signal: params.signal },
-  );
+  const requestBody: ChatCompletionRequest = {
+    model: params.model,
+    messages: [{ role: "system", content: params.system }, ...params.messages],
+    response_format: params.responseFormat as never,
+  };
+  let response;
+  if (params.onDelta) {
+    try {
+      response = await client.createStreamingChatCompletion(requestBody, {
+        signal: params.signal,
+        onDelta: params.onDelta,
+      });
+    } catch (error) {
+      if (error instanceof ApiError && STREAM_REJECT_STATUSES.has(error.status)) {
+        // This endpoint does not accept streaming: retry once in bulk.
+        response = await client.createChatCompletion(requestBody, { signal: params.signal });
+      } else {
+        throw error;
+      }
+    }
+  } else {
+    response = await client.createChatCompletion(requestBody, { signal: params.signal });
+  }
   const raw = response.choices?.[0]?.message?.content;
   if (typeof raw !== "string" || raw.length === 0) {
     const reason = response.error?.message ?? "empty content";
@@ -110,6 +134,7 @@ export async function generateNarration(params: {
   system: string;
   messages: { role: "system" | "user" | "assistant"; content: string }[];
   signal?: AbortSignal;
+  onDelta?: (accumulatedText: string) => void;
 }): Promise<GeneratedTurn> {
   const { parsedJson, response } = await callChatCompletion({
     apiKey: params.apiKey,
@@ -118,6 +143,7 @@ export async function generateNarration(params: {
     messages: params.messages,
     responseFormat: buildNarratorResponseFormat(),
     signal: params.signal,
+    onDelta: params.onDelta,
   });
 
   const parsed = narratorSceneResponseSchema.safeParse(parsedJson);
@@ -156,6 +182,7 @@ export async function generateSceneOnly(params: {
   system: string;
   messages: { role: "system" | "user" | "assistant"; content: string }[];
   signal?: AbortSignal;
+  onDelta?: (accumulatedText: string) => void;
 }): Promise<GeneratedSceneOnly> {
   const { parsedJson, response } = await callChatCompletion({
     apiKey: params.apiKey,
@@ -164,6 +191,7 @@ export async function generateSceneOnly(params: {
     messages: params.messages,
     responseFormat: buildSceneOnlyResponseFormat(),
     signal: params.signal,
+    onDelta: params.onDelta,
   });
   const parsed = narratorSceneOnlyResponseSchema.safeParse(parsedJson);
   if (!parsed.success) {

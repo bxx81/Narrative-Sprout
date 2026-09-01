@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import Button from "../components/ui/Button";
 import { ROUTES } from "../app/routes";
 
@@ -9,6 +10,7 @@ import { ROUTES } from "../app/routes";
  */
 const CompletedDataDeletionScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleReturn = () => {
     sessionStorage.removeItem("nsDataDeletionComplete");
@@ -17,12 +19,12 @@ const CompletedDataDeletionScreen: React.FC = () => {
 
   return (
     <main className="flex h-screen flex-col items-center justify-center gap-6 p-4 text-center">
-      <h2 className="font-serif-display text-2xl font-bold md:text-3xl">Data deletion complete</h2>
-      <p className="support-text-color max-w-md text-sm">
-        All save data, settings, and API keys have been removed from this browser.
-      </p>
+      <h2 className="font-serif-display text-2xl font-bold md:text-3xl">
+        {t("dataDeletionCompleteTitle")}
+      </h2>
+      <p className="support-text-color max-w-md text-sm">{t("dataDeletionCompleteDescription")}</p>
       <Button onClick={handleReturn} intent="tertiary" size="small">
-        Return to Start Screen
+        {t("returnToStartButton")}
       </Button>
     </main>
   );
