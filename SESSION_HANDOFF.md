@@ -32,7 +32,7 @@
 | 4     | ✅ 完了（PR #6 merged、#7 で履歴ワイヤ形式修正） | セーブ管理（一覧は既存・削除追加）、ZIP エクスポート（新形式 `ns-save`: manifest.json + nodes/*.json + assets/<nodeId>.<ext>）、データ全消去                     |
 | 5     | ✅ 完了（PR #8 merged）  | 暗号化バックアップ（AES-GCM、§3.3、`ns-backup`/`.nsbak`）+ Google Drive（`drive.file` スコープ + `NarrativeSproutBackup` フォルダ）+ ns-save インポート。完了条件「平文が外部に出ないことをテストで証明」は `plaintextLeak.test.ts` で達成 |
 | 5.5   | ✅ 完了（PR #9 merged）  | UI 移植：Legacy から全画面を移植（react-router 導入、Tailwind テーマ/ボタン体系、Load/History/Chronicle/Settings/Starting/DeletionComplete、ゲーム画面 2 ペイン + nav + overlay、画像再生成 action） |
-| 6     | 🚧 実装完了・未コミット（feature/phase6-i18n-autoplay-streaming） | i18n（5言語バンドル + AI 動的翻訳 + 言語セレクタ）、オートプレイ（reasoning チェーン永続化）、SSE ストリーミング（live 本文表示 + per-model opt-out）、PWA 修正（SW registration + manifest アイコン） |
+| 6     | ✅ 完了（PR #10 merged） | i18n（5言語バンドル + AI 動的翻訳 + 言語セレクタ）、オートプレイ（reasoning チェーン永続化）、SSE ストリーミング（live 本文表示 + per-model opt-out）、PWA 修正（SW registration + manifest アイコン）。実機確認済み（言語切替・翻訳・ストリーミング・オートプレイ動作）。UI 差分（Legacy との見た目の違い）は後に回す判断 |
 | 7     | 未着手                  | Tauri 版（`src-tauri` 専用ブランチ、stronghold 導入、dist は全ブランチ ignore 済み）                                                                      |
 
 ## Phase 2 の実機確認方法（自分で試すには）
@@ -63,7 +63,7 @@
 - **store 変更** (`gameStore.ts`): `screen`/`beginThemeSetup` 削除。追加: `updateSettings(partial)`（グローバル settings への唯一の書き込み経路）、`saveCredential(key, value)`、`regenerateImage(nodeId)`（同キー上書き、AsyncOperation で管理、a1111/comfyui は進捗 % 表示）、`chronicleTargetNodeId` + `setChronicleTargetNode`、`deleteBranch` が `{ gameDeleted }` を返すよう変更。画像生成トークン（HF/NIM）は bootstrap でメモリにロード。
 - **シーンナビの修正（実機確認で発見）**: (1) 語数表示 — `countWords` が改行あり日本語で「段落数」を返すバグ（`generateScene.ts`、CJK 比率判定に修正。表示は GameScreen で sceneText から再計算し既存セーブも正しく見える）。(2) Forward ボタン常時無効 — `useGameNavigation` がパスを表示ノードから構築しており `indexOf(viewing)` が常に末尾になるバグ（Legacy 同様、末端=プレイヘッドから構築するよう修正）。併せて Legacy の `currentNodeId`（プレイヘッド、Forward の目的地）を store に `currentNodeId` として復活（セッションのみ・非永続化）。History/Chronicle の Resume Here は `resumeStoryAtNode(nodeId, branchEndNodeId)` で表示位置とプレイヘッドをセットする（Legacy `onRewind(gameLog, endId, node.id)` 相当）。回帰テスト: `src/store/gameStore.test.ts`（store フロー）+ `src/hooks/useGameNavigation.test.tsx`（happy-dom 実レンダリング、Resume Here/プレイヘッド不一致/Chronicle 中間の3シナリオ）。
 - **配置の決定事項**: Backup & Restore セクション（Phase 5 実装）はタイトル画面から **設定 > Data Management** へ移動（Legacy 準拠。戻す場合は TitleScreen に `<BackupSection />` を戻すだけ）。セーブのエクスポートは LoadScreen のカードから HistoryScreen の「Download Save Data」ボタンへ。wipe は Settings > Delete All Data（confirm 後、`sessionStorage` フラグ + リロードで DeletionComplete 画面を表示）。
-- **意図的に未実装**（Phase 6 以降）: react-hot-toast 未導入（インライン表示で代用）、AI 翻訳/言語セレクタ、ストリーミング、オートプレイ、本文編集（store に該当 action なし）、開発者オプション。
+- **意図的に未実装**（Phase 6 以降）: react-hot-toast 未導入（インライン表示で代用）、AI 翻訳/言語セレクタ、ストリーミング、オートプレイ、本文編集（store に該当 action なし）、開発者オプション。※AI 翻訳/言語セレクタ・ストリーミング・オートプレイは Phase 6（PR #10）で対応済み。
 
 ## 実装の設計上の要点（再訪時の注意）
 
@@ -99,10 +99,11 @@
   - `src/store/gameStore.ts` / `asyncOperation.ts`
   - `src/screens/{TitleScreen,ThemeSetupScreen,GameScreen}.tsx` / `src/lib/imageConversion.ts`
   - UI 移植 (Phase 5.5): `src/app/{App.tsx,routes.ts,ConfirmationProvider.tsx}` / `src/screens/{LoadScreen,HistoryScreen,ChronicleScreen,SettingsScreen,StartingScreen,CompletedDataDeletionScreen}.tsx` / `src/components/ui/*` / `src/components/{StoryCard,AttachmentPreview,BackupSection}.tsx` / `src/components/game/*` / `src/components/settings/*` / `src/hooks/{useDebouncedExternalState,useBreakpoint,useLazyNodeImage,useNode,useFullscreen,useGameNavigation,useConfirm}.ts` / `public/{s,images,icons}`
+  - Phase 6: `src/features/i18n/{index,config,englishUiTexts,translateService,api}.ts` + `locales/{en,ja,zh,zh-tw,ko}.json` / `src/features/autoplay/{autoplayService,api}.ts` + テスト / `src/store/streamStore.ts` + テスト / `src/lib/{modelOptions,openAiClient}.ts` / `src/main.tsx`（registerSW）
 
 ## セッション再開手順（このファイルを閉じる前に）
 
 1. `git checkout main && git pull`
 2. `REDESIGN.md` と `AGENTS.md` を再読
-3. 次のフェーズの作業ブランチを切る（例: `feature/phase6-i18n-autoplay-streaming`）
+3. 次のフェーズの作業ブランチを切る（例: `feature/phase7-tauri`）
 4. 着手
