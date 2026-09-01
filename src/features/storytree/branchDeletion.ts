@@ -49,7 +49,9 @@ export function collectNodesToDelete(allNodes: StoryNodeRecord[], endNodeId: str
   while (currentParentId) {
     const parent = byId.get(currentParentId);
     if (!parent) break;
-    const siblings = (byParent.get(currentParentId) ?? []).filter((n) => !nodesToDelete.has(n.id as string));
+    const siblings = (byParent.get(currentParentId) ?? []).filter(
+      (n) => !nodesToDelete.has(n.id as string),
+    );
     if (siblings.length > 0) break;
     // Parent has no remaining children -> delete it as well
     nodesToDelete.add(currentParentId);

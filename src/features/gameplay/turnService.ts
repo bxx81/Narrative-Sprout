@@ -17,7 +17,11 @@ import {
 import { baseMemoryForNewNode } from "../storytree/api";
 import { resolveMemoryStrategy } from "../narrative/api";
 import { compactMemory, shouldCompactStoryLog, splitStoryLog } from "../memory/api";
-import { assetRecordFromDataUrl, generateSceneImage, webpQualityForCompression } from "../image/api";
+import {
+  assetRecordFromDataUrl,
+  generateSceneImage,
+  webpQualityForCompression,
+} from "../image/api";
 import type { ImageGenConfig } from "../image/api";
 import type { MemoryStrategy, WebpCompression } from "../../types/settings";
 
@@ -48,7 +52,8 @@ async function maybeCompactMemory(params: {
   signal?: AbortSignal;
   currentCost: number | null;
 }): Promise<{ memory: MemoryState; cost: number | null }> {
-  if (!shouldCompactStoryLog(params.memory.storyLog)) return { memory: params.memory, cost: params.currentCost };
+  if (!shouldCompactStoryLog(params.memory.storyLog))
+    return { memory: params.memory, cost: params.currentCost };
   const { older } = splitStoryLog(params.memory.storyLog);
   if (older.length === 0) return { memory: params.memory, cost: params.currentCost };
   try {
@@ -403,7 +408,9 @@ export async function refineScene(
   const attachmentTexts = params.attachmentTexts ?? params.game.attachmentTexts ?? [];
   const isRoot = params.targetNode.parentNodeId === null;
 
-  const baseMemory = isRoot ? { notes: {}, storyLog: [] } : baseMemoryForNewNode(params.parentNode!);
+  const baseMemory = isRoot
+    ? { notes: {}, storyLog: [] }
+    : baseMemoryForNewNode(params.parentNode!);
   const strategy = resolveMemoryStrategy(params.memoryStrategy, params.sceneTextLength);
 
   const choiceText = params.targetNode.choiceText ?? "Begin the narrative.";

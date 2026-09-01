@@ -62,7 +62,10 @@ describe("GameRecord schema", () => {
   });
 
   test("filters invalid attachmentTexts elements element-wise (REDESIGN §5.7)", () => {
-    const withBad = { ...minimalGameRecord, attachmentTexts: ["valid", 123 as unknown as string, null as unknown as string, "also valid"] };
+    const withBad = {
+      ...minimalGameRecord,
+      attachmentTexts: ["valid", 123 as unknown as string, null as unknown as string, "also valid"],
+    };
     const result = gameRecordSchema.safeParse(withBad);
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.attachmentTexts).toEqual(["valid", "also valid"]);
