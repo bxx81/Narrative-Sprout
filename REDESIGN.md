@@ -269,6 +269,7 @@ interface GameRecord {
   lastPlayedAt: string;
   latestNodeId: string | null; // サマリ表示用の参照のみ保持（重複データなし）
   // 生成設定は一切保持しない（§5.4。全てグローバル settings を常時参照）
+  attachmentTexts?: string[]; // 添付テキスト（YAML解決後、{a|b}適用済み）。per-gameの世界設定として保持（§4.4）。要素単位で検証し不正要素はスキップ。
 }
 
 interface StoryNodeRecord {
