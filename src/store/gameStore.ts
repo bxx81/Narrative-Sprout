@@ -4,9 +4,11 @@ import { credentialsRepository } from "../db/credentialsRepository";
 import { gameRepository } from "../db/gameRepository";
 import { settingsRepository } from "../db/settingsRepository";
 import { assetRepository } from "../db/assetRepository";
+import { wipeRepository } from "../db/wipeRepository";
 import { db } from "../db/database";
 import { choosePath, refineScene, startGame } from "../features/gameplay/turnService";
 import { collectAncestors } from "../features/storytree/api";
+import { downloadBlob, exportGameAsZip } from "../features/export/api";
 import type { GameRecord, SettingsRecord, StoryNodeRecord } from "../types";
 import type { AssetRecord } from "../types/asset";
 import type { AsyncOperation } from "./asyncOperation";
@@ -42,6 +44,9 @@ interface GameState {
   choose: (choiceText: string) => Promise<void>;
   refine: (nodeId: string, refinePrompt: string) => Promise<void>;
   deleteBranch: (nodeId: string) => Promise<void>;
+  deleteSave: (gameId: string) => Promise<void>;
+  exportSave: (gameId: string) => Promise<void>;
+  wipeAllData: () => Promise<void>;
   setViewingNode: (nodeId: string) => void;
 }
 
@@ -301,6 +306,25 @@ export const useGameStore = create<GameState>()(
       },
 
       setViewingNode: (nodeId) => set({ viewingNodeId: nodeId }),
+
+      deleteSave: async (gameId) => {
+        await gameRepository.deleteGame(gameId);
+        set({ games: await gameRepository.listGames() });
+      },
+
+      exportSave: async (gameId) => {
+        const { fileName, blob } = await exportGameAsZip(gameId);
+        downloadBlob(blob, fileName);
+      },
+
+      wipeAllData: async () => {
+        await wipeRepository.wipeAllUserData();
+        localStorage.clear();
+        sessionStorage.clear();
+        // Full reload guarantees no stale in-memory state over an empty DB;
+        // bootstrap() rebuilds defaults on the next boot.
+        window.location.reload();
+      },
     })),
     { name: "game" },
   ),
