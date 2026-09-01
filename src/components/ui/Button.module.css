@@ -1,0 +1,120 @@
+@reference "../../index.css";
+
+/*
+ * Button Base
+ */
+.button-style {
+  @apply cursor-pointer items-center justify-center rounded-lg border-0 outline-offset-1 transition-all duration-300;
+  --value-outline-style: solid;
+
+  /* Button Size */
+  &.medium-circle {
+    @apply z-50 rounded-full p-3;
+    --value-offset: -3px;
+  }
+  &.help {
+    @apply flex size-5 cursor-help rounded-full;
+    --value-offset: -2px;
+  }
+  &.small-circle {
+    @apply flex size-5 rounded-full;
+    --value-offset: -2px;
+  }
+  &.small {
+    @apply px-4 py-2 text-sm font-semibold shadow-sm;
+    --value-offset: -3px;
+    outline-offset: -1px;
+  }
+
+  &.medium {
+    @apply px-6 py-3 text-base font-bold shadow-md;
+    outline-offset: -2px;
+    --value-offset: -4px;
+  }
+
+  &.large {
+    @apply px-8 py-4 text-lg font-bold shadow-lg;
+    outline-offset: -2px;
+    --value-offset: -5px;
+  }
+  /* Button Intent */
+  &.circle {
+    @apply hover:text-primary-light focus:text-primary text-body-text rounded-full p-2 drop-shadow-[0_0_0_var(--color-primary-light)];
+    --value-outline-style: none;
+  }
+
+  &.circle:hover:not(:disabled) {
+    @apply drop-shadow-[0_0_10px_var(--color-primary-light)];
+  }
+
+  &.overlay-circle {
+    @apply rounded-full p-2;
+    --color-this-text: var(--color-navigator-text);
+    --color-this-bg: oklch(from var(--color-navigator) l c h / 30%);
+    --value-offset: -2px;
+  }
+
+  &.primary {
+    --color-this-text: var(--color-primary-text);
+    --color-this-bg: var(--color-primary);
+  }
+  &.secondary {
+    --color-this-bg: var(--color-secondary);
+    --color-this-text: var(--color-secondary-text);
+  }
+  &.tertiary {
+    --color-this-bg: var(--color-tertiary);
+    --color-this-text: var(--color-tertiary-text);
+  }
+  &.alt {
+    --color-this-bg: var(--color-alt);
+    --color-this-text: var(--color-alt-text);
+  }
+
+  &.danger {
+    --color-this-bg: var(--color-danger);
+    --color-this-text: var(--color-danger-text);
+  }
+
+  &.navigator {
+    --color-this-bg: var(--color-navigator);
+    --color-this-text: var(--color-navigator-text);
+  }
+
+  &.retryable {
+    --color-this-bg: var(--color-warning);
+    --color-this-text: var(--color-warning-text);
+  }
+
+  &.non-retryable {
+    --color-this-bg: var(--color-danger);
+    --color-this-text: var(--color-danger-text);
+  }
+
+  /* ボタン挙動: 変数から適用 */
+
+  background-color: var(--color-this-bg);
+  color: var(--color-this-text);
+
+  &:hover {
+    background-color: oklch(from var(--color-this-bg) calc(l + var(--value-hover)) c h);
+  }
+  &:focus {
+    outline-style: var(--value-outline-style);
+    outline-color: var(--color-this-text);
+    outline-offset: var(--value-offset);
+    outline-width: thin;
+  }
+  &:active {
+    background-color: oklch(from var(--color-this-bg) calc(l - var(--value-hover) / 2) c h);
+  }
+
+  /* Button Disabled */
+  &.disabled {
+    @apply disabled:bg-disable disabled:text-disable-text disabled:transform-none disabled:cursor-default;
+  }
+
+  &.circle-disabled {
+    @apply disabled:cursor-default disabled:opacity-20;
+  }
+}

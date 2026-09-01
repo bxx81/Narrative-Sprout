@@ -30,7 +30,8 @@
 | 3     | ✅ 完了（PR #5 merged） | 画像生成（HF Spaces / A1111 / ComfyUI / NIM、WebP 変換・保存、assets ストア）＋ メモリ強化（split / compaction）＋ 添付（YAML front matter、§4.4）＋ リファイン |
 | 3.1   | ✅ 完了                 | PR #5 レビュー指摘（deleteBranch 孤児化 / テスト重複 / attachmentTexts .default / GC Blob ロード）はマージ時に対応済み                                            |
 | 4     | ✅ 完了（PR #6 merged、#7 で履歴ワイヤ形式修正） | セーブ管理（一覧は既存・削除追加）、ZIP エクスポート（新形式 `ns-save`: manifest.json + nodes/*.json + assets/<nodeId>.<ext>）、データ全消去                     |
-| 5     | 🚧 実装完了・未マージ（ブランチ `feature/phase5-encrypted-backup-drive`） | 暗号化バックアップ（AES-GCM、§3.3、`ns-backup`/`.nsbak`）+ Google Drive（`drive.file` スコープ + `NarrativeSproutBackup` フォルダ）+ ns-save インポート。完了条件「平文が外部に出ないことをテストで証明」は `plaintextLeak.test.ts` で達成 |
+| 5     | ✅ 完了（PR #8 merged）  | 暗号化バックアップ（AES-GCM、§3.3、`ns-backup`/`.nsbak`）+ Google Drive（`drive.file` スコープ + `NarrativeSproutBackup` フォルダ）+ ns-save インポート。完了条件「平文が外部に出ないことをテストで証明」は `plaintextLeak.test.ts` で達成 |
+| 5.5   | 🚧 実装完了・未コミット  | UI 移植：Legacy から全画面を移植（react-router 導入、Tailwind テーマ/ボタン体系、Load/History/Chronicle/Settings/Starting/DeletionComplete、ゲーム画面 2 ペイン + nav + overlay、画像再生成 action）。i18n は未導入で文言は英語ハードコード |
 | 6     | 未着手                  | i18n（5言語 + AI 動的翻訳）、オートプレイ、ストリーミング、PWA 完成度上げ                                                                 |
 | 7     | 未着手                  | Tauri 版（`src-tauri` 専用ブランチ、stronghold 導入、dist は全ブランチ ignore 済み）                                                                      |
 
@@ -40,7 +41,18 @@
 2. New Game → テーマを入れて Start → 導入シーンが生成される。
 3. 3 択を選ぶと次ターン生成。タイトルに戻って Continue から再開できる。
 
-既知の制約（Phase 5で解消済み/残存）: 画像生成は 4プロバイダ対応（HF/A1111/ComfyUI/NIM、無効時はフォールバックSVG）、添付は YAML front matter + {a|b} + 条件分岐対応、巻き戻しは breadcrumb + 子分岐一覧 + Delete branch、リファインは sibling分岐で動作。セーブ一覧に Export（ns-save ZIP）/ Delete、タイトル画面に Backup & Restore セクション（暗号化 .nsbak のダウンロード/復元、ns-save ZIP インポート、Google Drive 接続/アップロード/一覧/復元/削除）を追加。言語は settings のデフォルト固定（Japanese）のまま。Drive を使うには `VITE_GOOGLE_CLIENT_ID` の設定と Google Cloud 側の OAuth 設定が必要（README > Google Drive setup）。
+既知の制約（Phase 5.5 UI 移植後）: 画像生成は 4プロバイダ対応（HF/A1111/ComfyUI/NIM、無効時はフォールバックSVG）。UI は Legacy 見た目を移植済み（タイトル/テーマ設定/生成待ち/ゲーム/ロード/ヒストリー/クロニクル/設定/削除完了）。言語は settings のデフォルト固定（Japanese）のまま（i18n は Phase 6）。Drive を使うには `VITE_GOOGLE_CLIENT_ID` の設定と Google Cloud 側の OAuth 設定が必要（README > Google Drive setup）。未移植の Legacy 機能: 本文手動編集・オートプレイ・ストリーミング・テーマ自動生成（Generate Idea）・OpenRouter PKCE 取得（Phase 6 以降で対応）。
+
+## Phase 5.5（UI 移植）の要点
+
+- **ルーティング**: `react-router`（BrowserRouter + Routes）を導入。`src/app/routes.ts` に ROUTES 定数。Zustand の `screen` state は廃止（遷移はコンポーネントが `useNavigate` で行い、store はデータのみ）。`/play` `/history` `/chronicle` は `RequireActiveGame` ガードで activeGame が無ければ `/` へリダイレクト。
+- **スタイル基盤**: Legacy の `index.css`（`@theme` トークン + `form-style`/`choice-style`/`h2-style` 等の共通クラス、`.dark` 変数上書き、OS ダークモード連動）と `Button` intent×size 体系（CSS Module、`@reference "../../index.css"` 相対パスで注意）を移植。フォント/Material アイコン/タイトル背景画像は `public/s/` と `public/images/` に実物コピー（`.prettierignore` に `public/` 追加済み）。
+- **共通部品**: `src/components/ui/{Button,Icon,BackButton,LoadingSpinner,Expander,SettingsSection,ToggleSwitch,MainText,Divider,HelpTooltip}`、`src/components/{StoryCard,AttachmentPreview,BackupSection}`、確認ダイアログは `ConfirmationProvider` + `useConfirm()`（Promise ベース、native `<dialog>`）。
+- **新スクリーン**: `src/screens/{LoadScreen,HistoryScreen,ChronicleScreen,SettingsScreen,StartingScreen,CompletedDataDeletionScreen}.tsx`。ゲーム画面は Legacy の 2 ペイン（PC）/縦積み（モバイル）+ `GameNavButtons`（←/→/画像再生成/メニュー）+ `LoadingOverlay`/`ZoomOverlay`/`RefineDialog`（リファインはメニューのダイアログに配置）。
+- **store 変更** (`gameStore.ts`): `screen`/`beginThemeSetup` 削除。追加: `updateSettings(partial)`（グローバル settings への唯一の書き込み経路）、`saveCredential(key, value)`、`regenerateImage(nodeId)`（同キー上書き、AsyncOperation で管理、a1111/comfyui は進捗 % 表示）、`chronicleTargetNodeId` + `setChronicleTargetNode`、`deleteBranch` が `{ gameDeleted }` を返すよう変更。画像生成トークン（HF/NIM）は bootstrap でメモリにロード。
+- **シーンナビの修正（実機確認で発見）**: (1) 語数表示 — `countWords` が改行あり日本語で「段落数」を返すバグ（`generateScene.ts`、CJK 比率判定に修正。表示は GameScreen で sceneText から再計算し既存セーブも正しく見える）。(2) Forward ボタン常時無効 — `useGameNavigation` がパスを表示ノードから構築しており `indexOf(viewing)` が常に末尾になるバグ（Legacy 同様、末端=プレイヘッドから構築するよう修正）。併せて Legacy の `currentNodeId`（プレイヘッド、Forward の目的地）を store に `currentNodeId` として復活（セッションのみ・非永続化）。History/Chronicle の Resume Here は `resumeStoryAtNode(nodeId, branchEndNodeId)` で表示位置とプレイヘッドをセットする（Legacy `onRewind(gameLog, endId, node.id)` 相当）。回帰テスト: `src/store/gameStore.test.ts`（store フロー）+ `src/hooks/useGameNavigation.test.tsx`（happy-dom 実レンダリング、Resume Here/プレイヘッド不一致/Chronicle 中間の3シナリオ）。
+- **配置の決定事項**: Backup & Restore セクション（Phase 5 実装）はタイトル画面から **設定 > Data Management** へ移動（Legacy 準拠。戻す場合は TitleScreen に `<BackupSection />` を戻すだけ）。セーブのエクスポートは LoadScreen のカードから HistoryScreen の「Download Save Data」ボタンへ。wipe は Settings > Delete All Data（confirm 後、`sessionStorage` フラグ + リロードで DeletionComplete 画面を表示）。
+- **意図的に未実装**（Phase 6 以降）: react-hot-toast 未導入（インライン表示で代用）、AI 翻訳/言語セレクタ、ストリーミング、オートプレイ、本文編集（store に該当 action なし）、開発者オプション。
 
 ## 実装の設計上の要点（再訪時の注意）
 
@@ -59,6 +71,7 @@
   - Google 認証は `googleAuth.ts`（GIS token client を動的ロード、gapi-script 不使用、API キー不要）。**アクセストークンはメモリのみで永続化しない**（リロードで再接続）。Drive REST は `driveClient.ts`（fetch + Bearer、`fetchImpl` を注入してテスト）。401 は `DriveUnauthorizedError` になり、store アクションがトークンをクリアする。
   - UI は `components/BackupSection.tsx`（タイトル画面に組み込み）。store アクションは gameStore に追加（`downloadEncryptedBackup` / `restoreBackupFromFile` / `importSaveFromFile` / `connectGoogleDrive` ほか）。`import.meta.env.VITE_GOOGLE_CLIENT_ID` は新規 VITE_ 変数なので AGENTS の規約どおり PR レビュー対象。
   - テストの要は `plaintextLeak.test.ts`（Phase 5 完了条件）： ローカルダウンロードと Drive アップロード両方の境界で、エンベロープ本文 + base64 デコード後のバイト列に平文（タイトル・本文・promptSent・メモ・設定値）とクレデンシャルが含まれないことを検証する。テスト用レコードファクトリは `features/backup/testsupport/records.ts` に共通化（Phase 3.1 のテスト重複指摘の教訓）。
+- **CodeQL 運用メモ**: リポジトリは CodeQL **default setup**（`.github/workflows` に codeql.yml なし）。`// codeql[...]` 抑制コメントは default setup では自動反映されない（advanced setup + `AlertSuppression.ql` + `dismiss-alerts` アクションが必要）。誤検知は API で却下する（例: PR #9 の `js/xss-through-dom` — React が属性をエスケープするため alt への file.name 流入は無害。根拠コメントを AttachmentPreview.tsx に記載済み）。
 - `bunfig.toml` の `[test] preload` で `src/db/installFakeIndexedDb.ts` を読み込んでいる（Dexie はモジュール評価時に indexedDB を捕捉するため、テストは fake-indexeddb で実DB相当のテストが可能）。`db.delete()` 後は `db.transaction()` が自動再オープンしない点に注意（テスト内では明示 `db.open()`）。
 - すでに作った主要ファイル（再読込時の地図）：
   - `src/db/{database,gameRepository,assetRepository,settingsRepository,credentialsRepository}.ts` / `migrations.ts`
@@ -74,6 +87,7 @@
   - `src/lib/crypto.ts` / `src/lib/imageFileExtensions.ts`（`getImageMimeTypeFromExtension` / `isKnownImageMimeType` を追加）
   - `src/store/gameStore.ts` / `asyncOperation.ts`
   - `src/screens/{TitleScreen,ThemeSetupScreen,GameScreen}.tsx` / `src/lib/imageConversion.ts`
+  - UI 移植 (Phase 5.5): `src/app/{App.tsx,routes.ts,ConfirmationProvider.tsx}` / `src/screens/{LoadScreen,HistoryScreen,ChronicleScreen,SettingsScreen,StartingScreen,CompletedDataDeletionScreen}.tsx` / `src/components/ui/*` / `src/components/{StoryCard,AttachmentPreview,BackupSection}.tsx` / `src/components/game/*` / `src/components/settings/*` / `src/hooks/{useDebouncedExternalState,useBreakpoint,useLazyNodeImage,useNode,useFullscreen,useGameNavigation,useConfirm}.ts` / `public/{s,images,icons}`
 
 ## セッション再開手順（このファイルを閉じる前に）
 

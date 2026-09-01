@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useGameStore } from "../store/gameStore";
 import type { DriveFileMetadata } from "../features/backup/api";
+import Button from "./ui/Button";
+import { Icon } from "./ui/Icon";
 
 /**
- * Backup & restore section of the title screen (REDESIGN §3.3, §8):
+ * Backup & restore section (REDESIGN §3.3, §8):
  * encrypted local backup (.nsbak), ns-save import, Google Drive backup.
  * Every operation requires the passphrase; there is deliberately no
  * unencrypted path (§3.3).
@@ -50,36 +52,36 @@ export function BackupSection() {
     }
   }
 
-  const secondaryButton =
-    "rounded bg-neutral-700 px-3 py-1.5 text-xs hover:bg-neutral-600 disabled:opacity-40";
-  const primaryButton =
-    "rounded bg-indigo-600 px-3 py-1.5 text-xs hover:bg-indigo-500 disabled:opacity-40";
-
   return (
-    <section className="rounded border border-neutral-700 p-4">
-      <h2 className="mb-1 text-lg">Backup &amp; Restore</h2>
-      <p className="mb-3 text-xs text-neutral-400">
+    <section className="bg-text-bg text-body-text rounded-lg p-4 shadow-md">
+      <h3 className="mb-1 flex items-center gap-2 font-semibold">
+        <Icon iconName="database" />
+        Backup &amp; Restore
+      </h3>
+      <p className="support-text-color mb-3 text-xs">
         Backups contain every save plus your non-secret settings, encrypted with AES-GCM
         (WebCrypto). API keys are never included. If you lose the passphrase, the backup cannot be
         restored.
       </p>
 
-      <label className="mb-3 block text-xs text-neutral-400">
+      <label className="support-text-color mb-3 block text-xs">
         Passphrase
         <input
           type="password"
           value={passphrase}
           onChange={(e) => setPassphrase(e.target.value)}
-          className="mt-1 w-full rounded bg-neutral-800 p-2 text-sm text-neutral-100"
+          className="form-style mt-1"
           placeholder="Backup passphrase"
-          autoComplete="off"
+          autoComplete="new-password"
         />
       </label>
 
       <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            className={primaryButton}
+        <div className="form-layout-style flex-wrap items-center">
+          <Button
+            intent="primary"
+            size="small"
+            isWorking={busy}
             disabled={busy || passphrase.length === 0}
             onClick={() =>
               void runOperation(async () => {
@@ -89,16 +91,17 @@ export function BackupSection() {
             }
           >
             Download backup (.nsbak)
-          </button>
+          </Button>
 
           <input
             type="file"
             accept=".nsbak,application/json"
-            className="text-xs"
+            className="form-style flex-1 py-1.5 text-xs"
             onChange={(e) => setBackupFile(e.target.files?.[0] ?? null)}
           />
-          <button
-            className={secondaryButton}
+          <Button
+            intent="secondary"
+            size="small"
             disabled={busy || !backupFile || passphrase.length === 0}
             onClick={() => {
               const file = backupFile;
@@ -111,18 +114,19 @@ export function BackupSection() {
             }}
           >
             Restore from file
-          </button>
+          </Button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="form-layout-style flex-wrap items-center">
           <input
             type="file"
             accept=".zip"
-            className="text-xs"
+            className="form-style flex-1 py-1.5 text-xs"
             onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
           />
-          <button
-            className={secondaryButton}
+          <Button
+            intent="secondary"
+            size="small"
             disabled={busy || !importFile}
             onClick={() => {
               const file = importFile;
@@ -135,17 +139,19 @@ export function BackupSection() {
             }}
           >
             Import ns-save ZIP
-          </button>
+          </Button>
         </div>
       </div>
 
-      <div className="mt-4 border-t border-neutral-800 pt-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-sm font-semibold">Google Drive</h3>
+      <div className="border-text-border mt-4 border-t pt-3">
+        <div className="form-layout-style flex-wrap items-center">
+          <h4 className="text-sm font-semibold">Google Drive</h4>
           {driveConnected ? (
             <>
-              <button
-                className={primaryButton}
+              <Button
+                intent="alt"
+                size="small"
+                isWorking={busy}
                 disabled={busy || passphrase.length === 0}
                 onClick={() =>
                   void runOperation(async () => {
@@ -154,10 +160,12 @@ export function BackupSection() {
                   })
                 }
               >
+                <Icon iconName="cloud_upload" />
                 Back up to Drive
-              </button>
-              <button
-                className={secondaryButton}
+              </Button>
+              <Button
+                intent="secondary"
+                size="small"
                 disabled={busy}
                 onClick={() =>
                   void runOperation(async () => {
@@ -167,9 +175,10 @@ export function BackupSection() {
                 }
               >
                 Refresh
-              </button>
-              <button
-                className={secondaryButton}
+              </Button>
+              <Button
+                intent="secondary"
+                size="small"
                 disabled={busy}
                 onClick={() =>
                   void runOperation(async () => {
@@ -178,12 +187,15 @@ export function BackupSection() {
                   })
                 }
               >
+                <Icon iconName="logout" />
                 Disconnect
-              </button>
+              </Button>
             </>
           ) : (
-            <button
-              className={primaryButton}
+            <Button
+              intent="primary"
+              size="small"
+              isWorking={busy}
               disabled={busy}
               onClick={() =>
                 void runOperation(async () => {
@@ -192,13 +204,14 @@ export function BackupSection() {
                 })
               }
             >
+              <Icon iconName="login" />
               Connect Google Drive
-            </button>
+            </Button>
           )}
         </div>
 
         {driveConnected && driveBackups.length === 0 && (
-          <p className="mt-2 text-xs text-neutral-400">
+          <p className="support-text-color mt-2 text-xs">
             No backups found on Drive yet. &quot;Back up to Drive&quot; creates one.
           </p>
         )}
@@ -208,15 +221,19 @@ export function BackupSection() {
             {driveBackups.map((backup) => (
               <li
                 key={backup.fileId}
-                className="flex flex-wrap items-center justify-between gap-2 rounded bg-neutral-800 px-2 py-1.5 text-xs"
+                className="bg-body-bg flex flex-wrap items-center justify-between gap-2 rounded px-2 py-1.5 text-xs"
               >
                 <span className="min-w-0 flex-1 truncate" title={backup.name}>
                   {backup.name}
-                  <span className="ml-2 text-neutral-500">{formatDriveBackupMetadata(backup)}</span>
+                  <span className="support-text-color ml-2">
+                    {formatDriveBackupMetadata(backup)}
+                  </span>
                 </span>
                 <span className="flex shrink-0 gap-1">
-                  <button
-                    className={secondaryButton}
+                  <Button
+                    intent="secondary"
+                    size="small-circle"
+                    className="px-2"
                     disabled={busy || passphrase.length === 0}
                     onClick={() =>
                       void runOperation(async () => {
@@ -226,11 +243,13 @@ export function BackupSection() {
                     }
                   >
                     Restore
-                  </button>
+                  </Button>
                   {confirmingDeleteFileId === backup.fileId ? (
                     <>
-                      <button
-                        className="rounded bg-red-700 px-2 py-1.5 text-xs hover:bg-red-600"
+                      <Button
+                        intent="danger"
+                        size="small-circle"
+                        className="px-2"
                         disabled={busy}
                         onClick={() => {
                           setConfirmingDeleteFileId(null);
@@ -241,21 +260,25 @@ export function BackupSection() {
                         }}
                       >
                         Confirm
-                      </button>
-                      <button
-                        className={secondaryButton}
+                      </Button>
+                      <Button
+                        intent="secondary"
+                        size="small-circle"
+                        className="px-2"
                         onClick={() => setConfirmingDeleteFileId(null)}
                       >
                         Cancel
-                      </button>
+                      </Button>
                     </>
                   ) : (
-                    <button
-                      className={`${secondaryButton} hover:bg-red-800`}
+                    <Button
+                      intent="secondary"
+                      size="small-circle"
+                      className="px-2 hover:bg-red-800"
                       onClick={() => setConfirmingDeleteFileId(backup.fileId)}
                     >
                       Delete
-                    </button>
+                    </Button>
                   )}
                 </span>
               </li>
@@ -264,8 +287,8 @@ export function BackupSection() {
         )}
       </div>
 
-      {statusText && <p className="mt-3 text-xs text-emerald-400">{statusText}</p>}
-      {errorText && <p className="mt-3 text-xs text-red-400">{errorText}</p>}
+      {statusText && <p className="text-primary mt-3 text-xs">{statusText}</p>}
+      {errorText && <p className="mt-3 text-xs font-semibold text-danger">{errorText}</p>}
     </section>
   );
 }

@@ -1,184 +1,315 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router";
+import { useBreakpoint } from "../hooks/useBreakpoint";
 import { useGameStore } from "../store/gameStore";
+import { ROUTES } from "../app/routes";
+import MainText from "../components/ui/MainText";
+import GameNavButtons from "../components/game/GameNavButtons";
+import ImageDisplay from "../components/game/ImageDisplay";
+import LoadingOverlay, { type SpinnerState } from "../components/game/LoadingOverlay";
+import ZoomOverlay from "../components/game/ZoomOverlay";
+import GameChoices, { LongPressMs } from "../components/game/GameChoices";
+import ModelNameDisplay from "../components/game/ModelNameDisplay";
+import RefineDialog from "../components/game/RefineDialog";
+import { Divider } from "../components/ui/Divider";
+import { countWords } from "../features/narrative/api";
 
-export function GameScreen() {
+const ordinal = (n: number): string => {
+  const suffixes = ["th", "st", "nd", "rd"];
+  const value = n % 100;
+  return n + (suffixes[(value - 20) % 10] ?? suffixes[value] ?? suffixes[0]!);
+};
+
+/**
+ * The main game screen: scene image, text, choices, and navigation controls.
+ * PC shows a sticky two-pane layout; mobile stacks vertically (legacy look).
+ */
+const GameScreen: React.FC = () => {
+  const navigate = useNavigate();
+  const activeGame = useGameStore((s) => s.activeGame);
   const nodes = useGameStore((s) => s.nodes);
   const assets = useGameStore((s) => s.assets);
   const viewingNodeId = useGameStore((s) => s.viewingNodeId);
   const generation = useGameStore((s) => s.generation);
-  const activeGame = useGameStore((s) => s.activeGame);
+  const imageRegeneration = useGameStore((s) => s.imageRegeneration);
+  const imageGenerationProgress = useGameStore((s) => s.imageGenerationProgress);
+  const settings = useGameStore((s) => s.settings);
   const choose = useGameStore((s) => s.choose);
   const refine = useGameStore((s) => s.refine);
-  const deleteBranch = useGameStore((s) => s.deleteBranch);
-  const setViewingNode = useGameStore((s) => s.setViewingNode);
   const goToTitle = useGameStore((s) => s.goToTitle);
 
-  const [refinePrompt, setRefinePrompt] = useState("");
+  const { width, isLandscape } = useBreakpoint();
+  const isMd = width >= 768;
 
-  const node = nodes.find((n) => n.id === viewingNodeId) ?? null;
-  const running = generation.phase === "running";
-  const asset = viewingNodeId ? assets[viewingNodeId] : undefined;
+  const [choicePresetSignal, setChoicePresetSignal] = useState<{ choice: string } | undefined>(
+    undefined,
+  );
+  const choicePresetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const [refineOpen, setRefineOpen] = useState(false);
 
-  const imageUrl = useMemo(() => {
-    if (!asset) return null;
-    return URL.createObjectURL(asset.blob);
-  }, [asset]);
+  const loading = generation.phase === "running";
+  const isImageRegenerating = imageRegeneration.phase === "running";
+  const isPageLoading = loading || isImageRegenerating;
+  const spinnerState: SpinnerState = isImageRegenerating
+    ? "Image"
+    : generation.phase === "running"
+      ? generation.payload.kind === "choice"
+        ? "Choice"
+        : "Scene"
+      : null;
+
+  const node = useMemo(
+    () => nodes.find((n) => n.id === viewingNodeId) ?? null,
+    [nodes, viewingNodeId],
+  );
+  const asset = viewingNodeId ? (assets[viewingNodeId] ?? null) : null;
 
   useEffect(() => {
-    return () => {
-      if (imageUrl) URL.revokeObjectURL(imageUrl);
-    };
-  }, [imageUrl]);
-
-  // Build breadcrumb path from root to viewing node
-  const path = useMemo(() => {
-    if (!node) return [];
-    const byId = new Map(nodes.map((n) => [n.id, n]));
-    const result: typeof nodes = [];
-    let cur: typeof node | undefined = node;
-    while (cur) {
-      result.push(cur);
-      cur = cur.parentNodeId ? byId.get(cur.parentNodeId) : undefined;
+    // Scroll to top when the viewed scene changes (not during image-only regen)
+    if (!isImageRegenerating) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
-    return result.reverse();
-  }, [node, nodes]);
+  }, [viewingNodeId, loading, isImageRegenerating]);
 
-  const children = useMemo(() => {
-    if (!viewingNodeId) return [];
-    return nodes.filter((n) => n.parentNodeId === viewingNodeId);
-  }, [nodes, viewingNodeId]);
+  const handleChoiceSubmit = (choice: string) => {
+    if (loading) return;
+    void choose(choice);
+  };
 
-  if (!node) {
+  const handleRestart = async () => {
+    await goToTitle();
+    navigate(ROUTES.HOME, { viewTransition: true });
+  };
+
+  const handleRefineSubmit = (refinePrompt: string) => {
+    if (!viewingNodeId || loading) return;
+    setRefineOpen(false);
+    void refine(viewingNodeId, refinePrompt);
+  };
+
+  const openZoom = () => {
+    setIsClosing(false);
+    setIsZoomed(true);
+  };
+
+  const closeZoom = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsZoomed(false);
+      setIsClosing(false);
+    }, 300);
+  };
+
+  if (!activeGame || !viewingNodeId || !node || !settings) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-neutral-900 text-neutral-100">
-        <p>Scene not found.</p>
-      </main>
+      <div className="bg-body-bg flex h-screen items-center justify-center">
+        <p className="support-text-color">Scene not found.</p>
+      </div>
     );
   }
 
-  return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 bg-neutral-900 p-8 text-neutral-100">
-      <header className="flex items-center justify-between">
-        <span className="text-sm text-neutral-400">Turn {node.turnNumber}</span>
-        <div className="flex gap-2">
-          <button
-            className="rounded bg-neutral-700 px-3 py-1 text-sm"
-            onClick={() => void goToTitle()}
-            disabled={running}
-          >
-            Title
-          </button>
-          <button
-            className="rounded bg-red-800 px-3 py-1 text-sm disabled:opacity-40"
-            onClick={() => {
-              if (
-                confirm("この分岐を削除しますか？（子分岐がない場合のみ親まで遡って削除されます）")
-              )
-                void deleteBranch(node.id);
-            }}
-            disabled={running || !activeGame}
-          >
-            Delete branch
-          </button>
-        </div>
-      </header>
+  const { scene, turnNumber, choiceText } = node;
 
-      {/* Breadcrumb / history navigation */}
-      <nav className="flex flex-wrap gap-1 text-xs">
-        {path.map((p, idx) => (
-          <button
-            key={p.id}
-            className={`rounded px-2 py-1 ${p.id === viewingNodeId ? "bg-indigo-600 text-white" : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700"}`}
-            onClick={() => setViewingNode(p.id)}
-          >
-            {idx === 0 ? "Root" : `T${p.turnNumber}`}
-            {p.choiceText ? `:${p.choiceText.slice(0, 12)}` : ""}
-          </button>
-        ))}
-      </nav>
+  const isCurrentStoryOver = scene.isStoryOver;
 
-      {children.length > 0 && (
-        <section className="rounded border border-neutral-700 p-2">
-          <p className="mb-1 text-xs text-neutral-400">
-            この分岐から派生した選択肢 ({children.length})
-          </p>
-          <div className="flex flex-wrap gap-1">
-            {children.map((c) => (
-              <button
-                key={c.id}
-                className="rounded bg-neutral-800 px-2 py-1 text-xs hover:bg-neutral-700"
-                onClick={() => setViewingNode(c.id)}
-              >
-                {c.choiceText?.slice(0, 20) ?? "(root)"} → T{c.turnNumber}
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
+  const cost = node.metadata.generationCost;
+  const currentCost = cost && cost > 0 ? "¢" + (cost * 100).toFixed(2) : null;
+  const modelName = node.metadata.modelName;
+  // Recomputed from sceneText rather than the stored sceneWordCount, so
+  // records saved with the old (paragraph-counting) counter display correctly.
+  const sceneWordCount = countWords(scene.sceneText);
 
-      {node.choiceText && <p className="text-sm text-indigo-300">＞ {node.choiceText}</p>}
+  const currentDividerText = [
+    turnNumber && (currentCost || sceneWordCount) ? "This" : "",
+    turnNumber ? `${ordinal(turnNumber)} turn` : "",
+    currentCost ? `cost ${currentCost}` : "",
+    currentCost && sceneWordCount ? "and" : "",
+    sceneWordCount ? `is ${sceneWordCount} words long.` : "",
+  ]
+    .join(" ")
+    .trim();
 
-      {imageUrl ? (
-        <img src={imageUrl} alt="Scene illustration" className="w-full rounded object-cover" />
-      ) : (
-        <div className="flex h-48 items-center justify-center rounded bg-neutral-800 text-sm text-neutral-500">
-          No image (generator disabled or pending)
+  const mainText = (
+    <article className="animate-fade-in w-full max-w-2xl md:min-w-[20rem]">
+      {isLandscape && (
+        <div className="dividers-style text-[9pt]" aria-hidden="true">
+          - Narrative Sprout -
         </div>
       )}
-
-      <article className="whitespace-pre-wrap leading-relaxed">{node.scene.sceneText}</article>
-
-      {node.scene.isStoryOver && node.scene.storyClosingText && (
-        <article className="whitespace-pre-wrap leading-relaxed text-amber-200">
-          {node.scene.storyClosingText}
-        </article>
-      )}
-
-      {generation.phase === "failed" && (
-        <p className="text-sm text-red-400">生成に失敗: {generation.error.message}</p>
-      )}
-
-      {/* Refine */}
-      <section className="rounded border border-neutral-700 p-3">
-        <h3 className="mb-2 text-sm font-semibold text-neutral-300">シーンを修正（リファイン）</h3>
-        <p className="mb-2 text-xs text-neutral-500">
-          このシーンを指示に従って再生成し、同じ親の下に sibling として追加します。
-        </p>
-        <textarea
-          className="w-full rounded bg-neutral-800 p-2 text-sm"
-          rows={2}
-          placeholder="例: もっと緊迫感を出して、夜の設定にして"
-          value={refinePrompt}
-          onChange={(e) => setRefinePrompt(e.target.value)}
-          disabled={running}
-        />
-        <button
-          className="mt-2 rounded bg-indigo-600 px-4 py-1 text-sm disabled:opacity-40"
-          disabled={running || !refinePrompt.trim()}
-          onClick={() => {
-            void refine(node.id, refinePrompt.trim());
-            setRefinePrompt("");
+      {choiceText ? (
+        <p
+          className="font-serif-display text-center text-sm leading-relaxed select-text [line-break:strict] selection:bg-lime-500/30"
+          onMouseDown={() => {
+            choicePresetTimer.current = setTimeout(() => {
+              setChoicePresetSignal({ choice: choiceText });
+            }, LongPressMs);
+          }}
+          onMouseUp={() => {
+            if (choicePresetTimer.current) {
+              clearTimeout(choicePresetTimer.current);
+              choicePresetTimer.current = null;
+            }
+          }}
+          onMouseLeave={() => {
+            if (choicePresetTimer.current) {
+              clearTimeout(choicePresetTimer.current);
+              choicePresetTimer.current = null;
+            }
+          }}
+          onTouchStart={() => {
+            choicePresetTimer.current = setTimeout(() => {
+              setChoicePresetSignal({ choice: choiceText });
+            }, 500);
+          }}
+          onTouchEnd={() => {
+            if (choicePresetTimer.current) {
+              clearTimeout(choicePresetTimer.current);
+              choicePresetTimer.current = null;
+            }
+          }}
+          onTouchMove={() => {
+            if (choicePresetTimer.current) {
+              clearTimeout(choicePresetTimer.current);
+              choicePresetTimer.current = null;
+            }
           }}
         >
-          Refine this scene
-        </button>
-      </section>
-
-      {!node.scene.isStoryOver && (
-        <nav className="mt-auto flex flex-col gap-2">
-          {node.scene.choices.map((choice) => (
-            <button
-              key={choice}
-              className="rounded bg-neutral-800 p-3 text-left hover:bg-neutral-700 disabled:opacity-40"
-              disabled={running}
-              onClick={() => void choose(choice)}
-            >
-              {choice}
-            </button>
-          ))}
-          {running && <p className="text-center text-sm text-neutral-400">Generating…</p>}
-        </nav>
+          {choiceText}
+        </p>
+      ) : (
+        <Divider />
       )}
-    </main>
+
+      <div className="dividers-style md:pb-12" data-testid="divide">
+        {currentDividerText}
+      </div>
+
+      <div className="font-serif-display select-text selection:bg-lime-500/30">
+        <MainText text={scene.sceneText} />
+        {isCurrentStoryOver && scene.storyClosingText && (
+          <>
+            <Divider className="my-8" />
+            <MainText text={scene.storyClosingText} className="font-semibold" />
+          </>
+        )}
+      </div>
+      <Divider className="my-8 md:my-16" />
+
+      <GameChoices
+        choices={scene.choices}
+        isCurrentStoryOver={isCurrentStoryOver}
+        loading={loading}
+        onChoiceSubmit={handleChoiceSubmit}
+        onRestart={() => void handleRestart()}
+        viewingNodeId={viewingNodeId}
+        choicePreset={choicePresetSignal}
+      />
+
+      {generation.phase === "failed" && (
+        <p className="mt-4 text-center text-sm font-semibold text-danger">
+          Generation failed: {generation.error.message}
+        </p>
+      )}
+
+      {imageRegeneration.phase === "failed" && (
+        <p className="mt-4 text-center text-sm font-semibold text-danger">
+          Image regeneration failed: {imageRegeneration.error.message}
+        </p>
+      )}
+
+      {modelName ? (
+        <div className="dividers-style my-16">
+          Generated by <ModelNameDisplay key={viewingNodeId} modelName={modelName} />
+        </div>
+      ) : (
+        <Divider className="my-16" />
+      )}
+    </article>
   );
-}
+
+  const sceneImageProps = {
+    imageBlob: asset?.blob ?? null,
+    alt: scene.imagePrompt,
+  };
+
+  return (
+    <div className="bg-body-bg min-h-screen transition-colors duration-500">
+      <LoadingOverlay
+        isPageLoading={isPageLoading}
+        spinnerState={spinnerState}
+        imageGenerationProgress={imageGenerationProgress}
+        imageGenerator={settings.imageGenerator}
+        error={generation.phase === "failed" || imageRegeneration.phase === "failed"}
+      />
+
+      <RefineDialog
+        isOpen={refineOpen}
+        onClose={() => setRefineOpen(false)}
+        onSubmit={handleRefineSubmit}
+        isBusy={loading}
+      />
+
+      {isZoomed && (
+        <ZoomOverlay
+          isClosing={isClosing}
+          onClose={closeZoom}
+          imageBlob={asset?.blob ?? null}
+          alt={scene.imagePrompt}
+        />
+      )}
+
+      {!isMd && (
+        <div className="flex flex-col">
+          <button
+            className="bg-body-bg relative w-full cursor-zoom-in overflow-hidden"
+            onClick={openZoom}
+            aria-label="Enlarge image"
+          >
+            <ImageDisplay
+              {...sceneImageProps}
+              className="mx-auto block h-auto max-h-[80vh] w-full object-contain transition-transform duration-500 hover:scale-[1.02]"
+            />
+          </button>
+
+          <nav className="text-bg-color border-text-border sticky top-0 z-50 flex items-center justify-center gap-3 border-y p-3">
+            <GameNavButtons onOpenRefine={() => setRefineOpen(true)} />
+          </nav>
+
+          <main className="bg-text-bg flex flex-col items-center p-6 pb-12">{mainText}</main>
+        </div>
+      )}
+
+      {isMd && (
+        <div className="flex">
+          <aside className="border-text-border bg-body-bg sticky top-0 flex h-screen w-[45%] min-w-100 items-center justify-center overflow-hidden border-r p-8 backdrop-blur-md">
+            <div className="animate-fade-in flex max-h-full max-w-full flex-col items-center gap-8">
+              <button
+                className="group relative cursor-zoom-in overflow-hidden rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] transition-all duration-700 hover:scale-[1.01] hover:shadow-[0_30px_60px_rgba(0,0,0,0.4)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)]"
+                onClick={openZoom}
+                aria-label="Enlarge image"
+              >
+                <ImageDisplay
+                  {...sceneImageProps}
+                  className="block max-h-[70vh] w-auto object-contain"
+                />
+                <div className="absolute inset-0 bg-linear-to-t from-black/20 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+              </button>
+
+              <nav className="body-bg-color border-text-border/20 z-3 flex items-center gap-3 rounded-2xl border p-3 px-5 shadow-lg">
+                <GameNavButtons onOpenRefine={() => setRefineOpen(true)} />
+              </nav>
+            </div>
+          </aside>
+
+          <main className="bg-text-bg flex flex-1 flex-col items-center p-20 md:p-24 md:pt-16">
+            {mainText}
+          </main>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default GameScreen;

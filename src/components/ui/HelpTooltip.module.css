@@ -1,0 +1,23 @@
+.trigger {
+  anchor-name: var(--anchor-name, --default-anchor);
+}
+
+.popover {
+  inset: auto;
+  margin-block: 6px;
+  max-height: 50vh;
+  overflow-y: auto;
+  position: fixed;
+  position-anchor: var(--anchor-name);
+  position-area: bottom;
+  position-try-fallbacks:
+    flip-block,
+    flip-inline,
+    flip-block flip-inline;
+  position-try-order: most-height;
+  @apply w-[20rem] max-w-[calc(100vw-2rem)];
+
+  @media (max-width: 640px) {
+    width: calc(100vw - 2rem);
+  }
+}

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { devtools, subscribeWithSelector } from "zustand/middleware";
 import { credentialsRepository } from "../db/credentialsRepository";
+import type { CredentialKey } from "../types";
 import { gameRepository } from "../db/gameRepository";
 import { settingsRepository } from "../db/settingsRepository";
 import { assetRepository } from "../db/assetRepository";
@@ -26,13 +27,16 @@ import {
   type RestoreSummaryWithManifest,
   type SaveImportResult,
 } from "../features/backup/api";
-import type { GameRecord, SettingsRecord, StoryNodeRecord } from "../types";
+import type { GameRecord, SettingsRecord, StoryNodeRecord, StoryNodeId } from "../types";
 import type { AssetRecord } from "../types/asset";
 import type { AsyncOperation } from "./asyncOperation";
-import { buildImageGenConfig } from "../features/image/api";
+import {
+  assetRecordFromDataUrl,
+  buildImageGenConfig,
+  generateSceneImage,
+  webpQualityForCompression,
+} from "../features/image/api";
 import { processAttachmentFiles } from "../features/attachments/api";
-
-type Screen = "title" | "themeSetup" | "playing";
 
 interface GenerationPayload {
   kind: "start" | "choice" | "refine";
@@ -40,33 +44,54 @@ interface GenerationPayload {
   refinePrompt?: string;
 }
 
+interface ImageRegenerationPayload {
+  nodeId: string;
+}
+
 interface GameState {
-  screen: Screen;
   settings: SettingsRecord | null;
   openrouterApiKey: string | null;
+  huggingFaceToken: string | null;
+  nvidiaNimToken: string | null;
   games: GameRecord[];
   activeGame: GameRecord | null;
   nodes: StoryNodeRecord[]; // all nodes of the active game
   assets: Record<string, AssetRecord>; // nodeId -> AssetRecord
   viewingNodeId: string | null;
+  /**
+   * Playhead of the current playthrough: the end node of the remembered
+   * root->end route that Back/Forward navigation walks. Legacy
+   * `currentNodeId`. Session-only (not persisted); `latestNodeId` on the
+   * record remains the save-list summary pointer.
+   */
+  currentNodeId: string | null;
+  chronicleTargetNodeId: string | null;
   generation: AsyncOperation<GenerationPayload, never>;
+  imageRegeneration: AsyncOperation<ImageRegenerationPayload, never>;
+  /** Progress (0..1) of the running image generation, when reportable. */
+  imageGenerationProgress: number | null;
   driveConnected: boolean;
   driveBackups: DriveFileMetadata[];
 
   // actions (the ONLY legal way to mutate; REDESIGN §4.3.1)
   bootstrap: () => Promise<void>;
   saveApiKey: (key: string) => Promise<void>;
+  saveCredential: (key: CredentialKey, value: string) => Promise<void>;
+  updateSettings: (partial: Partial<SettingsRecord>) => Promise<void>;
   goToTitle: () => Promise<void>;
-  beginThemeSetup: () => void;
   startNewGame: (theme: string, attachmentFiles?: File[]) => Promise<void>;
   openGame: (gameId: string) => Promise<void>;
   choose: (choiceText: string) => Promise<void>;
   refine: (nodeId: string, refinePrompt: string) => Promise<void>;
-  deleteBranch: (nodeId: string) => Promise<void>;
+  regenerateImage: (nodeId: string) => Promise<void>;
+  deleteBranch: (nodeId: string) => Promise<{ gameDeleted: boolean }>;
   deleteSave: (gameId: string) => Promise<void>;
   exportSave: (gameId: string) => Promise<void>;
   wipeAllData: () => Promise<void>;
   setViewingNode: (nodeId: string) => void;
+  /** Resumes play: sets the viewed node and moves the playhead (branch end). */
+  resumeStoryAtNode: (nodeId: string, branchEndNodeId: string) => void;
+  setChronicleTargetNode: (nodeId: string) => void;
   downloadEncryptedBackup: (passphrase: string) => Promise<void>;
   restoreBackupFromFile: (file: File, passphrase: string) => Promise<RestoreSummaryWithManifest>;
   importSaveFromFile: (file: File) => Promise<SaveImportResult>;
@@ -102,29 +127,42 @@ async function buildImageConfigForSettings(settings: SettingsRecord) {
 export const useGameStore = create<GameState>()(
   devtools(
     subscribeWithSelector((set, get) => ({
-      screen: "title",
       settings: null,
       openrouterApiKey: null,
+      huggingFaceToken: null,
+      nvidiaNimToken: null,
       games: [],
       activeGame: null,
       nodes: [],
       assets: {},
       viewingNodeId: null,
+      currentNodeId: null,
+      chronicleTargetNodeId: null,
       generation: { phase: "idle" },
+      imageRegeneration: { phase: "idle" },
+      imageGenerationProgress: null,
       // The Drive access token lives only in memory (googleAuth), so a fresh
       // page load always starts disconnected.
       driveConnected: hasDriveAccessToken(),
       driveBackups: [],
 
       bootstrap: async () => {
-        const [settings, apiKey, games] = await Promise.all([
+        const [settings, apiKey, hfToken, nimToken, games] = await Promise.all([
           settingsRepository.get(),
           credentialsRepository.get("openrouterApiKey"),
+          credentialsRepository.get("huggingFaceToken"),
+          credentialsRepository.get("nvidiaNimToken"),
           gameRepository.listGames(),
         ]);
         // Orphan GC (best-effort, non-blocking failure)
         void assetRepository.collectGarbage().catch(() => {});
-        set({ settings, openrouterApiKey: apiKey, games });
+        set({
+          settings,
+          openrouterApiKey: apiKey,
+          huggingFaceToken: hfToken,
+          nvidiaNimToken: nimToken,
+          games,
+        });
       },
 
       saveApiKey: async (key) => {
@@ -132,20 +170,44 @@ export const useGameStore = create<GameState>()(
         set({ openrouterApiKey: key });
       },
 
+      saveCredential: async (key, value) => {
+        await credentialsRepository.set(key, value);
+        switch (key) {
+          case "openrouterApiKey":
+            set({ openrouterApiKey: value });
+            break;
+          case "huggingFaceToken":
+            set({ huggingFaceToken: value });
+            break;
+          case "nvidiaNimToken":
+            set({ nvidiaNimToken: value });
+            break;
+          default:
+            break;
+        }
+      },
+
+      updateSettings: async (partial) => {
+        const current = get().settings;
+        if (!current) return;
+        const updated: SettingsRecord = { ...current, ...partial };
+        await settingsRepository.put(updated);
+        set({ settings: updated });
+      },
+
       goToTitle: async () => {
         const games = await gameRepository.listGames();
         set({
-          screen: "title",
           games,
           activeGame: null,
           nodes: [],
           assets: {},
           viewingNodeId: null,
+          currentNodeId: null,
+          chronicleTargetNodeId: null,
           generation: { phase: "idle" },
         });
       },
-
-      beginThemeSetup: () => set({ screen: "themeSetup" }),
 
       startNewGame: async (theme, attachmentFiles) => {
         const { settings, openrouterApiKey } = get();
@@ -177,11 +239,11 @@ export const useGameStore = create<GameState>()(
           });
           const assets = await loadAssetsForNodes([rootNode.id]);
           set({
-            screen: "playing",
             activeGame: game,
             nodes: [rootNode],
             assets,
             viewingNodeId: rootNode.id,
+            currentNodeId: rootNode.id,
             generation: { phase: "idle" },
           });
         } catch (error) {
@@ -196,12 +258,13 @@ export const useGameStore = create<GameState>()(
         ]);
         if (!game) return;
         const assets = await loadAssetsForNodes(nodes.map((n) => n.id));
+        const playhead = game.latestNodeId ?? nodes[0]?.id ?? null;
         set({
-          screen: "playing",
           activeGame: game,
           nodes,
           assets,
-          viewingNodeId: game.latestNodeId ?? nodes[0]?.id ?? null,
+          viewingNodeId: playhead,
+          currentNodeId: playhead,
         });
       },
 
@@ -250,6 +313,7 @@ export const useGameStore = create<GameState>()(
             assets: { ...get().assets, ...newAssets },
             activeGame: updatedGame,
             viewingNodeId: node.id,
+            currentNodeId: node.id,
             generation: { phase: "idle" },
           });
         } catch (error) {
@@ -302,6 +366,7 @@ export const useGameStore = create<GameState>()(
             assets: { ...get().assets, ...newAssets },
             activeGame: updatedGame,
             viewingNodeId: node.id,
+            currentNodeId: node.id,
             generation: { phase: "idle" },
           });
         } catch (error) {
@@ -309,38 +374,111 @@ export const useGameStore = create<GameState>()(
         }
       },
 
+      regenerateImage: async (nodeId) => {
+        const state = get();
+        const { settings, activeGame } = state;
+        if (!settings || !activeGame) return;
+        if (state.generation.phase === "running") return;
+        if (state.imageRegeneration.phase === "running") return;
+        if (settings.imageGenerator === "disabled") return;
+        const node = state.nodes.find((n) => n.id === nodeId);
+        if (!node) return;
+
+        const payload: ImageRegenerationPayload = { nodeId };
+        set({
+          imageRegeneration: { phase: "running", payload, startedAt: new Date().toISOString() },
+          imageGenerationProgress: null,
+        });
+        try {
+          const imageGenConfig = await buildImageConfigForSettings(settings);
+          const dataUrl = await generateSceneImage({
+            imagePrompt: node.scene.imagePrompt,
+            negativeImagePrompt: node.scene.negativeImagePrompt,
+            imageGenConfig,
+            onProgress: (progress) => set({ imageGenerationProgress: progress }),
+          });
+          const asset = await assetRecordFromDataUrl(
+            nodeId as StoryNodeId,
+            dataUrl,
+            webpQualityForCompression(settings.webpCompression),
+          );
+          if (asset) {
+            // Regeneration overwrites the same key (REDESIGN §5.3)
+            await assetRepository.put(asset);
+            set({
+              assets: { ...get().assets, [nodeId]: asset },
+              imageRegeneration: { phase: "idle" },
+              imageGenerationProgress: null,
+            });
+          } else {
+            set({
+              imageRegeneration: {
+                phase: "failed",
+                payload,
+                error: new Error("Image generation returned no image."),
+              },
+              imageGenerationProgress: null,
+            });
+          }
+        } catch (error) {
+          if ((error as Error).name === "AbortError") {
+            set({ imageRegeneration: { phase: "idle" }, imageGenerationProgress: null });
+            return;
+          }
+          set({
+            imageRegeneration: { phase: "failed", payload, error: error as Error },
+            imageGenerationProgress: null,
+          });
+        }
+      },
+
       deleteBranch: async (nodeId) => {
         const { activeGame } = get();
-        if (!activeGame) return;
+        if (!activeGame) return { gameDeleted: false };
         const updatedGame = await gameRepository.deleteBranch(activeGame.id, nodeId);
         if (!updatedGame) {
           // Entire game deleted
           const games = await gameRepository.listGames();
           set({
-            screen: "title",
             games,
             activeGame: null,
             nodes: [],
             assets: {},
             viewingNodeId: null,
+            currentNodeId: null,
+            chronicleTargetNodeId: null,
           });
-          return;
+          return { gameDeleted: true };
         }
         // Reload to get accurate remaining nodes/assets
         const freshNodes = await gameRepository.getNodesOfGame(activeGame.id);
         const freshAssets = await loadAssetsForNodes(freshNodes.map((n) => n.id));
         const games = await gameRepository.listGames();
+        const playhead = updatedGame.latestNodeId ?? freshNodes[0]?.id ?? null;
         set({
           games,
           activeGame: updatedGame,
           nodes: freshNodes,
           assets: freshAssets,
-          viewingNodeId: updatedGame.latestNodeId ?? freshNodes[0]?.id ?? null,
+          viewingNodeId: playhead,
+          currentNodeId: playhead,
         });
         void assetRepository.collectGarbage().catch(() => {});
+        return { gameDeleted: false };
       },
 
       setViewingNode: (nodeId) => set({ viewingNodeId: nodeId }),
+
+      resumeStoryAtNode: (nodeId, branchEndNodeId) => {
+        const { activeGame, nodes } = get();
+        if (!activeGame) return;
+        // Both endpoints must be nodes of the active game.
+        const knownIds = new Set<string>(nodes.map((n) => n.id));
+        if (!knownIds.has(nodeId) || !knownIds.has(branchEndNodeId)) return;
+        set({ viewingNodeId: nodeId, currentNodeId: branchEndNodeId });
+      },
+
+      setChronicleTargetNode: (nodeId) => set({ chronicleTargetNodeId: nodeId }),
 
       deleteSave: async (gameId) => {
         await gameRepository.deleteGame(gameId);
@@ -356,8 +494,11 @@ export const useGameStore = create<GameState>()(
         await wipeRepository.wipeAllUserData();
         localStorage.clear();
         sessionStorage.clear();
-        // Full reload guarantees no stale in-memory state over an empty DB;
-        // bootstrap() rebuilds defaults on the next boot.
+        // Flag for the completion screen; must be set AFTER the storage wipe
+        // because the wipe intentionally clears everything.
+        sessionStorage.setItem("nsDataDeletionComplete", "1");
+        // Full reload guarantees no stale in-memory state over a deleted DB
+        // (Dexie refuses to auto-reopen a deleted database).
         window.location.reload();
       },
 

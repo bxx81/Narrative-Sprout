@@ -1,0 +1,36 @@
+@keyframes spinner-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spinner-dash {
+  0% {
+    stroke-dasharray: 1 300;
+    stroke-dashoffset: 0;
+  }
+
+  50% {
+    stroke-dasharray: 120 300;
+    stroke-dashoffset: -35;
+  }
+
+  100% {
+    stroke-dasharray: 120 300;
+    stroke-dashoffset: -225;
+  }
+}
+
+.animate-spinner-rotate {
+  animation: spinner-rotate 2s linear infinite;
+  will-change: auto;
+}
+
+.animate-spinner-dash {
+  animation: spinner-dash 1.5s ease-in-out infinite;
+  will-change: auto;
+}
