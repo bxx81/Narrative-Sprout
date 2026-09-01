@@ -37,14 +37,15 @@ export const assetRepository = {
   /**
    * Orphan GC: removes any asset whose node no longer exists.
    * Returns the number of deleted orphans.
+   * Uses primaryKeys only to avoid deserializing Blobs.
    */
   async collectGarbage(): Promise<number> {
-    const [allAssets, allNodeIds] = await Promise.all([
-      db.assets.toArray(),
+    const [allAssetIds, allNodeIds] = await Promise.all([
+      db.assets.toCollection().primaryKeys(),
       db.nodes.toCollection().primaryKeys(),
     ]);
     const live = new Set(allNodeIds as string[]);
-    const orphanIds = allAssets.filter((a) => !live.has(a.nodeId)).map((a) => a.nodeId);
+    const orphanIds = (allAssetIds as string[]).filter((id) => !live.has(id));
     if (orphanIds.length > 0) {
       await db.assets.bulkDelete(orphanIds);
       console.warn(`[assets] GC removed ${orphanIds.length} orphan(s)`, orphanIds);

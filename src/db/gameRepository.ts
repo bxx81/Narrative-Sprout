@@ -1,4 +1,5 @@
 import { db } from "./database";
+import { collectNodesToDelete } from "../features/storytree/branchDeletion";
 import type { AssetRecord } from "../types/asset";
 import type { GameRecord, StoryNodeRecord } from "../types";
 
@@ -55,37 +56,14 @@ export const gameRepository = {
   },
 
   /**
-   * Deletes a branch from `endNodeId` upward, stopping when a node has
-   * siblings (another child of the same parent). Deletes nodes and their
-   * assets in one transaction (orphan-safe by construction).
+   * Deletes a branch rooted at `endNodeId` (including its entire subtree)
+   * and then walks upward while the parent would become childless.
+   * All deletions are transactional with assets (REDESIGN §5.3).
    * Returns the updated GameRecord or `null` if the entire game was deleted.
    */
   async deleteBranch(gameId: string, endNodeId: string): Promise<GameRecord | null> {
     const allNodes = await db.nodes.where("gameId").equals(gameId).toArray();
-    const byId = new Map<string, StoryNodeRecord>(allNodes.map((n) => [n.id as string, n]));
-    const byParent = new Map<string, StoryNodeRecord[]>();
-    for (const n of allNodes) {
-      if (n.parentNodeId) {
-        const key = n.parentNodeId as string;
-        const list = byParent.get(key) ?? [];
-        list.push(n);
-        byParent.set(key, list);
-      }
-    }
-    const nodesToDelete = new Set<string>();
-    let currentId: string | null = endNodeId;
-    while (currentId) {
-      const current = byId.get(currentId);
-      if (!current) break;
-      nodesToDelete.add(currentId);
-      const parentId = current.parentNodeId;
-      if (!parentId) break;
-      const siblings = (byParent.get(parentId) ?? []).filter(
-        (n) => n.id !== currentId && !nodesToDelete.has(n.id),
-      );
-      if (siblings.length > 0) break;
-      currentId = parentId;
-    }
+    const nodesToDelete = collectNodesToDelete(allNodes, endNodeId);
 
     const remainingNodes = allNodes.filter((n) => !nodesToDelete.has(n.id));
     if (remainingNodes.length === 0) {

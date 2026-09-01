@@ -55,6 +55,19 @@ describe("GameRecord schema", () => {
     expect(gameRecordSchema.safeParse(minimalGameRecord).success).toBe(true);
   });
 
+  test("accepts missing attachmentTexts (optional, per-game world data)", () => {
+    const { attachmentTexts: _attachmentTexts, ...withoutAttachments } = minimalGameRecord;
+    void _attachmentTexts;
+    expect(gameRecordSchema.safeParse(withoutAttachments).success).toBe(true);
+  });
+
+  test("filters invalid attachmentTexts elements element-wise (REDESIGN §5.7)", () => {
+    const withBad = { ...minimalGameRecord, attachmentTexts: ["valid", 123 as unknown as string, null as unknown as string, "also valid"] };
+    const result = gameRecordSchema.safeParse(withBad);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.attachmentTexts).toEqual(["valid", "also valid"]);
+  });
+
   test("rejects settings-like leftovers (records carry no settings, REDESIGN §5.2)", () => {
     const result = gameRecordSchema.safeParse(minimalGameRecord);
     expect(result.success && result.data).not.toHaveProperty("imageSettings");

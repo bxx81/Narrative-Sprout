@@ -16,6 +16,9 @@ export class NvidiaNimImageGenerator implements IImageGenerator {
 
   async generate(params: GenerateParams): Promise<string> {
     const { prompt, config, onProgress, signal } = params;
+    // NIM API does not support negativePrompt; the field is accepted by the
+    // interface for uniformity but intentionally ignored here.
+    void params.negativePrompt;
     const { nimEndpoint, nimToken, nimConfig } = config;
     if (!nimEndpoint) throw new Error("NVIDIA NIM endpoint is not configured.");
     const userConfig = parseJsonConfig<Record<string, string | number | boolean>>(

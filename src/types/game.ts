@@ -12,6 +12,24 @@ import { memoryDeltaSchema, memoryStateSchema, sceneContentSchema } from "./scen
  *                       there is intentionally no asset reference field here.
  */
 
+/**
+ * Attachment texts are validated element-wise (REDESIGN §5.7):
+ * invalid elements are skipped with a warning, not failing the whole record.
+ */
+const attachmentTextsSchema = z
+  .array(z.unknown())
+  .optional()
+  .transform((value) => {
+    if (value === undefined) return undefined;
+    const result: string[] = [];
+    for (const item of value) {
+      const parsed = z.string().safeParse(item);
+      if (parsed.success) result.push(parsed.data);
+      else console.warn("[game] invalid attachmentTexts element skipped", item);
+    }
+    return result;
+  });
+
 export const gameRecordSchema = z.object({
   id: gameIdSchema,
   /** Integer schema version for the future migration chain (§5.6). */
@@ -22,8 +40,8 @@ export const gameRecordSchema = z.object({
   lastPlayedAt: z.string(), // ISO 8601
   /** Reference-only pointer used by the save list; no duplicated scene data. */
   latestNodeId: storyNodeIdSchema.nullable(),
-  /** Attachment texts for this game (YAML front matter already resolved, {a|b} applied). */
-  attachmentTexts: z.array(z.string()).optional().default([]),
+  /** Attachment texts for this game (YAML front matter already resolved, {a|b} applied). Per-game world data, not generation settings. */
+  attachmentTexts: attachmentTextsSchema,
 });
 export type GameRecord = z.infer<typeof gameRecordSchema>;
 

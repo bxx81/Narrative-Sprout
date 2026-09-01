@@ -6,11 +6,11 @@ import { settingsRepository } from "../db/settingsRepository";
 import { assetRepository } from "../db/assetRepository";
 import { db } from "../db/database";
 import { choosePath, refineScene, startGame } from "../features/gameplay/turnService";
-import { collectAncestors } from "../features/storytree/treeTraversal";
+import { collectAncestors } from "../features/storytree/api";
 import type { GameRecord, SettingsRecord, StoryNodeRecord } from "../types";
 import type { AssetRecord } from "../types/asset";
 import type { AsyncOperation } from "./asyncOperation";
-import { buildImageGenConfig } from "../features/image/buildImageGenConfig";
+import { buildImageGenConfig } from "../features/image/api";
 import { processAttachmentFiles } from "../features/attachments/api";
 
 type Screen = "title" | "themeSetup" | "playing";

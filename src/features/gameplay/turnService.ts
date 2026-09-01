@@ -1,26 +1,25 @@
 import { gameRepository } from "../../db/gameRepository";
 import type { GameId, GameRecord, StoryNodeId, StoryNodeRecord } from "../../types";
 import type { MemoryState } from "../../types";
-import { applyMemoryDelta } from "../narrative/memoryMerge";
+import { applyMemoryDelta } from "../narrative/api";
 import {
   buildCompactionPrompt,
   buildMemoryUpdatePrompt,
   buildOpeningPrompt,
   buildTurnPrompt,
-} from "../narrative/promptBuilder";
+} from "../narrative/api";
 import {
   generateMemoryUpdate,
   generateNarration,
   generateSceneOnly,
   generateStoryLogCompaction,
-} from "../narrative/generateScene";
-import { baseMemoryForNewNode } from "../storytree/treeTraversal";
-import { resolveMemoryStrategy } from "../narrative/resolveMemoryStrategy";
-import { shouldCompactStoryLog, compactMemory } from "../memory/storyLogCompaction";
-import { generateSceneImage } from "../image/generateImage";
-import { assetRecordFromDataUrl, webpQualityForCompression } from "../image/assetHelpers";
-import type { ImageGenConfig } from "../image/types";
-import type { WebpCompression, MemoryStrategy } from "../../types/settings";
+} from "../narrative/api";
+import { baseMemoryForNewNode } from "../storytree/api";
+import { resolveMemoryStrategy } from "../narrative/api";
+import { compactMemory, shouldCompactStoryLog, splitStoryLog } from "../memory/api";
+import { assetRecordFromDataUrl, generateSceneImage, webpQualityForCompression } from "../image/api";
+import type { ImageGenConfig } from "../image/api";
+import type { MemoryStrategy, WebpCompression } from "../../types/settings";
 
 function newUuid(): string {
   return crypto.randomUUID();
@@ -37,6 +36,44 @@ export interface StartGameParams {
   webpCompression?: WebpCompression;
   memoryStrategy?: MemoryStrategy;
   enableStoryLogCompaction?: boolean;
+}
+
+async function maybeCompactMemory(params: {
+  memory: MemoryState;
+  theme: string;
+  language: string;
+  attachmentTexts: string[];
+  apiKey: string;
+  model: string;
+  signal?: AbortSignal;
+  currentCost: number | null;
+}): Promise<{ memory: MemoryState; cost: number | null }> {
+  if (!shouldCompactStoryLog(params.memory.storyLog)) return { memory: params.memory, cost: params.currentCost };
+  const { older } = splitStoryLog(params.memory.storyLog);
+  if (older.length === 0) return { memory: params.memory, cost: params.currentCost };
+  try {
+    const compactionPrompt = buildCompactionPrompt({
+      theme: params.theme,
+      language: params.language,
+      storyLog: older,
+      existingSummary: params.memory.storyLogSummary ?? "",
+      attachmentTexts: params.attachmentTexts,
+      flags: params.memory.notes,
+    });
+    const compaction = await generateStoryLogCompaction({
+      apiKey: params.apiKey,
+      model: params.model,
+      system: compactionPrompt.system,
+      messages: compactionPrompt.messages,
+      signal: params.signal,
+    });
+    const compacted = compactMemory(params.memory, compaction.storyLogSummary, compaction.facts);
+    const cost = (params.currentCost ?? 0) + (compaction.generationCost ?? 0);
+    return { memory: compacted, cost };
+  } catch (error) {
+    console.warn("[compaction] failed, keeping storyLog:", error);
+    return { memory: params.memory, cost: params.currentCost };
+  }
 }
 
 /**
@@ -87,7 +124,6 @@ export async function startGame(
     notesDraft = sceneOnly.notesDraft;
     generationCost = sceneOnly.generationCost;
     modelName = sceneOnly.modelName;
-    // Memory update call (sequential for simplicity; legacy does parallel with image)
     const memoryPrompt = buildMemoryUpdatePrompt({
       theme: params.theme,
       language: params.language,
@@ -109,7 +145,6 @@ export async function startGame(
     modelName = memoryResult.modelName ?? modelName;
   }
 
-  // Location fallback: if empty carry from none (first turn has no parent)
   if (!scene.locationContext) scene.locationContext = "";
 
   const now = new Date().toISOString();
@@ -118,30 +153,24 @@ export async function startGame(
 
   let memory: MemoryState = applyMemoryDelta({ notes: {}, storyLog: [] }, memoryDelta);
 
-  // Compaction check (after first turn storyLog length is 1, so no compaction yet)
-  if (params.enableStoryLogCompaction !== false && shouldCompactStoryLog(memory.storyLog)) {
-    try {
-      const compactionPrompt = buildCompactionPrompt({
-        theme: params.theme,
-        language: params.language,
-        storyLog: memory.storyLog.slice(0, memory.storyLog.length - 20),
-        existingSummary: memory.storyLogSummary ?? "",
-        attachmentTexts,
-        flags: memory.notes,
-      });
-      const compaction = await generateStoryLogCompaction({
-        apiKey: params.apiKey,
-        model: params.model,
-        system: compactionPrompt.system,
-        messages: compactionPrompt.messages,
-        signal: options?.signal,
-      });
-      memory = compactMemory(memory, compaction.storyLogSummary, compaction.facts);
-      generationCost = (generationCost ?? 0) + (compaction.generationCost ?? 0);
-    } catch (error) {
-      console.warn("[compaction] failed, keeping storyLog:", error);
-    }
+  if (params.enableStoryLogCompaction !== false) {
+    const compacted = await maybeCompactMemory({
+      memory,
+      theme: params.theme,
+      language: params.language,
+      attachmentTexts,
+      apiKey: params.apiKey,
+      model: params.model,
+      signal: options?.signal,
+      currentCost: generationCost,
+    });
+    memory = compacted.memory;
+    generationCost = compacted.cost;
   }
+
+  // promptSent is the user message actually sent (opening note), not the full attachment prefix.
+  // History rebuilding uses promptSent + scene pairs; attachments are re-injected via prefix each turn.
+  const promptSent = messages[messages.length - 1]?.content ?? "";
 
   const rootNode: StoryNodeRecord = {
     id: nodeId,
@@ -150,7 +179,7 @@ export async function startGame(
     turnNumber: 1,
     choiceText: null,
     scene,
-    promptSent: messages.map((m) => m.content).join("\n"),
+    promptSent,
     memory,
     memoryDelta,
     metadata: {
@@ -173,7 +202,6 @@ export async function startGame(
     attachmentTexts,
   };
 
-  // Image generation (after narrative, before persistence)
   let asset: import("../../types/asset").AssetRecord | null = null;
   if (params.imageGenConfig && params.imageGenConfig.generator !== "disabled") {
     try {
@@ -266,7 +294,6 @@ export async function choosePath(
       memory: baseMemory,
       turnNumber: params.parentNode.turnNumber + 1,
     });
-    // Parallelize memory and image? For now sequential for memory, then image after
     const memoryResult = await generateMemoryUpdate({
       apiKey: params.apiKey,
       model: params.model,
@@ -279,35 +306,25 @@ export async function choosePath(
     modelName = memoryResult.modelName ?? modelName;
   }
 
-  // Location fallback
   if (!scene.locationContext) {
     scene.locationContext = params.parentNode.scene.locationContext ?? "";
   }
 
   let memory: MemoryState = applyMemoryDelta(baseMemory, memoryDelta);
 
-  if (params.enableStoryLogCompaction !== false && shouldCompactStoryLog(memory.storyLog)) {
-    try {
-      const compactionPrompt = buildCompactionPrompt({
-        theme: params.game.title,
-        language: params.language,
-        storyLog: memory.storyLog.slice(0, memory.storyLog.length - 20),
-        existingSummary: memory.storyLogSummary ?? "",
-        attachmentTexts,
-        flags: memory.notes,
-      });
-      const compaction = await generateStoryLogCompaction({
-        apiKey: params.apiKey,
-        model: params.model,
-        system: compactionPrompt.system,
-        messages: compactionPrompt.messages,
-        signal: options?.signal,
-      });
-      memory = compactMemory(memory, compaction.storyLogSummary, compaction.facts);
-      generationCost = (generationCost ?? 0) + (compaction.generationCost ?? 0);
-    } catch (error) {
-      console.warn("[compaction] failed:", error);
-    }
+  if (params.enableStoryLogCompaction !== false) {
+    const compacted = await maybeCompactMemory({
+      memory,
+      theme: params.game.title,
+      language: params.language,
+      attachmentTexts,
+      apiKey: params.apiKey,
+      model: params.model,
+      signal: options?.signal,
+      currentCost: generationCost,
+    });
+    memory = compacted.memory;
+    generationCost = compacted.cost;
   }
 
   const nodeId = newUuid() as StoryNodeId;
@@ -334,8 +351,6 @@ export async function choosePath(
   let asset: import("../../types/asset").AssetRecord | null = null;
   if (params.imageGenConfig && params.imageGenConfig.generator !== "disabled") {
     try {
-      // For split strategy, legacy ran image in parallel with memory update.
-      // Here we run after memory for simplicity; could be parallelized later.
       const dataUrl = await generateSceneImage({
         imagePrompt: scene!.imagePrompt,
         negativeImagePrompt: scene!.negativeImagePrompt,
@@ -364,7 +379,7 @@ export interface RefineSceneParams {
   model: string;
   game: GameRecord;
   targetNode: StoryNodeRecord;
-  parentNode: StoryNodeRecord | null; // null for root refinement (handled as sibling)
+  parentNode: StoryNodeRecord | null;
   ancestors: StoryNodeRecord[]; // for context (ancestors of parent)
   refinePrompt: string;
   language: string;
@@ -378,9 +393,8 @@ export interface RefineSceneParams {
 
 /**
  * Refines a scene by regenerating it as a sibling of `targetNode` under the same parent.
- * For root nodes (parentNode null), this creates a sibling root? Actually root has no parent,
- * but we treat it as creating a new sibling under the same game with same turnNumber.
- * For non-root, parent is target's parent.
+ * For root nodes, creates a new turn-1 sibling (same game, same turnNumber). The original
+ * root remains; the new node becomes the latest.
  */
 export async function refineScene(
   params: RefineSceneParams,
@@ -389,22 +403,17 @@ export async function refineScene(
   const attachmentTexts = params.attachmentTexts ?? params.game.attachmentTexts ?? [];
   const isRoot = params.targetNode.parentNodeId === null;
 
-  const baseMemory = isRoot
-    ? { notes: {}, storyLog: [] }
-    : baseMemoryForNewNode(params.parentNode!);
+  const baseMemory = isRoot ? { notes: {}, storyLog: [] } : baseMemoryForNewNode(params.parentNode!);
   const strategy = resolveMemoryStrategy(params.memoryStrategy, params.sceneTextLength);
 
-  // Build refine instruction
   const choiceText = params.targetNode.choiceText ?? "Begin the narrative.";
   const originalSceneJson = JSON.stringify(params.targetNode.scene);
   const refineInstruction =
     (isRoot
       ? `[Refine request for the first scene] Please regenerate the ENTIRE response based on instructions:\nOriginal scene:\n${originalSceneJson}\n\nUser instructions: ${params.refinePrompt}`
       : `[Refine request] The player chose: "${choiceText}". The following scene data was generated but needs correction. Please regenerate the ENTIRE response based on instructions:\nOriginal scene:\n${originalSceneJson}\n\nUser instructions: ${params.refinePrompt}`) +
-    `\nTarget scene length: ${params.sceneTextLength}. Output ONLY the keys that changed in notes.`; // length hint handled by promptBuilder
+    `\nTarget scene length: ${params.sceneTextLength}. Output ONLY the keys that changed in notes.`;
 
-  // Reuse turn prompt building but with refineInstruction as choiceText
-  // For root, we use opening prompt style but inject refineInstruction
   let system: string;
   let messages: import("../../lib/openAiClient").ChatMessage[];
 
@@ -416,7 +425,6 @@ export async function refineScene(
       attachmentTexts,
     });
     system = opening.system;
-    // Replace opening user note with refine instruction
     messages = [...opening.messages.slice(0, -1), { role: "user", content: refineInstruction }];
   } else {
     const turn = buildTurnPrompt({
@@ -487,28 +495,19 @@ export async function refineScene(
 
   let memory: MemoryState = applyMemoryDelta(baseMemory, memoryDelta!);
 
-  if (params.enableStoryLogCompaction !== false && shouldCompactStoryLog(memory.storyLog)) {
-    try {
-      const compactionPrompt = buildCompactionPrompt({
-        theme: params.game.title,
-        language: params.language,
-        storyLog: memory.storyLog.slice(0, memory.storyLog.length - 20),
-        existingSummary: memory.storyLogSummary ?? "",
-        attachmentTexts,
-        flags: memory.notes,
-      });
-      const compaction = await generateStoryLogCompaction({
-        apiKey: params.apiKey,
-        model: params.model,
-        system: compactionPrompt.system,
-        messages: compactionPrompt.messages,
-        signal: options?.signal,
-      });
-      memory = compactMemory(memory, compaction.storyLogSummary, compaction.facts);
-      generationCost = (generationCost ?? 0) + (compaction.generationCost ?? 0);
-    } catch (error) {
-      console.warn("[compaction] failed:", error);
-    }
+  if (params.enableStoryLogCompaction !== false) {
+    const compacted = await maybeCompactMemory({
+      memory,
+      theme: params.game.title,
+      language: params.language,
+      attachmentTexts,
+      apiKey: params.apiKey,
+      model: params.model,
+      signal: options?.signal,
+      currentCost: generationCost,
+    });
+    memory = compacted.memory;
+    generationCost = compacted.cost;
   }
 
   const nodeId = newUuid() as StoryNodeId;
