@@ -313,5 +313,9 @@
   "confirmButton": "Confirm",
   "deletedFromDrive": "Deleted {{name}} from Drive.",
   "restoredFromDriveSummary": "Restored {{count}} game(s) from {{name}}.",
-  "unknownSize": "unknown size"
+  "unknownSize": "unknown size",
+  "invalidModelOption": "Invalid model setting. Use \"provider/model\" with optional \"--option=value\" pairs.",
+  "modelOptionsHelp": "Trailing options: --BaseURL=https://... (custom OpenAI-compatible endpoint) --temperature=0.7 --top_p --top_k --max_tokens --timeout --reasoning=true|low|high --kwargs_reasoning --only=provider --strict=false --stream=false",
+  "apiKeyPrefixMismatchWarning": "This key does not look like an OpenRouter key (expected prefix: sk-or-). Check the endpoint or the key.",
+  "apiKeyPkceFailed": "Failed to get the API key from OpenRouter. Please try again."
 }

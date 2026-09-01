@@ -100,16 +100,13 @@ export function sceneToWireResponse(
   };
 }
 
-/** JSON Schema for the OpenAI `response_format` (OpenRouter structured output). */
-export function buildNarratorResponseFormat() {
-  return {
-    type: "json_schema" as const,
-    json_schema: {
-      name: "narrator_scene",
-      strict: true,
-      schema: z.toJSONSchema(narratorSceneResponseSchema) as Record<string, unknown>,
-    },
-  };
+/**
+ * Prompt-embedded JSON schema text for non-strict providers
+ * (`--strict=false`): the request uses `json_object` and the schema text is
+ * appended to the system prompt instead.
+ */
+export function buildSchemaPromptText(schema: z.ZodType): string {
+  return JSON.stringify(z.toJSONSchema(schema), null, 2);
 }
 
 /** Scene-only response for split strategy (call 1): no notes/sceneSummary. */
@@ -148,17 +145,6 @@ export const narratorSceneOnlyResponseSchema = z.object({
 });
 export type NarratorSceneOnlyResponse = z.infer<typeof narratorSceneOnlyResponseSchema>;
 
-export function buildSceneOnlyResponseFormat() {
-  return {
-    type: "json_schema" as const,
-    json_schema: {
-      name: "narrator_scene_only",
-      strict: true,
-      schema: z.toJSONSchema(narratorSceneOnlyResponseSchema) as Record<string, unknown>,
-    },
-  };
-}
-
 /** Memory-only response for split strategy (call 2). */
 export const memoryUpdateResponseSchema = z.object({
   sceneSummary: z
@@ -170,17 +156,6 @@ export const memoryUpdateResponseSchema = z.object({
 });
 export type MemoryUpdateResponse = z.infer<typeof memoryUpdateResponseSchema>;
 
-export function buildMemoryUpdateResponseFormat() {
-  return {
-    type: "json_schema" as const,
-    json_schema: {
-      name: "memory_update",
-      strict: true,
-      schema: z.toJSONSchema(memoryUpdateResponseSchema) as Record<string, unknown>,
-    },
-  };
-}
-
 /** Archivist compaction response (storyLogSummary + facts). */
 export const storyLogCompactionResponseSchema = z.object({
   storyLogSummary: z.string().describe("Compressed chronicle preserving ALL plot-critical facts."),
@@ -189,14 +164,3 @@ export const storyLogCompactionResponseSchema = z.object({
     .describe("Durable facts to promote into notes (flag:/num:/lore: only)."),
 });
 export type StoryLogCompactionResponse = z.infer<typeof storyLogCompactionResponseSchema>;
-
-export function buildCompactionResponseFormat() {
-  return {
-    type: "json_schema" as const,
-    json_schema: {
-      name: "story_log_compaction",
-      strict: true,
-      schema: z.toJSONSchema(storyLogCompactionResponseSchema) as Record<string, unknown>,
-    },
-  };
-}

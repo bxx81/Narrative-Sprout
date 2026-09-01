@@ -41,7 +41,17 @@
 2. New Game → テーマを入れて Start → 導入シーンが生成される。
 3. 3 択を選ぶと次ターン生成。タイトルに戻って Continue から再開できる。
 
-既知の制約（Phase 6 実装後）: 画像生成は 4プロバイダ対応（HF/A1111/ComfyUI/NIM、無効時はフォールバックSVG）。UI は Legacy 見た目を移植済み。UI 言語は Settings > Language で選択可能（5言語 + AI翻訳）。物語本文の言語は `settings.language`（プロンプトに注入）。未移植の Legacy 機能: 本文手動編集・テーマ自動生成（Generate Idea）・OpenRouter PKCE 取得。
+既知の制約（Phase 6 実装後）: 画像生成は 4プロバイダ対応（HF/A1111/ComfyUI/NIM、無効時はフォールバックSVG）。UI は Legacy 見た目を移植済み。UI 言語は Settings > Language で選択可能（5言語 + AI翻訳）。物語本文の言語は `settings.language`（プロンプトに注入）。未移植の Legacy 機能: 本文手動編集・テーマ自動生成（Generate Idea）。
+
+## Phase 6.5（モデル詳細設定 + PKCE）の要点（未コミット時は feature ブランチ参照）
+
+- **モデルオプション完全対応** (`src/lib/modelOptions.ts` 書き直し): Legacy modelutils.ts の全オプションを移植 — `--BaseURL`（http/https 検証）、`--reasoning`（true/false/effort レベル）、`--reasoning_effort`、`--temperature`、`--top_p`、`--top_k`、`--frequency_penalty`、`--presence_penalty`、`--repetition_penalty`、`--min_p`、`--top_a`、`--max_tokens`、`--timeout`、`--kwargs_reasoning`、`--only`、`--strict`、`--stream`。`isValid` フラグで無効オプション検出。`buildSamplingParams` が legacy `getParams` 相当のリクエストボディ生成（max_tokens → max_completion_tokens、reasoning → {effort}、kwargs_reasoning → chat_template_kwargs、only → provider.only）。
+- **配線** (`generateScene.ts` の `callChatCompletion`): 全ナラティブ呼び出し（start/choice/refine/split/compaction）で `parseTextModelOptions` を解釈し、baseUrl・タイムアウト（`AbortSignal.any([signal, timeout])`）・サンプリングを適用。`--strict=false` 時は `json_object` レスポンス形式にフォールバックし、スキーマを system プロンプトに埋め込み。`autoplayService.ts` / `translateService.ts` も同様に配線。response_format ビルダー（`buildNarratorResponseFormat` 等4種）は未使用になったため削除し、schema は `callChatCompletion` 内で `responseSchema` + `responseSchemaName` として渡す設計に変更。
+- **OpenRouter アプリヘッダー** (`lib/openAiClient.ts`): `OPENROUTER_APP_HEADERS`（HTTP-Referer / X-OpenRouter-Title / X-OpenRouter-Categories）をデフォルト baseUrl のときのみ送信（custom --BaseURL では送らない。legacy 挙動）。
+- **OpenRouter PKCE** (`src/features/openrouter/pkceAuth.ts`): `startPkceAuth`（UUID state + verifier×2 → S256 challenge → `https://openrouter.ai/auth?...` へリダイレクト）、`exchangeCodeForApiKey`（15s ハードタイムアウト、verifier を即時削除して重複交換防止、`fetchImpl` 注入でテスト可）、`consumePkceCallback`（state 一致チェック = CSRF 防御、不一致時は null + console.error）、`stripPkceCallbackFromUrl`（replaceState でリロード再生防止）。localStorage キーは `nsOAuthState` / `nsOAuthCodeVerifier`。Settings に "Automatic API Key Setup" セクション新設、マウント時に 1 回だけ（useRef ガード）コールバック処理 → `saveApiKey` → 成功/失敗ステータス表示。
+- **Settings UI 強化**: モデル入力の検証を `parseTextModelOptions().isValid` ベースに変更（無効オプションは赤字 + `invalidModelOption`）、オプション構文ヘルプ（`modelOptionsHelp`）追記、API キー接頭辞警告（`apiKeyPrefixMismatchWarning`、OpenRouter baseUrl のとき `sk-or-` 以外なら表示。legacy `apiKeyValidation` の soft 版）。
+- **テスト**: `modelOptions.test.ts` 10 cases（パース/バリデーション/sampling params マップ/ストリーミング判定）、`pkceAuth.test.ts` 7 cases（URL 構築・交換成功/verifier 欠損/HTTP エラー・state 一致/CSRF 拒否）。全 184 テストグリーン。
+- **意図的に未実装**（後続フェーズ）: テーマ自動生成（Generate Idea）、本文手動編集、開発者オプション、react-hot-toast。
 
 ## Phase 6（i18n / オートプレイ / ストリーミング / PWA）の要点
 

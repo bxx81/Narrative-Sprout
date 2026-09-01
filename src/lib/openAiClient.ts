@@ -67,6 +67,16 @@ export interface StreamingCompletionOptions {
   idleTimeoutMs?: number;
 }
 
+/**
+ * App attribution headers sent to OpenRouter only (legacy defaultHeaders).
+ * Custom --BaseURL endpoints must not receive them.
+ */
+export const OPENROUTER_APP_HEADERS: Record<string, string> = {
+  "HTTP-Referer": "https://narrative-sprout.pages.dev",
+  "X-OpenRouter-Title": "Narrative Sprout",
+  "X-OpenRouter-Categories": "game",
+};
+
 export class OpenAiCompatibleClient {
   constructor(
     private readonly apiKey: string | null,
@@ -74,12 +84,20 @@ export class OpenAiCompatibleClient {
     private readonly maxRetries = 2,
   ) {}
 
+  private buildHeaders(): Record<string, string> {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;
+    if (this.baseUrl === "https://openrouter.ai/api/v1") {
+      Object.assign(headers, OPENROUTER_APP_HEADERS);
+    }
+    return headers;
+  }
+
   async createChatCompletion(
     body: ChatCompletionRequest,
     options?: { signal?: AbortSignal },
   ): Promise<ChatCompletionResponse> {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;
+    const headers = this.buildHeaders();
 
     let lastError: unknown;
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
@@ -123,8 +141,7 @@ export class OpenAiCompatibleClient {
     body: ChatCompletionRequest,
     options?: StreamingCompletionOptions,
   ): Promise<ChatCompletionResponse> {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;
+    const headers = this.buildHeaders();
     const requestBody = { ...body, stream: true, stream_options: { include_usage: true } };
 
     let lastError: unknown;

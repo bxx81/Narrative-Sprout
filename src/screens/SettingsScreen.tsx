@@ -4,8 +4,14 @@ import { useNavigate, useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useGameStore } from "../store/gameStore";
 import type { ImageGeneratorType } from "../types/settings";
-import { parseTextModelOptions } from "../lib/modelOptions";
+import { parseTextModelOptions, DEFAULT_OPENROUTER_BASE_URL } from "../lib/modelOptions";
 import { builtInLanguages } from "../features/i18n/api";
+import {
+  consumePkceCallback,
+  exchangeCodeForApiKey,
+  startPkceAuth,
+  stripPkceCallbackFromUrl,
+} from "../features/openrouter/api";
 import A1111ImageSettings from "../components/settings/A1111ImageSettings";
 import ComfyUIImageSettings from "../components/settings/ComfyUIImageSettings";
 import HuggingFaceImageSettings from "../components/settings/HuggingFaceImageSettings";
@@ -29,12 +35,15 @@ interface OpenRouterModel {
 
 /**
  * Isolated input for the text model setting (debounced sync to the store).
+ * Accepts trailing per-model options, e.g.
+ * "provider/model --BaseURL=http://127.0.0.1:1234/v1 --temperature=0.7".
  */
 const TextModelInput = React.memo(
   ({ value, onChange }: { value: string; onChange: (val: string) => void }) => {
     const { t } = useTranslation();
     const [localValue, setLocalValue] = useDebouncedExternalState(value, onChange);
-    const isInvalid = !/^\S+\/\S+/.test(localValue.trim().split(/\s+/)[0] ?? "");
+    const parsed = parseTextModelOptions(localValue);
+    const isInvalid = !parsed.isValid;
 
     const [models, setModels] = useState<OpenRouterModel[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -110,8 +119,9 @@ const TextModelInput = React.memo(
             className={`form-style ${isInvalid ? "form-style-invalid" : "form-style-valid"}`}
           />
           {isInvalid && (
-            <p className="mt-1 text-xs font-semibold text-red-500">{t("invalidModelSetting")}</p>
+            <p className="mt-1 text-xs font-semibold text-red-500">{t("invalidModelOption")}</p>
           )}
+          <p className="support-text-color mt-2 text-xs">{t("modelOptionsHelp")}</p>
         </div>
 
         <div className="mt-2 text-sm">
@@ -220,9 +230,32 @@ const SettingsScreen: React.FC = () => {
 
   const [key, setKey] = useState("");
   const [targetLanguage, setTargetLanguage] = useState("");
+  const [pkceStatus, setPkceStatus] = useState<string | null>(null);
+  const pkceProcessedRef = useRef(false);
 
   const cameFromPath = location.state?.from as string | undefined;
   const showReturnToStartButton = cameFromPath && cameFromPath !== ROUTES.HOME && activeGame;
+
+  // OpenRouter OAuth PKCE callback: consume ?code=&state= exactly once per
+  // mount, clean the address bar first (prevents replay on re-render), then
+  // exchange the code for a user-owned API key (legacy effect).
+  useEffect(() => {
+    if (pkceProcessedRef.current) return;
+    const searchParams = new URLSearchParams(window.location.search);
+    const callback = consumePkceCallback(searchParams);
+    if (!callback) return;
+    pkceProcessedRef.current = true;
+    stripPkceCallbackFromUrl();
+    exchangeCodeForApiKey(callback.code)
+      .then((newKey) => {
+        void saveApiKey(newKey);
+        setPkceStatus(t("apiKeyPkceSuccess"));
+      })
+      .catch((error) => {
+        console.error("[pkce] key exchange failed", error);
+        setPkceStatus(t("apiKeyPkceFailed"));
+      });
+  }, [saveApiKey, t]);
 
   if (!settings) return null;
 
@@ -234,10 +267,15 @@ const SettingsScreen: React.FC = () => {
   );
   const isCurrentAiLanguage = aiLanguagesSet.has(uiLanguage);
   const isTranslating = uiTranslation.phase === "running";
+  const parsedModel = parseTextModelOptions(settings.textModel);
 
   const handleReturnToStartClick = async () => {
     navigate(ROUTES.HOME, { replace: true, viewTransition: true });
     await goToTitle();
+  };
+
+  const handleGetApiKey = () => {
+    void startPkceAuth();
   };
 
   const handleApiKeySubmit = (e: React.FormEvent) => {
@@ -519,6 +557,36 @@ const SettingsScreen: React.FC = () => {
           </div>
         </SettingsSection>
 
+        {/* Automatic API Key Setup (PKCE) Section */}
+        <SettingsSection
+          ariaLabelledby="pkce-heading"
+          header={t("apiKeyPkceSectionTitle")}
+          icon={<Icon iconName="login" />}
+        >
+          <p className="explanation-text-style">{t("apiKeyPkceDescription")}</p>
+          <Button
+            type="button"
+            intent="primary"
+            size="medium"
+            onClick={handleGetApiKey}
+            className="w-full"
+          >
+            <Icon iconName="key" />
+            {t("apiKeyPkceButton")}
+          </Button>
+          {pkceStatus && (
+            <p
+              className={`mt-2 text-center text-xs font-semibold ${
+                pkceStatus === t("apiKeyPkceSuccess")
+                  ? "text-lime-600 dark:text-lime-400"
+                  : "text-danger"
+              }`}
+            >
+              {pkceStatus}
+            </p>
+          )}
+        </SettingsSection>
+
         {/* API Key Section */}
         <SettingsSection ariaLabelledby="api-key-heading">
           <Expander
@@ -558,6 +626,11 @@ const SettingsScreen: React.FC = () => {
                 {apiKey ? t("updateApiKeyButton") : t("apiKeySaveButton")}
               </Button>
             </form>
+            {apiKey && !isApiKeyPrefixValid(parsedModel, apiKey) && (
+              <p className="text-xs font-semibold text-red-500">
+                {t("apiKeyPrefixMismatchWarning")}
+              </p>
+            )}
             <p className="support-text-color text-xs">{t("apiKeyStoredLocallyNote")}</p>
           </Expander>
         </SettingsSection>
@@ -591,5 +664,20 @@ const SettingsScreen: React.FC = () => {
     </div>
   );
 };
+
+/**
+ * Soft prefix check between the endpoint and the key format (legacy
+ * `apiKeyValidation`): OpenRouter keys start with "sk-or-"; other endpoints
+ * are always accepted. Non-strict heuristic — a warning only.
+ */
+function isApiKeyPrefixValid(
+  options: ReturnType<typeof parseTextModelOptions>,
+  apiKey: string,
+): boolean {
+  if (options.baseUrl === DEFAULT_OPENROUTER_BASE_URL) {
+    return apiKey.startsWith("sk-or-");
+  }
+  return true;
+}
 
 export default SettingsScreen;

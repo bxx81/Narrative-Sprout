@@ -1,11 +1,10 @@
+import { z } from "zod";
 import { OpenAiCompatibleClient, ApiError } from "../../lib/openAiClient";
 import type { ChatCompletionRequest } from "../../lib/openAiClient";
+import { buildSamplingParams, parseTextModelOptions } from "../../lib/modelOptions";
 import type { MemoryDelta, SceneContent } from "../../types";
 import {
-  buildCompactionResponseFormat,
-  buildMemoryUpdateResponseFormat,
-  buildNarratorResponseFormat,
-  buildSceneOnlyResponseFormat,
+  buildSchemaPromptText,
   memoryUpdateResponseSchema,
   narratorSceneOnlyResponseSchema,
   narratorSceneResponseSchema,
@@ -81,34 +80,59 @@ async function callChatCompletion(params: {
   model: string;
   system: string;
   messages: { role: "system" | "user" | "assistant"; content: string }[];
-  responseFormat: Record<string, unknown>;
+  /** Zod schema the response must satisfy (also drives response_format). */
+  responseSchema: z.ZodType;
+  responseSchemaName: string;
   signal?: AbortSignal;
   /** When present, the narration is delivered via SSE with live deltas. */
   onDelta?: (accumulatedText: string) => void;
 }) {
-  const client = new OpenAiCompatibleClient(params.apiKey);
+  const modelOptions = parseTextModelOptions(params.model);
+  if (!modelOptions.isValid) {
+    throw new NarrationError("Model setting is invalid.");
+  }
+  const client = new OpenAiCompatibleClient(params.apiKey, modelOptions.baseUrl);
+  const responseFormat = modelOptions.strict
+    ? {
+        type: "json_schema" as const,
+        json_schema: {
+          name: params.responseSchemaName,
+          strict: true,
+          schema: z.toJSONSchema(params.responseSchema) as Record<string, unknown>,
+        },
+      }
+    : { type: "json_object" as const };
+  const systemContent = modelOptions.strict
+    ? params.system
+    : `${params.system}\n\nHere is the required JSON schema:\n\`\`\`json\n${buildSchemaPromptText(
+        params.responseSchema,
+      )}\n\`\`\`\n`;
   const requestBody: ChatCompletionRequest = {
-    model: params.model,
-    messages: [{ role: "system", content: params.system }, ...params.messages],
-    response_format: params.responseFormat as never,
+    model: modelOptions.model,
+    messages: [{ role: "system", content: systemContent }, ...params.messages],
+    response_format: responseFormat as never,
+    ...buildSamplingParams(modelOptions),
   };
+  const signal = params.signal
+    ? AbortSignal.any([params.signal, AbortSignal.timeout(modelOptions.timeoutMs)])
+    : AbortSignal.timeout(modelOptions.timeoutMs);
   let response;
-  if (params.onDelta) {
+  if (params.onDelta && modelOptions.stream) {
     try {
       response = await client.createStreamingChatCompletion(requestBody, {
-        signal: params.signal,
+        signal,
         onDelta: params.onDelta,
       });
     } catch (error) {
       if (error instanceof ApiError && STREAM_REJECT_STATUSES.has(error.status)) {
         // This endpoint does not accept streaming: retry once in bulk.
-        response = await client.createChatCompletion(requestBody, { signal: params.signal });
+        response = await client.createChatCompletion(requestBody, { signal });
       } else {
         throw error;
       }
     }
   } else {
-    response = await client.createChatCompletion(requestBody, { signal: params.signal });
+    response = await client.createChatCompletion(requestBody, { signal });
   }
   const raw = response.choices?.[0]?.message?.content;
   if (typeof raw !== "string" || raw.length === 0) {
@@ -141,7 +165,8 @@ export async function generateNarration(params: {
     model: params.model,
     system: params.system,
     messages: params.messages,
-    responseFormat: buildNarratorResponseFormat(),
+    responseSchema: narratorSceneResponseSchema,
+    responseSchemaName: "narrator_scene",
     signal: params.signal,
     onDelta: params.onDelta,
   });
@@ -189,7 +214,8 @@ export async function generateSceneOnly(params: {
     model: params.model,
     system: params.system,
     messages: params.messages,
-    responseFormat: buildSceneOnlyResponseFormat(),
+    responseSchema: narratorSceneOnlyResponseSchema,
+    responseSchemaName: "narrator_scene_only",
     signal: params.signal,
     onDelta: params.onDelta,
   });
@@ -231,7 +257,8 @@ export async function generateMemoryUpdate(params: {
     model: params.model,
     system: params.system,
     messages: params.messages,
-    responseFormat: buildMemoryUpdateResponseFormat(),
+    responseSchema: memoryUpdateResponseSchema,
+    responseSchemaName: "memory_update",
     signal: params.signal,
   });
   const parsed = memoryUpdateResponseSchema.safeParse(parsedJson);
@@ -261,7 +288,8 @@ export async function generateStoryLogCompaction(params: {
     model: params.model,
     system: params.system,
     messages: params.messages,
-    responseFormat: buildCompactionResponseFormat(),
+    responseSchema: storyLogCompactionResponseSchema,
+    responseSchemaName: "story_log_compaction",
     signal: params.signal,
   });
   const parsed = storyLogCompactionResponseSchema.safeParse(parsedJson);

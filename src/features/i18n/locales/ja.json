@@ -313,5 +313,9 @@
   "confirmButton": "確認",
   "deletedFromDrive": "{{name}} をドライブから削除しました。",
   "restoredFromDriveSummary": "{{name}} から {{count}} ゲームを復元しました。",
-  "unknownSize": "サイズ不明"
+  "unknownSize": "サイズ不明",
+  "invalidModelOption": "モデル設定が不正です。「provider/model」に「--option=value」形式のオプションを付けて指定してください。",
+  "modelOptionsHelp": "末尾オプション: --BaseURL=https://...（OpenAI互換エンドポイント）--temperature=0.7 --top_p --top_k --max_tokens --timeout --reasoning=true|low|high --kwargs_reasoning --only=provider --strict=false --stream=false",
+  "apiKeyPrefixMismatchWarning": "このキーは OpenRouter のキーではないようです（期待される接頭辞: sk-or-）。エンドポイントかキーを確認してください。",
+  "apiKeyPkceFailed": "OpenRouter から API キーを取得できませんでした。もう一度お試しください。"
 }

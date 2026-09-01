@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { OpenAiCompatibleClient } from "../../lib/openAiClient";
-import { parseTextModelOptions } from "../../lib/modelOptions";
+import { buildSamplingParams, parseTextModelOptions } from "../../lib/modelOptions";
 import type { Translation } from "./index";
 
 /**
@@ -77,19 +77,12 @@ ${JSON.stringify(englishChunk)}
 `;
 }
 
-function chunkResponseFormat(englishChunk: Translation): Record<string, unknown> {
+function chunkSchema(englishChunk: Translation): z.ZodType {
   const schemaShape: Record<string, z.ZodType> = {};
   for (const key of Object.keys(englishChunk)) {
     schemaShape[key] = z.string();
   }
-  return {
-    type: "json_schema",
-    json_schema: {
-      name: "translation",
-      strict: true,
-      schema: z.toJSONSchema(z.object(schemaShape)),
-    },
-  };
+  return z.object(schemaShape);
 }
 
 async function translateChunk(params: {
@@ -99,15 +92,36 @@ async function translateChunk(params: {
   englishChunk: Translation;
   signal?: AbortSignal;
 }): Promise<Translation> {
+  const modelOptions = parseTextModelOptions(params.textModel);
+  if (!modelOptions.isValid) {
+    throw new Error("Model setting is invalid.");
+  }
   // Be a good API citizen between sequential chunk calls.
   await new Promise((resolve) => setTimeout(resolve, POLITENESS_DELAY_MS));
+  const prompt = `${chunkPrompt(params.targetLanguage, params.englishChunk)}${
+    modelOptions.strict
+      ? ""
+      : `\nRequired JSON schema (keys MUST match the input exactly):\n${JSON.stringify(
+          z.toJSONSchema(chunkSchema(params.englishChunk)),
+          null,
+          2,
+        )}\n`
+  }`;
   const response = await params.client.createChatCompletion(
     {
-      model: parseTextModelOptions(params.textModel).model,
-      response_format: chunkResponseFormat(params.englishChunk) as never,
-      messages: [
-        { role: "user", content: chunkPrompt(params.targetLanguage, params.englishChunk) },
-      ],
+      model: modelOptions.model,
+      response_format: (modelOptions.strict
+        ? {
+            type: "json_schema",
+            json_schema: {
+              name: "translation",
+              strict: true,
+              schema: z.toJSONSchema(chunkSchema(params.englishChunk)),
+            },
+          }
+        : { type: "json_object" }) as never,
+      messages: [{ role: "user", content: prompt }],
+      ...buildSamplingParams(modelOptions),
     },
     { signal: params.signal },
   );
@@ -168,13 +182,15 @@ export async function getTranslateLanguageCode(params: {
 
   const prompt = `What is the most common IETF language tag (e.g., "en", "ja", "zh-CN") for the language "${params.languageName}"? Respond with ONLY the language tag itself and nothing else.`;
   try {
-    const client = new OpenAiCompatibleClient(params.apiKey);
+    const modelOptions = parseTextModelOptions(params.textModel);
+    const client = new OpenAiCompatibleClient(params.apiKey, modelOptions.baseUrl);
     const response = await client.createChatCompletion(
+      { model: modelOptions.model, messages: [{ role: "user", content: prompt }] },
       {
-        model: parseTextModelOptions(params.textModel).model,
-        messages: [{ role: "user", content: prompt }],
+        signal: params.signal
+          ? AbortSignal.any([params.signal, AbortSignal.timeout(modelOptions.timeoutMs)])
+          : AbortSignal.timeout(modelOptions.timeoutMs),
       },
-      { signal: params.signal },
     );
     const languageCode = response.choices?.[0]?.message?.content?.trim().toLowerCase();
     if (languageCode && /^[a-z]{2,3}(-[a-z]{2,4})?$/.test(languageCode)) {
@@ -207,7 +223,10 @@ export async function translateUIText(params: {
 }): Promise<{ translation: Translation; languageCode: string }> {
   const keys = Object.keys(params.englishTexts);
   const totalChunks = Math.max(1, Math.ceil(keys.length / CHUNK_SIZE));
-  const client = new OpenAiCompatibleClient(params.apiKey);
+  const client = new OpenAiCompatibleClient(
+    params.apiKey,
+    parseTextModelOptions(params.textModel).baseUrl,
+  );
   const progressPerChunk = 0.9 / totalChunks;
   let currentProgress = 0;
   let translatedJson: Translation = {};

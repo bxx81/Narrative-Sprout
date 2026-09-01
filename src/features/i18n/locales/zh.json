@@ -313,5 +313,9 @@
   "confirmButton": "确认",
   "deletedFromDrive": "已从云端硬盘删除 {{name}}。",
   "restoredFromDriveSummary": "已从 {{name}} 还原 {{count}} 个游戏。",
-  "unknownSize": "大小未知"
+  "unknownSize": "大小未知",
+  "invalidModelOption": "模型设置无效。请使用 \"provider/model\" 加可选的 \"--option=value\" 参数。",
+  "modelOptionsHelp": "尾部选项：--BaseURL=https://...（自定义 OpenAI 兼容端点）--temperature=0.7 --top_p --top_k --max_tokens --timeout --reasoning=true|low|high --kwargs_reasoning --only=provider --strict=false --stream=false",
+  "apiKeyPrefixMismatchWarning": "该密钥看起来不像 OpenRouter 密钥（预期前缀：sk-or-）。请检查端点或密钥。",
+  "apiKeyPkceFailed": "从 OpenRouter 获取 API 密钥失败。请重试。"
 }

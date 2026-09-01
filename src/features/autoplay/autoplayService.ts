@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { OpenAiCompatibleClient } from "../../lib/openAiClient";
-import { parseTextModelOptions } from "../../lib/modelOptions";
+import { buildSamplingParams, parseTextModelOptions } from "../../lib/modelOptions";
 import type { GameRecord, StoryNodeRecord } from "../../types";
 
 /*
@@ -158,23 +158,41 @@ export async function decideAutoplayTurn(params: {
   signal?: AbortSignal;
 }): Promise<AutoplayDecision> {
   const { text, isStoryOver } = buildAutoplayLog(params.game, params.nodes, params.viewingNodeId);
-  const response = await new OpenAiCompatibleClient(params.apiKey).createChatCompletion(
+  const modelOptions = parseTextModelOptions(params.textModel);
+  if (!modelOptions.isValid) {
+    throw new Error("Model setting is invalid.");
+  }
+  const responseSchema = isStoryOver ? autoplayEndingSchema : autoplayDecisionSchema;
+  const systemContent = modelOptions.strict
+    ? buildSystemPrompt(params.narrativeLanguage, isStoryOver)
+    : `${buildSystemPrompt(params.narrativeLanguage, isStoryOver)}\nHere is the required JSON schema:\n\`\`\`json\n${JSON.stringify(
+        z.toJSONSchema(responseSchema),
+        null,
+        2,
+      )}\n\`\`\`\n`;
+  const response = await new OpenAiCompatibleClient(
+    params.apiKey,
+    modelOptions.baseUrl,
+  ).createChatCompletion(
     {
-      model: parseTextModelOptions(params.textModel).model,
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "autoPlay",
-          strict: true,
-          schema: z.toJSONSchema(isStoryOver ? autoplayEndingSchema : autoplayDecisionSchema),
-        },
-      } as never,
+      model: modelOptions.model,
+      response_format: (modelOptions.strict
+        ? {
+            type: "json_schema",
+            json_schema: { name: "autoPlay", strict: true, schema: z.toJSONSchema(responseSchema) },
+          }
+        : { type: "json_object" }) as never,
       messages: [
-        { role: "system", content: buildSystemPrompt(params.narrativeLanguage, isStoryOver) },
+        { role: "system", content: systemContent },
         { role: "user", content: text },
       ],
+      ...buildSamplingParams(modelOptions),
     },
-    { signal: params.signal },
+    {
+      signal: params.signal
+        ? AbortSignal.any([params.signal, AbortSignal.timeout(modelOptions.timeoutMs)])
+        : AbortSignal.timeout(modelOptions.timeoutMs),
+    },
   );
   const raw = response.choices?.[0]?.message?.content;
   if (typeof raw !== "string" || raw.length === 0) {
