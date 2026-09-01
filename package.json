@@ -15,6 +15,7 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@gradio/client": "^2.5.1",
     "dexie": "^4.0.0",
     "i18next": "^25.0.0",
     "react": "^19.0.0",

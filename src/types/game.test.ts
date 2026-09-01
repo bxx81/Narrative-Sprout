@@ -17,6 +17,7 @@ const minimalGameRecord: GameRecord = {
   createdAt: "2026-08-24T00:00:00.000Z",
   lastPlayedAt: "2026-08-24T00:00:00.000Z",
   latestNodeId: nodeId,
+  attachmentTexts: [],
 };
 
 const minimalNode: StoryNodeRecord = {

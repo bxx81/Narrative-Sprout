@@ -22,6 +22,8 @@ export const gameRecordSchema = z.object({
   lastPlayedAt: z.string(), // ISO 8601
   /** Reference-only pointer used by the save list; no duplicated scene data. */
   latestNodeId: storyNodeIdSchema.nullable(),
+  /** Attachment texts for this game (YAML front matter already resolved, {a|b} applied). */
+  attachmentTexts: z.array(z.string()).optional().default([]),
 });
 export type GameRecord = z.infer<typeof gameRecordSchema>;
 
