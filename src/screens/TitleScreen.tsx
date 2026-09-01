@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import { useGameStore } from "../store/gameStore";
 import { ROUTES } from "../app/routes";
 import Button from "../components/ui/Button";
@@ -17,6 +18,7 @@ const REPOSITORY_URL = "https://github.com/bxx81/Narrative-Sprout";
  */
 const TitleScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const games = useGameStore((s) => s.games);
   const apiKey = useGameStore((s) => s.openrouterApiKey);
   const openGame = useGameStore((s) => s.openGame);
@@ -81,32 +83,31 @@ const TitleScreen: React.FC = () => {
       />
       <div className="flex grow flex-col items-center justify-center">
         <h1 className="font-serif-display text-title-text mb-4 text-[clamp(1.5rem,7.5vw,3rem)] leading-none font-bold drop-shadow-lg md:text-[clamp(3rem,6vw,5rem)]">
-          Narrative Sprout
+          {t("title")}
         </h1>
         <p className="text-title-text mx-auto mb-12 max-w-2xl text-lg drop-shadow-md [line-break:strict] md:text-xl">
-          Create unique stories in a world of your own design. Set the theme for your story, and AI
-          will bring it to life with dynamic narratives and visuals.
+          {t("description")}
         </p>
         <nav className="flex flex-col gap-4 sm:flex-row">
           {hasSaves ? (
             <>
               <Button onClick={() => void handleContinue()} intent="primary" size="large">
-                Continue
+                {t("continueStoryButton")}
               </Button>
               <Button onClick={handleBegin} intent="secondary" size="large">
-                New Story
+                {t("beginStoryButton")}
               </Button>
               <Button onClick={handleLoad} disabled={!hasSaves} intent="secondary" size="large">
-                Load
+                {t("loadStoryButton")}
               </Button>
             </>
           ) : (
             <>
               <Button onClick={handleBegin} intent="primary" size="large">
-                New Story
+                {t("beginStoryButton")}
               </Button>
               <Button onClick={handleLoad} disabled intent="secondary" size="large">
-                Load
+                {t("loadStoryButton")}
               </Button>
             </>
           )}
@@ -121,7 +122,7 @@ const TitleScreen: React.FC = () => {
               rel="noopener noreferrer"
               className="document-link"
             >
-              GitHub Repository
+              {t("githubRepositoryLink", { defaultValue: "GitHub Repository" })}
             </a>
           </div>
         </div>

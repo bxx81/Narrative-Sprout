@@ -3,6 +3,7 @@ import Button from "../ui/Button";
 import { useGameNavigation } from "../../hooks/useGameNavigation";
 import { useGameStore } from "../../store/gameStore";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import { ROUTES } from "../../app/routes";
 import { Icon } from "../ui/Icon";
 import { useConfirm } from "../../hooks/useConfirm";
@@ -18,21 +19,24 @@ const isShortcutBlocked = (element: Element | null) => {
 };
 
 /**
- * Scene navigation buttons + overflow menu (legacy GameNavButtons, ported to
- * the v2 store. Autoplay/editing arrive in a later phase; refine and delete
- * branch live in the menu).
+ * Scene navigation buttons + overflow menu (legacy GameNavButtons ported to
+ * the v2 store). Autoplay toggles from the menu; refine and delete branch
+ * also live here.
  */
 const GameNavButtons: React.FC<{ onOpenRefine: () => void }> = ({ onOpenRefine }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const confirm = useConfirm();
   const generation = useGameStore((s) => s.generation);
   const imageRegeneration = useGameStore((s) => s.imageRegeneration);
   const settings = useGameStore((s) => s.settings);
   const activeGame = useGameStore((s) => s.activeGame);
   const viewingNodeId = useGameStore((s) => s.viewingNodeId);
+  const autoplay = useGameStore((s) => s.autoplay);
   const regenerateImage = useGameStore((s) => s.regenerateImage);
   const goToTitle = useGameStore((s) => s.goToTitle);
   const deleteBranch = useGameStore((s) => s.deleteBranch);
+  const toggleAutoplay = useGameStore((s) => s.toggleAutoplay);
 
   const { canGoBack, canGoForward, isAtLatest, onNavigateBack, onNavigateForward, onGoToLatest } =
     useGameNavigation();
@@ -62,11 +66,10 @@ const GameNavButtons: React.FC<{ onOpenRefine: () => void }> = ({ onOpenRefine }
   const handleDeleteBranch = useCallback(async () => {
     if (!viewingNodeId || !activeGame) return;
     const result = await confirm({
-      title: "Delete Branch",
-      message:
-        "Delete this branch? The scene and all of its descendants (including images) will be removed. This cannot be undone.",
-      confirmLabel: "Delete",
-      cancelLabel: "Cancel",
+      title: t("deleteBranchConfirmTitle"),
+      message: t("deleteBranchConfirm"),
+      confirmLabel: t("deleteButton"),
+      cancelLabel: t("cancelButton"),
       isDestructive: true,
       icon: "delete_forever",
     });
@@ -75,7 +78,7 @@ const GameNavButtons: React.FC<{ onOpenRefine: () => void }> = ({ onOpenRefine }
     if (gameDeleted) {
       navigate(ROUTES.HOME, { replace: true, viewTransition: true });
     }
-  }, [viewingNodeId, activeGame, confirm, deleteBranch, navigate]);
+  }, [viewingNodeId, activeGame, confirm, deleteBranch, navigate, t]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
@@ -163,8 +166,8 @@ const GameNavButtons: React.FC<{ onOpenRefine: () => void }> = ({ onOpenRefine }
         onClick={onNavigateBack}
         disabled={!canGoBack || busy}
         intent="circle"
-        aria-label="Previous Scene"
-        title="Previous Scene"
+        aria-label={t("previousSceneButtonLabel")}
+        title={t("previousSceneButtonLabel")}
       >
         <Icon iconName="keyboard_arrow_left" />
       </Button>
@@ -173,8 +176,8 @@ const GameNavButtons: React.FC<{ onOpenRefine: () => void }> = ({ onOpenRefine }
         onClick={onNavigateForward}
         disabled={!canGoForward || busy}
         intent="circle"
-        aria-label="Next Scene"
-        title="Next Scene"
+        aria-label={t("nextSceneButtonLabel")}
+        title={t("nextSceneButtonLabel")}
       >
         <Icon iconName="keyboard_arrow_right" />
       </Button>
@@ -184,8 +187,8 @@ const GameNavButtons: React.FC<{ onOpenRefine: () => void }> = ({ onOpenRefine }
           onClick={() => viewingNodeId && void regenerateImage(viewingNodeId)}
           disabled={busy}
           intent="circle"
-          aria-label="Regenerate Image with New Seed"
-          title="Regenerate Image with New Seed"
+          aria-label={t("regenerateImageLabel")}
+          title={t("regenerateImageLabel")}
         >
           <Icon iconName="autorenew" />
         </Button>
@@ -198,8 +201,8 @@ const GameNavButtons: React.FC<{ onOpenRefine: () => void }> = ({ onOpenRefine }
           onClick={() => setMenuOpen((prev) => !prev)}
           intent="circle"
           className={`${menuOpen ? "rotate-90 bg-lime-600/20 text-lime-600 dark:bg-lime-400/20 dark:text-lime-400" : ""}`}
-          aria-label="More Options"
-          title="More Options"
+          aria-label={t("moreMenuButtonLabel")}
+          title={t("moreMenuButtonLabel")}
         >
           <Icon iconName="more_horiz" />
         </Button>
@@ -207,11 +210,26 @@ const GameNavButtons: React.FC<{ onOpenRefine: () => void }> = ({ onOpenRefine }
         {menuOpen && (
           <div className="animate-fade-in absolute top-full right-0 z-50 mt-2 flex items-center gap-3 rounded-full border border-zinc-200 bg-white/95 p-2 shadow-xl backdrop-blur-md md:top-auto md:bottom-full md:mb-2 dark:border-zinc-800 dark:bg-zinc-900/95">
             <Button
+              onClick={() => closeMenuAnd(toggleAutoplay)}
+              disabled={busy}
+              intent="circle"
+              className={
+                autoplay
+                  ? "bg-lime-600/20 text-lime-600 dark:bg-lime-400/20 dark:text-lime-400"
+                  : ""
+              }
+              aria-label={autoplay ? t("stopAutoplayButtonLabel") : t("autoplayButtonLabel")}
+              title={autoplay ? t("stopAutoplayButtonLabel") : t("autoplayButtonLabel")}
+            >
+              <Icon iconName={autoplay ? "autostop" : "autoplay"} />
+            </Button>
+
+            <Button
               onClick={() => closeMenuAnd(handleSwitchToHistory)}
               disabled={busy}
               intent="circle"
-              aria-label="View History"
-              title="View History"
+              aria-label={t("historyButtonLabel")}
+              title={t("historyButtonLabel")}
             >
               <Icon iconName="import_contacts" />
             </Button>
@@ -220,8 +238,8 @@ const GameNavButtons: React.FC<{ onOpenRefine: () => void }> = ({ onOpenRefine }
               onClick={() => closeMenuAnd(onGoToLatest)}
               disabled={isAtLatest || busy}
               intent="circle"
-              aria-label="Go to Latest Scene"
-              title="Go to Latest Scene"
+              aria-label={t("goToLatestSceneButtonLabel")}
+              title={t("goToLatestSceneButtonLabel")}
             >
               <Icon iconName="last_page" />
             </Button>
@@ -230,8 +248,8 @@ const GameNavButtons: React.FC<{ onOpenRefine: () => void }> = ({ onOpenRefine }
               intent="circle"
               disabled={busy}
               onClick={() => closeMenuAnd(onOpenRefine)}
-              title="Refine Scene with AI"
-              aria-label="Refine Scene with AI"
+              title={t("refineSceneButtonLabel")}
+              aria-label={t("refineSceneButtonLabel")}
             >
               <Icon iconName="auto_awesome_mosaic" />
             </Button>
@@ -240,8 +258,8 @@ const GameNavButtons: React.FC<{ onOpenRefine: () => void }> = ({ onOpenRefine }
               intent="circle"
               disabled={busy}
               onClick={() => closeMenuAnd(() => void handleDeleteBranch())}
-              title="Delete Branch"
-              aria-label="Delete Branch"
+              title={t("deleteBranchConfirmTitle")}
+              aria-label={t("deleteBranchConfirmTitle")}
             >
               <Icon iconName="delete_forever" />
             </Button>
@@ -250,8 +268,8 @@ const GameNavButtons: React.FC<{ onOpenRefine: () => void }> = ({ onOpenRefine }
               intent="circle"
               disabled={busy}
               onClick={() => closeMenuAnd(() => void handleHome())}
-              title="Return to Start Screen"
-              aria-label="Return to Start Screen"
+              title={t("returnToStartButton")}
+              aria-label={t("returnToStartButton")}
             >
               <Icon iconName="home" />
             </Button>

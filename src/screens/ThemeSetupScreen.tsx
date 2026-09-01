@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import { useGameStore } from "../store/gameStore";
 import { ROUTES } from "../app/routes";
 import A1111ImageSettings from "../components/settings/A1111ImageSettings";
@@ -18,6 +19,7 @@ import { Icon } from "../components/ui/Icon";
  */
 const ThemeSetupScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const settings = useGameStore((s) => s.settings);
   const apiKey = useGameStore((s) => s.openrouterApiKey);
   const generation = useGameStore((s) => s.generation);
@@ -146,7 +148,7 @@ const ThemeSetupScreen: React.FC = () => {
         {isDragging && (
           <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-lime-500/20 backdrop-blur-sm">
             <div className="rounded-lg border-4 border-dashed border-white bg-black/50 p-12 text-center text-white">
-              <p className="text-2xl font-bold">Drop files here</p>
+              <p className="text-2xl font-bold">{t("dropFilesHere")}</p>
             </div>
           </div>
         )}
@@ -155,13 +157,13 @@ const ThemeSetupScreen: React.FC = () => {
             {/* Theme Input Section */}
             <div>
               <label htmlFor="theme" className="font-serif-display mb-3 block text-xl font-bold">
-                Describe the theme of your story
+                {t("worldDescriptionLabel")}
               </label>
               <textarea
                 id="theme"
                 value={theme}
                 onChange={(e) => setTheme(e.target.value)}
-                placeholder="e.g., A neon-lit cyberpunk city where it never stops raining"
+                placeholder={t("worldDescriptionPlaceholder")}
                 className="form-style"
                 rows={4}
                 disabled={loading}
@@ -188,13 +190,14 @@ const ThemeSetupScreen: React.FC = () => {
                     }}
                   >
                     <Icon iconName="attach_file_add" />
-                    Attach File
+                    {t("uploadImageButton")}
                   </Button>
                 </div>
                 <p className="support-text-color text-xs">
-                  Scenario files (YAML front matter with a `theme:` key) set the theme; their body
-                  becomes attached world text. Text attachments support `{"{a|b}"}` random choices
-                  and `{"<flag:NAME>"}` conditional blocks.
+                  {t("scenarioFileHelp", {
+                    defaultValue:
+                      "Scenario files (YAML front matter with a `theme:` key) set the theme; their body becomes attached world text. Text attachments support `{a|b}` random choices and `<flag:NAME>` conditional blocks.",
+                  })}
                 </p>
                 {attachmentFiles.length > 0 && (
                   <div className="w-full space-y-2">
@@ -212,8 +215,8 @@ const ThemeSetupScreen: React.FC = () => {
 
             <fieldset className="border-text-border rounded-lg border p-4">
               <legend className="legend-text-style flex items-center gap-2 px-2">
-                Image Generator
-                <HelpTooltip content="Choose how game images are generated. You can connect to your own local image generation server, use a hosted Space, or disable images completely." />
+                {t("imageGeneratorLabel")}
+                <HelpTooltip content={t("helpImageGenerator")} />
               </legend>
               <select
                 id="image-generator"
@@ -226,19 +229,19 @@ const ThemeSetupScreen: React.FC = () => {
                 disabled={loading}
                 className="form-style"
               >
-                <option value="huggingface">Hugging Face</option>
-                <option value="a1111">AUTOMATIC1111 (Local)</option>
-                <option value="comfyui">ComfyUI (Local)</option>
-                <option value="nvidia_nim">NVIDIA NIM</option>
-                <option value="disabled">Disabled</option>
+                <option value="huggingface">{t("huggingFaceOption")}</option>
+                <option value="a1111">{t("a1111Option")}</option>
+                <option value="comfyui">{t("comfyuiOption")}</option>
+                <option value="nvidia_nim">{t("nvidiaNimOption")}</option>
+                <option value="disabled">{t("disabledOption")}</option>
               </select>
               {renderSettingsComponent()}
             </fieldset>
 
             <fieldset className="border-text-border rounded-lg border p-4">
               <legend className="legend-text-style flex items-center gap-2 px-2">
-                Scene Length
-                <HelpTooltip content="Controls the approximate length of each scene description. Longer settings use more API credits and may take longer to generate." />
+                {t("sceneLengthLabel")}
+                <HelpTooltip content={t("sceneLengthHelp")} />
               </legend>
               <select
                 id="scene-length"
@@ -247,18 +250,18 @@ const ThemeSetupScreen: React.FC = () => {
                 disabled={loading}
                 className="form-style"
               >
-                <option value="short">50-100 words</option>
-                <option value="medium">100-200 words</option>
-                <option value="verbose">200+ words (Verbose)</option>
-                <option value="novel">400-1200 words (Novel)</option>
-                <option value="novel2">800-1600 words (Novel)</option>
+                <option value="short">{t("sceneLengthDefault")}</option>
+                <option value="medium">{t("sceneLengthDetailed")}</option>
+                <option value="verbose">{t("sceneLengthVerbose")}</option>
+                <option value="novel">{t("sceneLengthNovel")}</option>
+                <option value="novel2">{t("sceneLengthNovel2")}</option>
               </select>
             </fieldset>
 
             <fieldset className="border-text-border rounded-lg border p-4">
               <legend className="legend-text-style flex items-center gap-2 px-2">
-                Memory Strategy
-                <HelpTooltip content="Controls how the story memory is updated. Single makes a single AI call per turn — cheaper and faster, but the same call also updates memory alongside the scene, so accuracy can suffer. Split adds a second, dedicated AI call focused purely on updating memory — more accurate, but it consumes extra tokens (and costs twice if you are billed per call). Auto picks between the two based on scene length." />
+                {t("memoryStrategyLabel")}
+                <HelpTooltip content={t("memoryStrategyHelp")} />
               </legend>
               <select
                 id="memory-strategy"
@@ -271,15 +274,15 @@ const ThemeSetupScreen: React.FC = () => {
                 disabled={loading}
                 className="form-style"
               >
-                <option value="auto">Auto (Recommended)</option>
-                <option value="single">Single call</option>
-                <option value="split">Split (Parallel)</option>
+                <option value="auto">{t("memoryStrategyAuto")}</option>
+                <option value="single">{t("memoryStrategySingle")}</option>
+                <option value="split">{t("memoryStrategySplit")}</option>
               </select>
             </fieldset>
 
             {generation.phase === "failed" && (
               <p className="text-sm font-semibold text-danger">
-                Generation failed: {generation.error.message}
+                {t("generationFailed", { message: generation.error.message })}
               </p>
             )}
 
@@ -290,7 +293,7 @@ const ThemeSetupScreen: React.FC = () => {
                 intent="primary"
                 size="large"
               >
-                Start Story
+                {t("startStoryButton")}
               </Button>
             </div>
           </div>

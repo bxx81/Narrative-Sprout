@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useDebouncedExternalState } from "../hooks/useDebouncedExternalState";
 import { useNavigate, useLocation } from "react-router";
+import { useTranslation } from "react-i18next";
 import { useGameStore } from "../store/gameStore";
 import type { ImageGeneratorType } from "../types/settings";
+import { parseTextModelOptions } from "../lib/modelOptions";
+import { builtInLanguages } from "../features/i18n/api";
 import A1111ImageSettings from "../components/settings/A1111ImageSettings";
 import ComfyUIImageSettings from "../components/settings/ComfyUIImageSettings";
 import HuggingFaceImageSettings from "../components/settings/HuggingFaceImageSettings";
@@ -29,8 +32,9 @@ interface OpenRouterModel {
  */
 const TextModelInput = React.memo(
   ({ value, onChange }: { value: string; onChange: (val: string) => void }) => {
+    const { t } = useTranslation();
     const [localValue, setLocalValue] = useDebouncedExternalState(value, onChange);
-    const isInvalid = !/^\S+\/\S+/.test(localValue.trim());
+    const isInvalid = !/^\S+\/\S+/.test(localValue.trim().split(/\s+/)[0] ?? "");
 
     const [models, setModels] = useState<OpenRouterModel[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -68,7 +72,7 @@ const TextModelInput = React.memo(
           return; // ignore aborts
         }
         console.error(err);
-        setError(err instanceof Error ? err.message : "Failed to fetch models.");
+        setError(err instanceof Error ? err.message : t("failedToFetchModels"));
       } finally {
         if (abortControllerRef.current === controller) {
           setIsLoading(false);
@@ -106,9 +110,7 @@ const TextModelInput = React.memo(
             className={`form-style ${isInvalid ? "form-style-invalid" : "form-style-valid"}`}
           />
           {isInvalid && (
-            <p className="mt-1 text-xs font-semibold text-red-500">
-              Invalid model settings format. Use "provider/model".
-            </p>
+            <p className="mt-1 text-xs font-semibold text-red-500">{t("invalidModelSetting")}</p>
           )}
         </div>
 
@@ -121,14 +123,14 @@ const TextModelInput = React.memo(
               onClick={() => void handleFetchModels()}
               className="w-full"
             >
-              Load OpenRouter Model List
+              {t("loadModelsButton")}
             </Button>
           )}
 
           {isLoading && (
             <div className="flex items-center justify-center gap-2 py-2 text-zinc-500 dark:text-zinc-400">
               <LoadingSpinner strokeWidth={6} className="h-5 w-5 text-indigo-500" />
-              <span className="animate-pulse">Fetching models from OpenRouter...</span>
+              <span className="animate-pulse">{t("loadingModelsText")}</span>
             </div>
           )}
 
@@ -142,7 +144,7 @@ const TextModelInput = React.memo(
                 onClick={() => void handleFetchModels()}
                 className="px-3 py-1 text-xs"
               >
-                Retry
+                {t("retryButton")}
               </Button>
             </div>
           )}
@@ -153,7 +155,7 @@ const TextModelInput = React.memo(
                 htmlFor="openrouter-model-selector"
                 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400"
               >
-                Select OpenRouter Model
+                {t("selectModelLabel")}
               </label>
               <div className="flex items-center gap-2">
                 <select
@@ -162,7 +164,7 @@ const TextModelInput = React.memo(
                   onChange={handleSelectChange}
                   className="form-style grow"
                 >
-                  <option value="">Select a model...</option>
+                  <option value="">{t("selectModelPlaceholder")}</option>
                   {models.map((model) => (
                     <option key={model.id} value={model.id}>
                       {model.name} ({model.id})
@@ -174,7 +176,7 @@ const TextModelInput = React.memo(
                   intent="secondary"
                   size="small"
                   onClick={() => void handleFetchModels()}
-                  title="Reload model list"
+                  title={t("reloadModelsTooltip")}
                   className="flex aspect-square h-full items-center justify-center p-2"
                 >
                   <Icon iconName="autorenew" />
@@ -191,11 +193,13 @@ TextModelInput.displayName = "TextModelInput";
 
 /**
  * The settings screen (legacy DetailedSettingsScreen, trimmed to the
- * features already implemented in v2).
+ * features implemented in v2). Language, streaming and AI translation
+ * sections arrived in Phase 6.
  */
 const SettingsScreen: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const confirm = useConfirm();
   const { isFullscreen, toggleFullscreen } = useFullscreen();
 
@@ -204,18 +208,32 @@ const SettingsScreen: React.FC = () => {
   const huggingFaceToken = useGameStore((s) => s.huggingFaceToken);
   const nvidiaNimToken = useGameStore((s) => s.nvidiaNimToken);
   const activeGame = useGameStore((s) => s.activeGame);
+  const uiTranslation = useGameStore((s) => s.uiTranslation);
+  const uiTranslationProgress = useGameStore((s) => s.uiTranslationProgress);
   const saveApiKey = useGameStore((s) => s.saveApiKey);
   const saveCredential = useGameStore((s) => s.saveCredential);
   const updateSettings = useGameStore((s) => s.updateSettings);
   const goToTitle = useGameStore((s) => s.goToTitle);
   const wipeAllData = useGameStore((s) => s.wipeAllData);
+  const translateUi = useGameStore((s) => s.translateUi);
+  const deleteAiTranslation = useGameStore((s) => s.deleteAiTranslation);
 
   const [key, setKey] = useState("");
+  const [targetLanguage, setTargetLanguage] = useState("");
 
   const cameFromPath = location.state?.from as string | undefined;
   const showReturnToStartButton = cameFromPath && cameFromPath !== ROUTES.HOME && activeGame;
 
   if (!settings) return null;
+
+  const uiLanguage = settings.uiLanguage;
+  const aiLanguages = Object.keys(settings.aiTranslations);
+  const aiLanguagesSet = new Set(aiLanguages);
+  const displayBuiltInLanguages = builtInLanguages.filter(
+    (language) => !aiLanguagesSet.has(language),
+  );
+  const isCurrentAiLanguage = aiLanguagesSet.has(uiLanguage);
+  const isTranslating = uiTranslation.phase === "running";
 
   const handleReturnToStartClick = async () => {
     navigate(ROUTES.HOME, { replace: true, viewTransition: true });
@@ -230,13 +248,19 @@ const SettingsScreen: React.FC = () => {
     }
   };
 
+  const handleTranslateUi = () => {
+    const trimmed = targetLanguage.trim();
+    if (!trimmed || isTranslating) return;
+    setTargetLanguage("");
+    void translateUi(trimmed);
+  };
+
   const handleDeleteAllData = async () => {
     const result = await confirm({
-      title: "Delete All Data",
-      message:
-        "This will completely delete all save data, settings, and API keys stored in this browser. This action cannot be undone.",
-      confirmLabel: "Delete Everything",
-      cancelLabel: "Cancel",
+      title: t("deleteAllDataConfirmTitle"),
+      message: t("deleteAllDataConfirm"),
+      confirmLabel: t("deleteAllDataConfirmConfirm"),
+      cancelLabel: t("cancelButton"),
       isDestructive: true,
       icon: "delete_forever",
     });
@@ -298,19 +322,17 @@ const SettingsScreen: React.FC = () => {
   return (
     <div className="mx-auto mb-20 max-w-2xl">
       <div className="mb-8 text-center">
-        <h1 className="font-serif-display text-3xl font-bold md:text-4xl">Settings</h1>
+        <h1 className="font-serif-display text-3xl font-bold md:text-4xl">{t("settingsTitle")}</h1>
       </div>
 
       <div>
-        {!apiKey && (
-          <p className="text-danger">To begin your story, you need an OpenRouter API key.</p>
-        )}
+        {!apiKey && <p className="text-danger">{t("apiKeyModalDescriptionShort")}</p>}
 
         {/* Game Actions Section */}
         {showReturnToStartButton && (
           <SettingsSection
             ariaLabelledby="game-actions-heading"
-            header="Game Actions"
+            header={t("gameActionsSectionTitle")}
             icon={<Icon iconName="gamepad" />}
           >
             <Button
@@ -320,7 +342,7 @@ const SettingsScreen: React.FC = () => {
               className="w-full space-y-3"
             >
               <Icon iconName="home" />
-              Return to Start Screen
+              {t("returnToStartButton")}
             </Button>
           </SettingsSection>
         )}
@@ -331,7 +353,7 @@ const SettingsScreen: React.FC = () => {
             <Expander
               id="image-settings-heading"
               ariacontrols="image-settings-content"
-              labelText="Image Generator"
+              labelText={t("imageGeneratorLabel")}
               icon={<Icon iconName="tune" />}
             >
               <select
@@ -344,21 +366,97 @@ const SettingsScreen: React.FC = () => {
                 }
                 className="form-style"
               >
-                <option value="huggingface">Hugging Face</option>
-                <option value="a1111">AUTOMATIC1111 (Local)</option>
-                <option value="comfyui">ComfyUI (Local)</option>
-                <option value="nvidia_nim">NVIDIA NIM</option>
-                <option value="disabled">Disabled</option>
+                <option value="huggingface">{t("huggingFaceOption")}</option>
+                <option value="a1111">{t("a1111Option")}</option>
+                <option value="comfyui">{t("comfyuiOption")}</option>
+                <option value="nvidia_nim">{t("nvidiaNimOption")}</option>
+                <option value="disabled">{t("disabledOption")}</option>
               </select>
               {renderSettingsComponent()}
             </Expander>
           </SettingsSection>
         )}
 
+        {/* Language Section */}
+        <SettingsSection
+          ariaLabelledby="language-heading"
+          header={t("languageSectionTitle")}
+          icon={<Icon iconName="translate" />}
+        >
+          <label htmlFor="ui-language-select" className="explanation-text-style">
+            {t("languageSelectLabel")}
+          </label>
+          <select
+            id="ui-language-select"
+            value={uiLanguage}
+            onChange={(e) => void updateSettings({ uiLanguage: e.target.value })}
+            className="form-style"
+          >
+            {displayBuiltInLanguages.map((language) => (
+              <option key={language} value={language}>
+                {language}
+              </option>
+            ))}
+            {aiLanguages.length > 0 && (
+              <optgroup label={t("aiTranslationOptgroupLabel")}>
+                {aiLanguages.map((language) => (
+                  <option key={language} value={language}>
+                    {language} {t("aiTranslationSuffix")}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+
+          <p className="explanation-text-style">{t("aiTranslationDescription")}</p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              id="ai-translation-input"
+              type="text"
+              value={targetLanguage}
+              onChange={(e) => setTargetLanguage(e.target.value)}
+              placeholder={t("aiTranslationInputLabel")}
+              disabled={isTranslating}
+              className="form-style grow"
+            />
+            <Button
+              type="button"
+              intent="secondary"
+              size="medium"
+              onClick={handleTranslateUi}
+              disabled={isTranslating || !targetLanguage.trim()}
+              className="sm:w-40"
+            >
+              {isTranslating ? t("aiTranslatingButton") : t("aiTranslationButton")}
+            </Button>
+          </div>
+          {isTranslating && (
+            <div className="flex items-center justify-center gap-2 py-1 text-zinc-500 dark:text-zinc-400">
+              <LoadingSpinner strokeWidth={6} className="h-4 w-4 text-indigo-500" />
+              <span className="animate-pulse text-xs">
+                {uiTranslationProgress !== null
+                  ? `${Math.round(uiTranslationProgress * 100)}%`
+                  : t("aiTranslatingButton")}
+              </span>
+            </div>
+          )}
+          {isCurrentAiLanguage && (
+            <Button
+              type="button"
+              intent="danger"
+              size="medium"
+              onClick={() => void deleteAiTranslation(uiLanguage)}
+              className="w-full"
+            >
+              {t("aiTranslationDeleteButton")}
+            </Button>
+          )}
+        </SettingsSection>
+
         {/* Display Section */}
         <SettingsSection
           ariaLabelledby="display-heading"
-          header="Display"
+          header={t("displaySectionTitle")}
           icon={<Icon iconName="display_settings" />}
         >
           <Button
@@ -370,12 +468,12 @@ const SettingsScreen: React.FC = () => {
             {!isFullscreen ? (
               <>
                 <Icon iconName="fullscreen" />
-                Enter Fullscreen
+                {t("enterFullscreenButton")}
               </>
             ) : (
               <>
                 <Icon iconName="fullscreen_exit" />
-                Exit Fullscreen
+                {t("exitFullscreenButton")}
               </>
             )}
           </Button>
@@ -384,29 +482,36 @@ const SettingsScreen: React.FC = () => {
         {/* Text model Section */}
         <SettingsSection
           ariaLabelledby="openai-text-model-heading"
-          header="Text Generation Model"
+          header={t("storyGenerationSectionTitle")}
           icon={<Icon iconName="api" />}
         >
           <TextModelInput
             value={settings.textModel}
             onChange={(model) => void updateSettings({ textModel: model })}
           />
+          <div className="mt-3 flex items-center justify-between gap-4">
+            <span className="explanation-text-style">{t("streamingToggleLabel")}</span>
+            <ToggleSwitch
+              checked={settings.enableStreaming}
+              onChange={(e) => void updateSettings({ enableStreaming: e.target.checked })}
+            />
+          </div>
+          <p className="explanation-text-style text-xs">
+            {parseTextModelOptions(settings.textModel).stream
+              ? t("streamingOpenRouterNote")
+              : t("streamingPerModelDisabled")}
+          </p>
         </SettingsSection>
 
         {/* Story Log Compaction Section */}
         <SettingsSection
           ariaLabelledby="storyLogCompaction-heading"
-          header="Story Log Compaction"
+          header={t("storyLogCompactionSectionTitle")}
           icon={<Icon iconName="summarize" />}
         >
-          <p className="explanation-text-style">
-            As your story grows, the internal scene log is periodically compressed into a concise
-            chronicle to keep context within limits. This makes an extra, automatic archivist call
-            that preserves plot-critical facts. Turn it off to keep the full log verbatim (may
-            exceed the model's context on very long stories).
-          </p>
+          <p className="explanation-text-style">{t("storyLogCompactionDescription")}</p>
           <div className="flex items-center justify-between gap-4">
-            <span className="explanation-text-style">Enable story log compaction (archivist)</span>
+            <span className="explanation-text-style">{t("storyLogCompactionToggleLabel")}</span>
             <ToggleSwitch
               checked={settings.enableStoryLogCompaction}
               onChange={(e) => void updateSettings({ enableStoryLogCompaction: e.target.checked })}
@@ -419,7 +524,7 @@ const SettingsScreen: React.FC = () => {
           <Expander
             id="api-key-heading"
             ariacontrols="api-key-content"
-            labelText="Manual API Key Setup"
+            labelText={t("apiKeySectionTitle")}
             icon={<Icon iconName="key" />}
           >
             <a
@@ -428,11 +533,11 @@ const SettingsScreen: React.FC = () => {
               rel="noopener noreferrer"
               className="explanation-text-style"
             >
-              Get API Key from OpenRouter
+              {t("apiKeyGetLink")}
             </a>
             <form onSubmit={handleApiKeySubmit} className="form-layout-style mt-2">
               <label htmlFor="api-key-input" className="sr-only">
-                OpenRouter API Key
+                {t("apiKeyInputLabel")}
               </label>
               <input
                 id="api-key-input"
@@ -440,7 +545,7 @@ const SettingsScreen: React.FC = () => {
                 autoComplete="new-password"
                 value={key}
                 onChange={(e) => setKey(e.target.value)}
-                placeholder="OpenRouter API Key"
+                placeholder={t("apiKeyInputLabel")}
                 className="form-style"
               />
               <Button
@@ -450,13 +555,10 @@ const SettingsScreen: React.FC = () => {
                 size="medium"
                 className="w-48"
               >
-                {apiKey ? "Update Key" : "Save Key"}
+                {apiKey ? t("updateApiKeyButton") : t("apiKeySaveButton")}
               </Button>
             </form>
-            <p className="support-text-color text-xs">
-              The key is stored locally in the browser (IndexedDB credentials store) only. It is
-              never included in exports or backups.
-            </p>
+            <p className="support-text-color text-xs">{t("apiKeyStoredLocallyNote")}</p>
           </Expander>
         </SettingsSection>
 
@@ -465,14 +567,11 @@ const SettingsScreen: React.FC = () => {
           <Expander
             id="data-management-heading"
             ariacontrols="data-management-content"
-            labelText="Data Management"
+            labelText={t("dataManagementSectionTitle")}
             icon={<Icon iconName="database" />}
           >
             <div>
-              <p className="explanation-text-style">
-                This will completely delete all save data, settings, and API keys. This action
-                cannot be undone.
-              </p>
+              <p className="explanation-text-style">{t("deleteAllDataWarning")}</p>
               <Button
                 onClick={() => void handleDeleteAllData()}
                 intent="danger"
@@ -480,7 +579,7 @@ const SettingsScreen: React.FC = () => {
                 className="w-full"
               >
                 <Icon iconName="delete_forever" />
-                Delete All Data
+                {t("deleteAllDataButton")}
               </Button>
             </div>
 

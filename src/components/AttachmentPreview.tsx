@@ -1,8 +1,10 @@
 import Button from "./ui/Button";
 import { Icon } from "./ui/Icon";
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 const AttachmentPreview: React.FC<{ file: File; onRemove: () => void }> = ({ file, onRemove }) => {
+  const { t } = useTranslation();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -55,7 +57,7 @@ const AttachmentPreview: React.FC<{ file: File; onRemove: () => void }> = ({ fil
         size="small-circle"
         onClick={onRemove}
         className="absolute top-1/2 right-2 -translate-y-1/2"
-        aria-label={`Remove ${file.name}`}
+        aria-label={t("removeAttachmentAriaLabel", { name: file.name })}
       >
         <Icon iconName="close_small" />
       </Button>

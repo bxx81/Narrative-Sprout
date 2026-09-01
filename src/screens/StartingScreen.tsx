@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import { useGameStore } from "../store/gameStore";
 import { ROUTES } from "../app/routes";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
@@ -10,6 +11,7 @@ import BackButton from "../components/ui/BackButton";
 
 const StartingScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const generation = useGameStore((s) => s.generation);
   const activeGame = useGameStore((s) => s.activeGame);
   const goToTitle = useGameStore((s) => s.goToTitle);
@@ -24,7 +26,7 @@ const StartingScreen: React.FC = () => {
   if (generation.phase === "failed") {
     return (
       <main className="mx-auto flex h-screen flex-col items-center justify-center gap-6 text-center">
-        <div className="text-danger text-lg font-semibold">Generation failed</div>
+        <div className="text-danger text-lg font-semibold">{t("errorOccurredTitle")}</div>
         <p className="support-text-color max-w-xl px-4 whitespace-pre-wrap">
           {generation.error.message}
         </p>
@@ -37,7 +39,7 @@ const StartingScreen: React.FC = () => {
               navigate(ROUTES.SETUP, { replace: true, viewTransition: true });
             }}
           >
-            Back to Setup
+            {t("backToSetupButton")}
           </Button>
         </div>
         <BackButton />
@@ -49,7 +51,7 @@ const StartingScreen: React.FC = () => {
     <main className="mx-auto flex h-screen flex-col items-center justify-center text-center">
       <LoadingSpinner className="size-16 text-lime-600 dark:text-lime-400" />
       <div className="animate-fade-in font-serif-display mt-8 text-xl md:text-2xl">
-        Preparing your story...
+        {t("loadingWeavingScene")}
       </div>
       <BackButton />
     </main>

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import Button from "../ui/Button";
 import { Icon } from "../ui/Icon";
 
@@ -26,6 +27,7 @@ const GameChoices: React.FC<GameChoicesProps> = ({
   viewingNodeId,
   choicePreset,
 }) => {
+  const { t } = useTranslation();
   const [customChoice, setCustomChoice] = useState("");
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggered = useRef(false);
@@ -65,7 +67,7 @@ const GameChoices: React.FC<GameChoicesProps> = ({
         {isCurrentStoryOver ? (
           <div className="mt-4 flex items-center justify-center">
             <Button onClick={onRestart} intent="primary" size="large">
-              Play Again
+              {t("playAgainButton")}
             </Button>
           </div>
         ) : (
@@ -97,21 +99,21 @@ const GameChoices: React.FC<GameChoicesProps> = ({
               className={`choice-form-style ${!loading ? "border-border" : "border-border/0"}`}
             >
               <label htmlFor="custom-choice-input" className="sr-only">
-                Or describe your action freely...
+                {t("customChoicePlaceholder")}
               </label>
               <input
                 id="custom-choice-input"
                 type="text"
                 value={customChoice}
                 onChange={(e) => setCustomChoice(e.target.value)}
-                placeholder="Or describe your action freely..."
+                placeholder={t("customChoicePlaceholder")}
                 disabled={loading}
                 className="choice-input"
               />
               <button
                 type="submit"
                 disabled={loading || !customChoice.trim()}
-                aria-label="Submit Custom Action"
+                aria-label={t("submitCustomActionLabel")}
                 className={`choice-button ${loading ? "opacity-0" : ""}`}
               >
                 <div className="flex items-center justify-center">

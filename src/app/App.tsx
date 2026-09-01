@@ -8,6 +8,9 @@ import {
   useLocation,
   useNavigate,
 } from "react-router";
+import { useTranslation } from "react-i18next";
+import i18n from "../features/i18n/config";
+import { getLanguageCode, applyLanguageDocumentEffects } from "../features/i18n/api";
 import { useGameStore } from "../store/gameStore";
 import { ROUTES, isNeedPadding, isVisibleSettingsButton } from "./routes";
 import { ConfirmationProvider } from "./ConfirmationProvider";
@@ -76,9 +79,27 @@ export function App() {
 }
 
 const AppLayout: React.FC = () => {
+  const { t } = useTranslation();
+  const settings = useGameStore((s) => s.settings);
   const settingsLoaded = useGameStore((s) => s.settings !== null);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Apply the UI language to i18next and the document (html lang, text
+  // direction, per-language fonts). AI translation bundles are merged into
+  // the resource bundle before switching (legacy applyLanguage).
+  const uiLanguage = settings?.uiLanguage;
+  const aiLanguageMappings = settings?.aiLanguageMappings;
+  const aiTranslationTexts = settings ? settings.aiTranslations[settings.uiLanguage] : undefined;
+  useEffect(() => {
+    if (!settings) return;
+    const languageCode = getLanguageCode(settings.uiLanguage, settings.aiLanguageMappings);
+    if (aiTranslationTexts) {
+      i18n.addResourceBundle(languageCode, "translation", aiTranslationTexts, true, true);
+    }
+    void i18n.changeLanguage(languageCode);
+    applyLanguageDocumentEffects(settings.uiLanguage, settings.aiLanguageMappings);
+  }, [settings, uiLanguage, aiLanguageMappings, aiTranslationTexts]);
 
   // Full data wipe reloads the app with this flag set; show the completion
   // screen instead of the routed screen.
@@ -89,7 +110,7 @@ const AppLayout: React.FC = () => {
   if (!settingsLoaded) {
     return (
       <div className="bg-body-bg flex h-screen items-center justify-center">
-        <p className="support-text-color">Loading…</p>
+        <p className="support-text-color">{t("toastLoading")}</p>
       </div>
     );
   }
@@ -128,8 +149,8 @@ const AppLayout: React.FC = () => {
           visibleSettingsButton ? "opacity-100" : "pointer-events-none hidden opacity-0"
         }`}
         aria-hidden={!visibleSettingsButton}
-        aria-label="Settings"
-        title="Settings"
+        aria-label={t("settingsTitle")}
+        title={t("settingsTitle")}
       >
         <Icon iconName="settings" />
       </Button>

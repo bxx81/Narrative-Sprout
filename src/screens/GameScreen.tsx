@@ -1,7 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import { useBreakpoint } from "../hooks/useBreakpoint";
+import { useConfirm } from "../hooks/useConfirm";
 import { useGameStore } from "../store/gameStore";
+import { streamStore } from "../store/streamStore";
 import { ROUTES } from "../app/routes";
 import MainText from "../components/ui/MainText";
 import GameNavButtons from "../components/game/GameNavButtons";
@@ -12,6 +15,7 @@ import GameChoices, { LongPressMs } from "../components/game/GameChoices";
 import ModelNameDisplay from "../components/game/ModelNameDisplay";
 import RefineDialog from "../components/game/RefineDialog";
 import { Divider } from "../components/ui/Divider";
+import Button from "../components/ui/Button";
 import { countWords } from "../features/narrative/api";
 
 const ordinal = (n: number): string => {
@@ -20,12 +24,18 @@ const ordinal = (n: number): string => {
   return n + (suffixes[(value - 20) % 10] ?? suffixes[value] ?? suffixes[0]!);
 };
 
+const isAbortError = (error: Error): boolean =>
+  error.name === "AbortError" || error.name === "TimeoutError";
+
 /**
  * The main game screen: scene image, text, choices, and navigation controls.
  * PC shows a sticky two-pane layout; mobile stacks vertically (legacy look).
+ * During streaming the partial narration renders live with the overlay
+ * suppressed; while autoplay is active the player AI drives the choices.
  */
 const GameScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const activeGame = useGameStore((s) => s.activeGame);
   const nodes = useGameStore((s) => s.nodes);
   const assets = useGameStore((s) => s.assets);
@@ -34,9 +44,18 @@ const GameScreen: React.FC = () => {
   const imageRegeneration = useGameStore((s) => s.imageRegeneration);
   const imageGenerationProgress = useGameStore((s) => s.imageGenerationProgress);
   const settings = useGameStore((s) => s.settings);
+  const autoplay = useGameStore((s) => s.autoplay);
+  const autoplayTurn = useGameStore((s) => s.autoplayTurn);
+  const autoplayEndingComment = useGameStore((s) => s.autoplayEndingComment);
   const choose = useGameStore((s) => s.choose);
   const refine = useGameStore((s) => s.refine);
   const goToTitle = useGameStore((s) => s.goToTitle);
+  const runAutoplayTurn = useGameStore((s) => s.runAutoplayTurn);
+  const dismissAutoplayEndingComment = useGameStore((s) => s.dismissAutoplayEndingComment);
+  const cancelGeneration = useGameStore((s) => s.cancelGeneration);
+
+  const stream = useSyncExternalStore(streamStore.subscribe, streamStore.getSnapshot);
+  const confirm = useConfirm();
 
   const { width, isLandscape } = useBreakpoint();
   const isMd = width >= 768;
@@ -51,20 +70,55 @@ const GameScreen: React.FC = () => {
 
   const loading = generation.phase === "running";
   const isImageRegenerating = imageRegeneration.phase === "running";
-  const isPageLoading = loading || isImageRegenerating;
+  const isAutoplayDeciding = autoplayTurn.phase === "running";
+  const isPageLoading = loading || isImageRegenerating || isAutoplayDeciding;
   const spinnerState: SpinnerState = isImageRegenerating
     ? "Image"
-    : generation.phase === "running"
-      ? generation.payload.kind === "choice"
-        ? "Choice"
-        : "Scene"
-      : null;
+    : isAutoplayDeciding
+      ? "Autoplay"
+      : loading
+        ? generation.payload.kind === "choice"
+          ? "Choice"
+          : "Scene"
+        : null;
+
+  // Streaming display state (out-of-band store; see streamStore)
+  const isStreamingLive = loading && stream.status === "streaming" && stream.sceneText.length > 0;
 
   const node = useMemo(
     () => nodes.find((n) => n.id === viewingNodeId) ?? null,
     [nodes, viewingNodeId],
   );
   const asset = viewingNodeId ? (assets[viewingNodeId] ?? null) : null;
+
+  // Autoplay driver loop: whenever autoplay is on and the pipeline is idle,
+  // ask the player AI for the next action (legacy GameScreen autoplay effect).
+  useEffect(() => {
+    if (!autoplay) return;
+    if (loading || isImageRegenerating) return;
+    if (generation.phase === "failed") return;
+    if (autoplayTurn.phase === "failed") return;
+    if (autoplayTurn.phase === "running") return;
+    void runAutoplayTurn();
+  }, [
+    autoplay,
+    loading,
+    isImageRegenerating,
+    generation.phase,
+    autoplayTurn.phase,
+    runAutoplayTurn,
+  ]);
+
+  // Ending comment dialog (legacy: confirm with reasoning when the story is over)
+  useEffect(() => {
+    if (!autoplayEndingComment) return;
+    void confirm({
+      title: t("autoplayCommentTitle", { defaultValue: "Comment" }),
+      message: autoplayEndingComment,
+      onlyInfo: true,
+      cancelLabel: t("dismissButton", { defaultValue: "Dismiss" }),
+    }).then(() => dismissAutoplayEndingComment());
+  }, [autoplayEndingComment, confirm, dismissAutoplayEndingComment, t]);
 
   useEffect(() => {
     // Scroll to top when the viewed scene changes (not during image-only regen)
@@ -74,7 +128,7 @@ const GameScreen: React.FC = () => {
   }, [viewingNodeId, loading, isImageRegenerating]);
 
   const handleChoiceSubmit = (choice: string) => {
-    if (loading) return;
+    if (loading || autoplay) return;
     void choose(choice);
   };
 
@@ -84,9 +138,13 @@ const GameScreen: React.FC = () => {
   };
 
   const handleRefineSubmit = (refinePrompt: string) => {
-    if (!viewingNodeId || loading) return;
+    if (!viewingNodeId || loading || autoplay) return;
     setRefineOpen(false);
     void refine(viewingNodeId, refinePrompt);
+  };
+
+  const handleCancelGeneration = () => {
+    cancelGeneration();
   };
 
   const openZoom = () => {
@@ -105,14 +163,32 @@ const GameScreen: React.FC = () => {
   if (!activeGame || !viewingNodeId || !node || !settings) {
     return (
       <div className="bg-body-bg flex h-screen items-center justify-center">
-        <p className="support-text-color">Scene not found.</p>
+        <p className="support-text-color">{t("sceneNotFound")}</p>
       </div>
     );
   }
 
   const { scene, turnNumber, choiceText } = node;
-
   const isCurrentStoryOver = scene.isStoryOver;
+
+  // During streaming the final data does not exist yet: show the submitted
+  // choice and a faked turn number to avoid mismatching the previous scene.
+  const streamingChoice =
+    loading && stream.status !== "idle" && generation.payload.kind === "choice"
+      ? (generation.payload.choiceText ?? null)
+      : null;
+  const displayChoiceText = streamingChoice ?? choiceText;
+  const displayTurnNumber = (() => {
+    if (!loading || stream.status === "idle") return turnNumber;
+    switch (generation.payload.kind) {
+      case "choice":
+        return turnNumber + 1;
+      case "refine":
+        return turnNumber;
+      default:
+        return 1;
+    }
+  })();
 
   const cost = node.metadata.generationCost;
   const currentCost = cost && cost > 0 ? "¢" + (cost * 100).toFixed(2) : null;
@@ -121,15 +197,18 @@ const GameScreen: React.FC = () => {
   // records saved with the old (paragraph-counting) counter display correctly.
   const sceneWordCount = countWords(scene.sceneText);
 
-  const currentDividerText = [
-    turnNumber && (currentCost || sceneWordCount) ? "This" : "",
-    turnNumber ? `${ordinal(turnNumber)} turn` : "",
-    currentCost ? `cost ${currentCost}` : "",
-    currentCost && sceneWordCount ? "and" : "",
-    sceneWordCount ? `is ${sceneWordCount} words long.` : "",
-  ]
-    .join(" ")
-    .trim();
+  const currentDividerText =
+    loading && stream.status === "streaming"
+      ? displayTurnNumberText(displayTurnNumber, stream.wordCount, t)
+      : [
+          turnNumber && (currentCost || sceneWordCount) ? t("dividerThisPrefix") : "",
+          turnNumber ? t("dividerTurn", { ordinal: ordinal(turnNumber) }) : "",
+          currentCost ? t("dividerCost", { cost: currentCost }) : "",
+          currentCost && sceneWordCount ? t("dividerAnd") : "",
+          sceneWordCount ? t("dividerWordsLong", { words: sceneWordCount }) : "",
+        ]
+          .join(" ")
+          .trim();
 
   const mainText = (
     <article className="animate-fade-in w-full max-w-2xl md:min-w-[20rem]">
@@ -138,12 +217,12 @@ const GameScreen: React.FC = () => {
           - Narrative Sprout -
         </div>
       )}
-      {choiceText ? (
+      {displayChoiceText ? (
         <p
           className="font-serif-display text-center text-sm leading-relaxed select-text [line-break:strict] selection:bg-lime-500/30"
           onMouseDown={() => {
             choicePresetTimer.current = setTimeout(() => {
-              setChoicePresetSignal({ choice: choiceText });
+              setChoicePresetSignal({ choice: displayChoiceText });
             }, LongPressMs);
           }}
           onMouseUp={() => {
@@ -160,7 +239,7 @@ const GameScreen: React.FC = () => {
           }}
           onTouchStart={() => {
             choicePresetTimer.current = setTimeout(() => {
-              setChoicePresetSignal({ choice: choiceText });
+              setChoicePresetSignal({ choice: displayChoiceText });
             }, 500);
           }}
           onTouchEnd={() => {
@@ -176,7 +255,7 @@ const GameScreen: React.FC = () => {
             }
           }}
         >
-          {choiceText}
+          {displayChoiceText}
         </p>
       ) : (
         <Divider />
@@ -187,8 +266,11 @@ const GameScreen: React.FC = () => {
       </div>
 
       <div className="font-serif-display select-text selection:bg-lime-500/30">
-        <MainText text={scene.sceneText} />
-        {isCurrentStoryOver && scene.storyClosingText && (
+        <MainText
+          text={isStreamingLive ? stream.sceneText : scene.sceneText}
+          streamingCursor={isStreamingLive && !stream.sceneTextComplete}
+        />
+        {isCurrentStoryOver && !isStreamingLive && scene.storyClosingText && (
           <>
             <Divider className="my-8" />
             <MainText text={scene.storyClosingText} className="font-semibold" />
@@ -197,31 +279,51 @@ const GameScreen: React.FC = () => {
       </div>
       <Divider className="my-8 md:my-16" />
 
-      <GameChoices
-        choices={scene.choices}
-        isCurrentStoryOver={isCurrentStoryOver}
-        loading={loading}
-        onChoiceSubmit={handleChoiceSubmit}
-        onRestart={() => void handleRestart()}
-        viewingNodeId={viewingNodeId}
-        choicePreset={choicePresetSignal}
-      />
+      {loading && stream.status !== "idle" ? (
+        <div className="flex flex-col gap-3" aria-hidden="true">
+          {[0, 1, 2].map((index) => (
+            <div key={index} className="choice-style animate-pulse select-none">
+              &nbsp;
+            </div>
+          ))}
+        </div>
+      ) : (
+        <GameChoices
+          choices={scene.choices}
+          isCurrentStoryOver={isCurrentStoryOver}
+          loading={isPageLoading || autoplay}
+          onChoiceSubmit={handleChoiceSubmit}
+          onRestart={() => void handleRestart()}
+          viewingNodeId={viewingNodeId}
+          choicePreset={choicePresetSignal}
+        />
+      )}
 
       {generation.phase === "failed" && (
         <p className="mt-4 text-center text-sm font-semibold text-danger">
-          Generation failed: {generation.error.message}
+          {isAbortError(generation.error)
+            ? t("errorAborted")
+            : t("generationFailed", { message: generation.error.message })}
         </p>
       )}
 
       {imageRegeneration.phase === "failed" && (
         <p className="mt-4 text-center text-sm font-semibold text-danger">
-          Image regeneration failed: {imageRegeneration.error.message}
+          {t("imageRegenerationFailed", { message: imageRegeneration.error.message })}
         </p>
+      )}
+
+      {(loading || isAutoplayDeciding) && stream.status !== "idle" && (
+        <div className="mt-4 flex justify-center">
+          <Button intent="secondary" size="medium" onClick={handleCancelGeneration}>
+            {t("cancelGenerationButton")}
+          </Button>
+        </div>
       )}
 
       {modelName ? (
         <div className="dividers-style my-16">
-          Generated by <ModelNameDisplay key={viewingNodeId} modelName={modelName} />
+          {t("generatedBy")} <ModelNameDisplay key={viewingNodeId} modelName={modelName} />
         </div>
       ) : (
         <Divider className="my-16" />
@@ -242,6 +344,8 @@ const GameScreen: React.FC = () => {
         imageGenerationProgress={imageGenerationProgress}
         imageGenerator={settings.imageGenerator}
         error={generation.phase === "failed" || imageRegeneration.phase === "failed"}
+        // ライブ本文表示の間はオーバーレイを隠す（ストリーミング中）
+        suppressed={loading && stream.status === "streaming" && stream.sceneText.length > 0}
       />
 
       <RefineDialog
@@ -265,7 +369,7 @@ const GameScreen: React.FC = () => {
           <button
             className="bg-body-bg relative w-full cursor-zoom-in overflow-hidden"
             onClick={openZoom}
-            aria-label="Enlarge image"
+            aria-label={t("enlargeImageLabel")}
           >
             <ImageDisplay
               {...sceneImageProps}
@@ -288,7 +392,7 @@ const GameScreen: React.FC = () => {
               <button
                 className="group relative cursor-zoom-in overflow-hidden rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] transition-all duration-700 hover:scale-[1.01] hover:shadow-[0_30px_60px_rgba(0,0,0,0.4)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)]"
                 onClick={openZoom}
-                aria-label="Enlarge image"
+                aria-label={t("enlargeImageLabel")}
               >
                 <ImageDisplay
                   {...sceneImageProps}
@@ -311,5 +415,19 @@ const GameScreen: React.FC = () => {
     </div>
   );
 };
+
+function displayTurnNumberText(
+  displayTurnNumber: number,
+  wordCount: number,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  if (!displayTurnNumber) {
+    return wordCount > 0 ? t("dividerWordsSoFarOnly", { words: wordCount }) : "";
+  }
+  if (wordCount <= 0) {
+    return t("dividerTurn", { ordinal: ordinal(displayTurnNumber) });
+  }
+  return t("dividerWordsSoFar", { ordinal: ordinal(displayTurnNumber), words: wordCount });
+}
 
 export default GameScreen;

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useGameStore } from "../store/gameStore";
 import type { DriveFileMetadata } from "../features/backup/api";
 import Button from "./ui/Button";
@@ -19,6 +20,7 @@ function formatDriveBackupMetadata(backup: DriveFileMetadata): string {
 }
 
 export function BackupSection() {
+  const { t } = useTranslation();
   const downloadEncryptedBackup = useGameStore((s) => s.downloadEncryptedBackup);
   const restoreBackupFromFile = useGameStore((s) => s.restoreBackupFromFile);
   const importSaveFromFile = useGameStore((s) => s.importSaveFromFile);
@@ -46,7 +48,7 @@ export function BackupSection() {
     try {
       setStatusText(await operation());
     } catch (error) {
-      setErrorText(error instanceof Error ? error.message : "The operation failed.");
+      setErrorText(error instanceof Error ? error.message : t("operationFailed"));
     } finally {
       setBusy(false);
     }
@@ -56,22 +58,18 @@ export function BackupSection() {
     <section className="bg-text-bg text-body-text rounded-lg p-4 shadow-md">
       <h3 className="mb-1 flex items-center gap-2 font-semibold">
         <Icon iconName="database" />
-        Backup &amp; Restore
+        {t("backupRestoreTitle")}
       </h3>
-      <p className="support-text-color mb-3 text-xs">
-        Backups contain every save plus your non-secret settings, encrypted with AES-GCM
-        (WebCrypto). API keys are never included. If you lose the passphrase, the backup cannot be
-        restored.
-      </p>
+      <p className="support-text-color mb-3 text-xs">{t("backupRestoreDescription")}</p>
 
       <label className="support-text-color mb-3 block text-xs">
-        Passphrase
+        {t("passphraseLabel")}
         <input
           type="password"
           value={passphrase}
           onChange={(e) => setPassphrase(e.target.value)}
           className="form-style mt-1"
-          placeholder="Backup passphrase"
+          placeholder={t("backupPassphrasePlaceholder")}
           autoComplete="new-password"
         />
       </label>
@@ -86,11 +84,11 @@ export function BackupSection() {
             onClick={() =>
               void runOperation(async () => {
                 await downloadEncryptedBackup(passphrase);
-                return "Encrypted backup downloaded.";
+                return t("encryptedBackupDownloaded");
               })
             }
           >
-            Download backup (.nsbak)
+            {t("downloadBackupButton")}
           </Button>
 
           <input
@@ -109,11 +107,15 @@ export function BackupSection() {
               void runOperation(async () => {
                 const summary = await restoreBackupFromFile(file, passphrase);
                 setBackupFile(null);
-                return `Restored ${summary.restoredGameCount} game(s), ${summary.restoredNodeCount} node(s), ${summary.restoredAssetCount} image(s).`;
+                return t("restoredSummary", {
+                  games: summary.restoredGameCount,
+                  nodes: summary.restoredNodeCount,
+                  images: summary.restoredAssetCount,
+                });
               });
             }}
           >
-            Restore from file
+            {t("restoreFromFileButton")}
           </Button>
         </div>
 
@@ -134,18 +136,21 @@ export function BackupSection() {
               void runOperation(async () => {
                 const result = await importSaveFromFile(file);
                 setImportFile(null);
-                return `Imported "${result.gameTitle}" (${result.restoredNodeCount} node(s)).`;
+                return t("importedNsSaveSummary", {
+                  title: result.gameTitle,
+                  count: result.restoredNodeCount,
+                });
               });
             }}
           >
-            Import ns-save ZIP
+            {t("importNsSaveButton")}
           </Button>
         </div>
       </div>
 
       <div className="border-text-border mt-4 border-t pt-3">
         <div className="form-layout-style flex-wrap items-center">
-          <h4 className="text-sm font-semibold">Google Drive</h4>
+          <h4 className="text-sm font-semibold">{t("googleDriveTitle")}</h4>
           {driveConnected ? (
             <>
               <Button
@@ -156,12 +161,12 @@ export function BackupSection() {
                 onClick={() =>
                   void runOperation(async () => {
                     const { fileName } = await uploadBackupToGoogleDrive(passphrase);
-                    return `Uploaded ${fileName} to Drive.`;
+                    return t("uploadedToDrive", { fileName });
                   })
                 }
               >
                 <Icon iconName="cloud_upload" />
-                Back up to Drive
+                {t("backUpToDriveButton")}
               </Button>
               <Button
                 intent="secondary"
@@ -170,11 +175,11 @@ export function BackupSection() {
                 onClick={() =>
                   void runOperation(async () => {
                     await refreshGoogleDriveBackups();
-                    return "Backup list refreshed.";
+                    return t("backupListRefreshed");
                   })
                 }
               >
-                Refresh
+                {t("refreshButton")}
               </Button>
               <Button
                 intent="secondary"
@@ -183,12 +188,12 @@ export function BackupSection() {
                 onClick={() =>
                   void runOperation(async () => {
                     await disconnectGoogleDrive();
-                    return "Disconnected from Google Drive.";
+                    return t("disconnectedFromDrive");
                   })
                 }
               >
                 <Icon iconName="logout" />
-                Disconnect
+                {t("disconnectButton")}
               </Button>
             </>
           ) : (
@@ -200,20 +205,18 @@ export function BackupSection() {
               onClick={() =>
                 void runOperation(async () => {
                   await connectGoogleDrive();
-                  return "Connected to Google Drive.";
+                  return t("connectedToDrive");
                 })
               }
             >
               <Icon iconName="login" />
-              Connect Google Drive
+              {t("connectGoogleDriveButton")}
             </Button>
           )}
         </div>
 
         {driveConnected && driveBackups.length === 0 && (
-          <p className="support-text-color mt-2 text-xs">
-            No backups found on Drive yet. &quot;Back up to Drive&quot; creates one.
-          </p>
+          <p className="support-text-color mt-2 text-xs">{t("noDriveBackupsYet")}</p>
         )}
 
         {driveConnected && driveBackups.length > 0 && (
@@ -238,11 +241,14 @@ export function BackupSection() {
                     onClick={() =>
                       void runOperation(async () => {
                         const summary = await restoreGoogleDriveBackup(backup.fileId, passphrase);
-                        return `Restored ${summary.restoredGameCount} game(s) from ${backup.name}.`;
+                        return t("restoredFromDriveSummary", {
+                          count: summary.restoredGameCount,
+                          name: backup.name,
+                        });
                       })
                     }
                   >
-                    Restore
+                    {t("restoreButton")}
                   </Button>
                   {confirmingDeleteFileId === backup.fileId ? (
                     <>
@@ -255,11 +261,11 @@ export function BackupSection() {
                           setConfirmingDeleteFileId(null);
                           void runOperation(async () => {
                             await deleteGoogleDriveBackup(backup.fileId);
-                            return `Deleted ${backup.name} from Drive.`;
+                            return t("deletedFromDrive", { name: backup.name });
                           });
                         }}
                       >
-                        Confirm
+                        {t("confirmButton")}
                       </Button>
                       <Button
                         intent="secondary"
@@ -267,7 +273,7 @@ export function BackupSection() {
                         className="px-2"
                         onClick={() => setConfirmingDeleteFileId(null)}
                       >
-                        Cancel
+                        {t("cancelButton")}
                       </Button>
                     </>
                   ) : (
@@ -277,7 +283,7 @@ export function BackupSection() {
                       className="px-2 hover:bg-red-800"
                       onClick={() => setConfirmingDeleteFileId(backup.fileId)}
                     >
-                      Delete
+                      {t("deleteButton")}
                     </Button>
                   )}
                 </span>
