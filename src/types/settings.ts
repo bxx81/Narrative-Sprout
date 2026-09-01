@@ -18,11 +18,16 @@ export const settingsRecordSchema = z.object({
   language: z.string(),
   /** Target prose length order (e.g. "short" | "medium" | "long"). */
   sceneTextLength: z.string(),
+  /** OpenRouter model id used for narrative text generation. */
+  textModel: z.string(),
 });
 export type SettingsRecord = z.infer<typeof settingsRecordSchema>;
+
+export const DEFAULT_TEXT_MODEL = "openai/gpt-4o-mini";
 
 export const defaultSettingsRecord: SettingsRecord = {
   key: SETTINGS_RECORD_KEY,
   language: "Japanese",
   sceneTextLength: "medium",
+  textModel: DEFAULT_TEXT_MODEL,
 };
