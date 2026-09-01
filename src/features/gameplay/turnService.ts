@@ -1,8 +1,9 @@
 import { gameRepository } from "../../db/gameRepository";
 import type { GameId, GameRecord, StoryNodeId, StoryNodeRecord } from "../../types";
 import type { MemoryState } from "../../types";
-import { applyMemoryDelta } from "../narrative/api";
 import {
+  applyMemoryDelta,
+  sceneToWireResponse,
   buildCompactionPrompt,
   buildMemoryUpdatePrompt,
   buildOpeningPrompt,
@@ -260,6 +261,7 @@ export async function choosePath(
     memory: baseMemory,
     choiceText: params.choiceText,
     attachmentTexts,
+    omitMemoryFields: strategy === "split",
   });
 
   let scene: import("../../types").SceneContent;
@@ -414,7 +416,14 @@ export async function refineScene(
   const strategy = resolveMemoryStrategy(params.memoryStrategy, params.sceneTextLength);
 
   const choiceText = params.targetNode.choiceText ?? "Begin the narrative.";
-  const originalSceneJson = JSON.stringify(params.targetNode.scene);
+  // History/reference material must be shown in the wire shape the model
+  // outputs (see sceneToWireResponse) or the regenerated response imitates
+  // the stored shape and fails validation.
+  const originalSceneJson = JSON.stringify(
+    sceneToWireResponse(params.targetNode.scene, params.targetNode.memoryDelta, {
+      omitMemoryFields: strategy === "split",
+    }),
+  );
   const refineInstruction =
     (isRoot
       ? `[Refine request for the first scene] Please regenerate the ENTIRE response based on instructions:\nOriginal scene:\n${originalSceneJson}\n\nUser instructions: ${params.refinePrompt}`
@@ -442,6 +451,7 @@ export async function refineScene(
       memory: baseMemory,
       choiceText: refineInstruction,
       attachmentTexts,
+      omitMemoryFields: strategy === "split",
     });
     system = turn.system;
     messages = turn.messages;

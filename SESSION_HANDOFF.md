@@ -46,6 +46,7 @@
 
 - `SceneContent` / `MemoryState` / `MemoryDelta` の関係：`memory` は累積、`memoryDelta` は当該ターンのみ。`scene` は表示専用（メモリを含まない、旧版と違う点）。
 - `promptSent` は LLM に投げたユーザーメッセージの生文字列。履歴再構築（最大5ターン、新しい順→古い順に reverse）に必須。**削除禁止**（REDESIGN §5.2 に理由記載）。Phase 3で `startGame` の `promptSent` は添付を含めないよう修正（添付は毎ターン prefix として再注入）。
+- **履歴再生は必ずワイヤ形式に**：`buildTurnPrompt` の assistant 履歴と refine の `originalSceneJson` は `sceneToWireResponse` (`sceneSchema.ts`) で保存形式→ワイヤ形式（`choices`配列→`choice1..3` 等）に変換してから JSON 化する。保存形式のまま流すと、json_schema を厳密強制しないプロバイダでモデルが保存形式を模倣し、次ターンのバリデーションが失敗する（legacy `stored2work` 相当。Phase 4 後の実機テストで発覚・修正）。split 戦略のシーン呼び出しでは `omitMemoryFields: true` も渡す。
 - 画像は `assets` ストア（nodeId 1:1 キー）で WebP 変換して保存。ノード削除と asset 削除は同一トランザクションで行うこと（`AGENTS.md` のルール7）。GC は `primaryKeys()` のみで実行（Blobをロードしない）。
 - 分岐削除は `collectNodesToDelete` (`src/features/storytree/branchDeletion.ts`) でサブツリー + 上方向の孤児化チェックを純粋関数化。`gameRepository.deleteBranch` はそれを利用し、テストは実コードを直接テストする。
 - `GameRecord.attachmentTexts` は per-game の世界設定（`GameRecord` に保持、settings ではない）。Zod では要素単位で検証し、`.default()` は使わない（`AGENTS.md` ルール4）。
