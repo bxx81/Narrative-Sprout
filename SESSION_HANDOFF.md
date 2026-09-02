@@ -90,6 +90,14 @@
 - **テスト**: `gameStore.stage.test.ts` — choose の fetch スタブ内で `generationStage` を観測し、開始直後 "choice" → テキスト呼び出し時 "scene" を検証。全 205 テストグリーン。
 - **スピナー復帰タイミング（Legacy での追加対応の移植）**: `suppressed` に `!stream.sceneTextComplete` を追加。ストリーミング中は本文受信完了（sceneText の閉じクォート検出）までオーバーレイを隠し、完了後は残り JSON（choices/notes/imagePrompt 等）の生成中にスピナーを再表示する（stage は "scene" のまま → 「シーンを生成中」表示）。
 
+## Phase 6.9.2（テーマ設定の添付ボタン 2 回目無反応修正）の要点
+
+- **症状**: ThemeSetupScreen の「ファイルを添付」ボタンが mount ごとに 1 回しか機能しない。ドラッグ&ドロップは常に正常。Edge で確認。タイトル画面に戻って再遷移すると復活（= mount 毎に 1 回）。
+- **原因（実機ログで確定）**: `change` は**毎回発火しており files も入っている**のに追加されない → **live FileList を setState updater のクロージャに渡していた**のが根本原因。`handleFileChange` は (1) `setAttachmentFiles((prev) => [...prev, ...Array.from(files)])` で updater を登録 → (2) `e.target.value = ""` が **live FileList をその場で空にする** → (3) updater は render 時に評価されるため、実行時には `Array.from(files)` が**空配列**になり何も追加されない。1 回目だけ成功するのは React の **eager state 評価**（該当 fiber に保留更新がない最初の dispatch では updater を同期的に評価し、`hasEagerState` として確定値を採用する）が `value=""` より前に走るため。ドラッグ&ドロップが常に成功するのも整合（`dataTransfer.files` は `value=""` で触られない）。Legacy 同一実装でも本来壊れるコードだが、React の評価タイミング次第で発現する可能性があった（タイミング依存バグ）。
+- **修正**: `handleFiles` を `File[]` 受けに変更し、**イベントハンドラ内で即時に `Array.from` でスナップショット**（file input は `e.target.value = ""` の前、drop は `dataTransfer.files`）してから setState に渡す。updater は生配列を参照するので評価タイミングに依存しない（spec 的に正しい形）。input の `key` リマウント（tracker リセット）も併せて維持。調査用 `[attach]` debug ログは原因確定後に除去済み。実機確認済み（2 回目・3 回目以降の連続添付 OK）。
+- **教訓**: FileList / DataTransfer など live 系オブジェクトを setState updater のクロージャに渡さない。ハンドラ内で即時スナップショット（`Array.from`）。
+- **front matter theme のテーマ欄反映（実機指摘対応）**: v2 では YAML front matter の `theme:` は startNewGame 内の `processAttachmentFiles` で解決され（生成のテーマに採用、テーマ欄の入力より優先・「最初の 1 つが有効」）、**テーマ欄には表示されなかった**。Legacy は「ファイル名に theme を含む .md/.txt の最初の `---` まで」を挿入する簡易ヒューリスティックだったため、UX 差として指摘された。v2 は `ThemeSetupScreen.handleFiles` でテキスト添付（text/plain / text/markdown / .md / .txt）を `File.text()` で読み `parseScenarioFile` して**最初の front matter theme を textarea に事前反映**（ファイル自体は従来どおり添付 = Start 時に本体が世界テキストになる）。画像等はスキップ、読み取り失敗は plain attachment 扱い。
+
 ## Phase 6.8（redoScene）の要点
 
 - **Legacy セマンティクス**: redo は「同一選択肢の sibling 再ロール」で refine（指示付き）と対になる機能。`discardHistoryContext` の切断は `promptService.buildContextForApi` で実現されており、**フラグ付きノード自体は履歴に含み、それより古い世代を永久に除外**（未来のノードから遡ってもフラグに到達した時点で停止）。メモリ接頭辞（notes/storyLog）は切断の対象外で親から継承。

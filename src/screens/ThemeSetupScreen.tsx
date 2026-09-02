@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { useGameStore } from "../store/gameStore";
+import { parseScenarioFile } from "../features/attachments/api";
 import { ROUTES } from "../app/routes";
 import A1111ImageSettings from "../components/settings/A1111ImageSettings";
 import ComfyUIImageSettings from "../components/settings/ComfyUIImageSettings";
@@ -35,6 +36,10 @@ const ThemeSetupScreen: React.FC = () => {
 
   const [theme, setTheme] = useState("");
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
+  // Remounting the hidden file input after every selection resets the DOM
+  // value AND React's value tracker: without this, the picker can reopen but
+  // the change event never fires again for the rest of the mount (Edge).
+  const [fileInputKey, setFileInputKey] = useState(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -53,14 +58,37 @@ const ThemeSetupScreen: React.FC = () => {
     }
   };
 
-  const handleFiles = (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    setAttachmentFiles((prev) => [...prev, ...Array.from(files)]);
+  // Takes a plain array: a live FileList may be emptied (e.target.value =
+  // "" clears it) before React evaluates the state updater, so callers must
+  // snapshot via Array.from in the event handler.
+  const handleFiles = async (files: File[]) => {
+    if (files.length === 0) return;
+    // Pre-fill the theme textarea from the first YAML front-matter `theme:`
+    // (legacy UX). processAttachmentFiles applies the same "first wins" rule
+    // at game start, and the file itself still becomes attached world text.
+    const isTextAttachment = (file: File) =>
+      file.type === "text/plain" || file.type === "text/markdown" || /\.(md|txt)$/i.test(file.name);
+    for (const file of files) {
+      if (!isTextAttachment(file)) continue;
+      try {
+        const parsed = parseScenarioFile(await file.text());
+        if (parsed.theme !== null) {
+          setTheme(parsed.theme);
+          break;
+        }
+      } catch {
+        // unreadable file — treat it as a plain attachment
+      }
+    }
+    setAttachmentFiles((prev) => [...prev, ...files]);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    handleFiles(e.target.files);
+    // Snapshot immediately: e.target.value = "" below empties the live FileList.
+    const picked = Array.from(e.target.files ?? []);
+    void handleFiles(picked);
     e.target.value = "";
+    setFileInputKey((key) => key + 1);
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -82,7 +110,7 @@ const ThemeSetupScreen: React.FC = () => {
     e.stopPropagation();
     setIsDragging(false);
     if (loading) return;
-    handleFiles(e.dataTransfer.files);
+    void handleFiles(Array.from(e.dataTransfer.files));
   };
 
   const handleRemoveAttachment = (indexToRemove: number) => {
@@ -187,6 +215,7 @@ const ThemeSetupScreen: React.FC = () => {
               <div className="mt-4 flex flex-col items-start gap-4">
                 <div className="flex items-center gap-4">
                   <input
+                    key={fileInputKey}
                     ref={fileInputRef}
                     type="file"
                     multiple
