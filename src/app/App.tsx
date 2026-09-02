@@ -8,10 +8,12 @@ import {
   useLocation,
   useNavigate,
 } from "react-router";
+import { Toaster } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import i18n from "../features/i18n/config";
 import { getLanguageCode, applyLanguageDocumentEffects } from "../features/i18n/api";
 import { useGameStore } from "../store/gameStore";
+import ErrorDialog from "../components/ErrorDialog";
 import { ROUTES, isNeedPadding, isVisibleSettingsButton } from "./routes";
 import { ConfirmationProvider } from "./ConfirmationProvider";
 import Button from "../components/ui/Button";
@@ -140,6 +142,23 @@ const AppLayout: React.FC = () => {
         </Route>
         <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
       </Routes>
+
+      <ErrorDialog />
+
+      {/* Legacy-styled top-center notification toasts (auto-close) */}
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          style: {
+            background: "#fff",
+            color: "#000",
+            fontSize: "12px",
+            padding: "12px 16px",
+            borderRadius: "8px",
+            boxShadow: "0 2px 6px rgba(0, 0, 0, 0.1)",
+          },
+        }}
+      />
 
       <Button
         onClick={handleSettingsClick}

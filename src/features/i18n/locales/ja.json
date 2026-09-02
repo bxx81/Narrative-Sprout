@@ -317,5 +317,7 @@
   "invalidModelOption": "モデル設定が不正です。「provider/model」に「--option=value」形式のオプションを付けて指定してください。",
   "modelOptionsHelp": "末尾オプション: --BaseURL=https://...（OpenAI互換エンドポイント）--temperature=0.7 --top_p --top_k --max_tokens --timeout --reasoning=true|low|high --kwargs_reasoning --only=provider --strict=false --stream=false",
   "apiKeyPrefixMismatchWarning": "このキーは OpenRouter のキーではないようです（期待される接頭辞: sk-or-）。エンドポイントかキーを確認してください。",
-  "apiKeyPkceFailed": "OpenRouter から API キーを取得できませんでした。もう一度お試しください。"
+  "apiKeyPkceFailed": "OpenRouter から API キーを取得できませんでした。もう一度お試しください。",
+  "autoRetryIntervalLabel": "429エラー時の自動リトライ間隔",
+  "autoRetryNever": "自動リトライしない"
 }

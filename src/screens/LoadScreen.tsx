@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
+import toast from "react-hot-toast";
 import { useGameStore } from "../store/gameStore";
 import type { GameRecord } from "../types";
 import { useLazyNodeImage } from "../hooks/useLazyNodeImage";
@@ -126,7 +127,6 @@ const LoadScreen: React.FC = () => {
   const dropZoneRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [importError, setImportError] = useState<string | null>(null);
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -153,16 +153,18 @@ const LoadScreen: React.FC = () => {
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    setImportError(null);
     try {
       for (const file of Array.from(files)) {
         const result = await importSaveFromFile(file);
         if (!result.restoredGameCount && !result.restoredNodeCount) {
-          setImportError(t("noImportableSaveData"));
+          toast.error(t("noImportableSaveData"));
+        } else {
+          toast.success(t("toastLoadSavedataSuccess"));
         }
       }
     } catch (error) {
-      setImportError(error instanceof Error ? error.message : t("importFailed"));
+      console.error("[import] save import failed", error);
+      toast.error(error instanceof Error ? error.message : t("importFailed"));
     }
   };
 
@@ -207,10 +209,6 @@ const LoadScreen: React.FC = () => {
             {t("loadSavedataButton")}
           </Button>
         </div>
-
-        {importError && (
-          <p className="mb-4 text-center text-sm font-semibold text-danger">{importError}</p>
-        )}
 
         {sortedGames.length > 0 ? (
           <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">

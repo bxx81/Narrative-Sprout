@@ -52,7 +52,14 @@
 - **OpenRouter PKCE** (`src/features/openrouter/pkceAuth.ts`): `startPkceAuth`（UUID state + verifier×2 → S256 challenge → `https://openrouter.ai/auth?...` へリダイレクト）、`exchangeCodeForApiKey`（15s ハードタイムアウト、verifier を即時削除して重複交換防止、`fetchImpl` 注入でテスト可）、`consumePkceCallback`（state 一致チェック = CSRF 防御、不一致時は null + console.error）、`stripPkceCallbackFromUrl`（replaceState でリロード再生防止）。localStorage キーは `nsOAuthState` / `nsOAuthCodeVerifier`。Settings に "Automatic API Key Setup" セクション新設、マウント時に 1 回だけ（useRef ガード）コールバック処理 → `saveApiKey` → 成功/失敗ステータス表示。
 - **Settings UI 強化**: モデル入力の検証を `parseTextModelOptions().isValid` ベースに変更（無効オプションは赤字 + `invalidModelOption`）、オプション構文ヘルプ（`modelOptionsHelp`）追記、API キー接頭辞警告（`apiKeyPrefixMismatchWarning`、OpenRouter baseUrl のとき `sk-or-` 以外なら表示。legacy `apiKeyValidation` の soft 版）。
 - **テスト**: `modelOptions.test.ts` 10 cases（パース/バリデーション/sampling params マップ/ストリーミング判定）、`pkceAuth.test.ts` 7 cases（URL 構築・交換成功/verifier 欠損/HTTP エラー・state 一致/CSRF 拒否）。全 184 テストグリーン。
-- **意図的に未実装**（後続フェーズ）: テーマ自動生成（Generate Idea）、本文手動編集、開発者オプション、react-hot-toast。
+- **意図的に未実装**（後続フェーズ）: テーマ自動生成（Generate Idea）、本文手動編集、開発者オプション。
+
+## Phase 6.6（トースト / エラーダイアログ / リトライ）の要点（未コミット時は feature ブランチ参照）
+
+- **トースト**: `react-hot-toast` 2.6.0 を導入（Legacy と同バージョン）。`App.tsx` で `<Toaster position="top-center">`（Legacy 同様の白カード 12px スタイル、auto-close）。インライン表示を置き換え: BackupSection の `runOperation`（成功/失敗→toast）、PKCE 成功/失敗、AI 翻訳失敗（`uiTranslation.phase === "failed"` を effect で監視→`aiTranslationError`）、LoadScreen のセーブインポート結果（`toastLoadSavedataSuccess` 等）、HistoryScreen のエクスポート結果（`toastDownloadSavedataSuccess`）。
+- **エラーダイアログ** (`src/components/ErrorDialog.tsx`): Legacy ErrorDisplay（modal variant）の移植。AppLayout にグローバルマウントされ、`generation` / `imageRegeneration` の `failed` phase で表示。分類は `src/lib/errorClassification.ts`（`classifyError`）: ApiError 429→`errorApiOverloaded`（retryable）、401/402/403→非 retryable、AbortError→`errorAborted`（onlyInformation、Dismiss のみ）、TimeoutError→`errorApiGeneric`、それ以外→メッセージ保持+retryable。タイトルは retryable→`errorStumbleTitle` / 非retryable→`errorOccurredTitle`。7行超メッセージは `errorShowMore/Less` でクランプ。429 + `settings.autoRetrySeconds > 0` でカウントダウン表示→自動リトライ（`errorAutoRetry`、秒数は Settings > Story Log Compaction セクション内の新セレクト `autoRetryIntervalLabel`、0=Never）。Dismiss は start 失敗時のみ `/setup` へ遷移（Legacy の Starting status 扱い相当）。
+- **リトライ**: `gameStore.ts` の `GenerationPayload` を discriminated union に拡張（start: theme+attachmentFiles / choice: choiceText+autoplayReasoning+autoplayCost / refine: nodeId+refinePrompt）し、failed phase に保持（Legacy `lastActionForRetry` 相当）。`retryGeneration()` が payload 種別で `startNewGame` / `choose` / `refine` / `regenerateImage` を再実行。`dismissError()` で failed→idle。StartingScreen の独自失敗表示は削除（グローバルダイアログに一本化）。GameScreen のインライン失敗テキストも削除。
+- **テスト**: `lib/errorClassification.test.ts` 6 cases、`gameStore.test.ts` にリトライ 2 cases（不正 textModel でネットワークなしに同期的失敗→payload 保持確認→retry 再実行→dismiss で idle）。全 192 テストグリーン。
 
 ## Phase 6（i18n / オートプレイ / ストリーミング / PWA）の要点
 

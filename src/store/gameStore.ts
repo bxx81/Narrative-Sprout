@@ -43,12 +43,19 @@ import {
 } from "../features/image/api";
 import { processAttachmentFiles } from "../features/attachments/api";
 
-interface GenerationPayload {
-  kind: "start" | "choice" | "refine";
-  choiceText?: string;
-  refinePrompt?: string;
-  autoplayReasoning?: string;
-}
+/**
+ * Payload retained through the failed phase so the error dialog can retry
+ * the exact action (legacy `lastActionForRetry`).
+ */
+type GenerationPayload =
+  | { kind: "start"; theme: string; attachmentFiles?: File[] }
+  | {
+      kind: "choice";
+      choiceText: string;
+      autoplayReasoning?: string;
+      autoplayCost?: number;
+    }
+  | { kind: "refine"; nodeId: string; refinePrompt: string };
 
 interface AutoplayDecisionPayload {
   kind: "decision";
@@ -124,7 +131,12 @@ interface GameState {
   dismissAutoplayEndingComment: () => void;
   /** Aborts the in-flight generation (text + image) via the stream signal. */
   cancelGeneration: () => void;
+  /** Re-runs the failed action from the retained payload (error dialog Retry). */
+  retryGeneration: () => Promise<void>;
+  /** Clears the failed generation/image operation (error dialog Dismiss). */
+  dismissError: () => void;
   setUiLanguage: (languageName: string) => Promise<void>;
+  /** Rejects on failure (caller surfaces the toast); failed phase stays set. */
   translateUi: (languageName: string) => Promise<void>;
   deleteAiTranslation: (languageName: string) => Promise<void>;
   downloadEncryptedBackup: (passphrase: string) => Promise<void>;
@@ -253,7 +265,7 @@ export const useGameStore = create<GameState>()(
       startNewGame: async (theme, attachmentFiles) => {
         const { settings, openrouterApiKey } = get();
         if (!settings || !openrouterApiKey) throw new Error("Setup incomplete.");
-        const payload: GenerationPayload = { kind: "start" };
+        const payload: GenerationPayload = { kind: "start", theme, attachmentFiles };
         set({
           generation: { phase: "running", payload, startedAt: new Date().toISOString() },
         });
@@ -341,6 +353,7 @@ export const useGameStore = create<GameState>()(
           kind: "choice",
           choiceText,
           autoplayReasoning: options?.autoplayReasoning,
+          autoplayCost: options?.autoplayCost,
         };
         set({
           generation: { phase: "running", payload, startedAt: new Date().toISOString() },
@@ -404,7 +417,7 @@ export const useGameStore = create<GameState>()(
         const byId = new Map(state.nodes.map((n) => [n.id, n]));
         // ancestors of parent for context
         const ancestors = parentNode ? collectAncestors(byId, parentNode.id, true) : [];
-        const payload: GenerationPayload = { kind: "refine", refinePrompt };
+        const payload: GenerationPayload = { kind: "refine", nodeId, refinePrompt };
         set({ generation: { phase: "running", payload, startedAt: new Date().toISOString() } });
         streamStore.begin(isStreamingEnabledForSettings(settings));
         try {
@@ -616,6 +629,40 @@ export const useGameStore = create<GameState>()(
 
       cancelGeneration: () => streamStore.cancel(),
 
+      retryGeneration: async () => {
+        const state = get();
+        if (state.generation.phase === "failed") {
+          const payload = state.generation.payload;
+          switch (payload.kind) {
+            case "start":
+              await get().startNewGame(payload.theme, payload.attachmentFiles);
+              break;
+            case "choice":
+              await get().choose(payload.choiceText, {
+                autoplayReasoning: payload.autoplayReasoning,
+                autoplayCost: payload.autoplayCost,
+              });
+              break;
+            case "refine":
+              await get().refine(payload.nodeId, payload.refinePrompt);
+              break;
+          }
+          return;
+        }
+        if (state.imageRegeneration.phase === "failed") {
+          await get().regenerateImage(state.imageRegeneration.payload.nodeId);
+        }
+      },
+
+      dismissError: () => {
+        if (get().generation.phase === "failed") {
+          set({ generation: { phase: "idle" } });
+        }
+        if (get().imageRegeneration.phase === "failed") {
+          set({ imageRegeneration: { phase: "idle" } });
+        }
+      },
+
       setUiLanguage: async (languageName) => {
         await get().updateSettings({ uiLanguage: languageName });
       },
@@ -652,6 +699,9 @@ export const useGameStore = create<GameState>()(
             uiTranslation: { phase: "failed", payload, error: error as Error },
             uiTranslationProgress: null,
           });
+          // Rethrow so the caller can surface the failure exactly once (a
+          // phase-watching effect would re-fire on every screen remount).
+          throw error;
         }
       },
 
