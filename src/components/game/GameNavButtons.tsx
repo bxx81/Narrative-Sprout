@@ -39,6 +39,7 @@ const GameNavButtons: React.FC<{ onOpenRefine: () => void; onOpenEdit: () => voi
   const regenerateImage = useGameStore((s) => s.regenerateImage);
   const goToTitle = useGameStore((s) => s.goToTitle);
   const deleteBranch = useGameStore((s) => s.deleteBranch);
+  const redoScene = useGameStore((s) => s.redoScene);
   const toggleAutoplay = useGameStore((s) => s.toggleAutoplay);
 
   const { canGoBack, canGoForward, isAtLatest, onNavigateBack, onNavigateForward, onGoToLatest } =
@@ -82,6 +83,37 @@ const GameNavButtons: React.FC<{ onOpenRefine: () => void; onOpenEdit: () => voi
       navigate(ROUTES.HOME, { replace: true, viewTransition: true });
     }
   }, [viewingNodeId, activeGame, confirm, deleteBranch, navigate, t]);
+
+  const handleRedoScene = useCallback(async () => {
+    if (!viewingNodeId || !activeGame) return;
+    const nodesById = new Map(useGameStore.getState().nodes.map((n) => [n.id as string, n]));
+    const target = nodesById.get(viewingNodeId);
+    if (!target) return;
+    if (target.parentNodeId === null) {
+      // Root redo: a new save slot with a regenerated first scene.
+      const result = await confirm({
+        title: t("redoSceneButtonLabel"),
+        message: t("redoRootConfirmMessage"),
+        confirmLabel: t("redoRootConfirmLabel"),
+        cancelLabel: t("cancelButton"),
+      });
+      if (result !== true) return;
+      await redoScene(viewingNodeId, false);
+      return;
+    }
+    if (!target.choiceText) return;
+    // Non-root redo: Keep = re-roll with full context, Discard = re-roll and
+    // permanently cut the prompt history older than the new scene.
+    const result = await confirm({
+      title: t("redoSceneButtonLabel"),
+      message: t("redoSceneConfirmMessage"),
+      confirmLabel: t("redoSceneConfirmKeep"),
+      neutralLabel: t("redoSceneConfirmDiscard"),
+      cancelLabel: t("cancelButton"),
+    });
+    if (result !== true && result !== "neutral") return;
+    await redoScene(viewingNodeId, result === "neutral");
+  }, [viewingNodeId, activeGame, confirm, redoScene, t]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
@@ -265,6 +297,16 @@ const GameNavButtons: React.FC<{ onOpenRefine: () => void; onOpenEdit: () => voi
               aria-label={t("editSceneButtonLabel")}
             >
               <Icon iconName="edit" />
+            </Button>
+
+            <Button
+              intent="circle"
+              disabled={busy}
+              onClick={() => closeMenuAnd(() => void handleRedoScene())}
+              title={t("redoSceneButtonLabel")}
+              aria-label={t("redoSceneButtonLabel")}
+            >
+              <Icon iconName="redo" />
             </Button>
 
             <Button

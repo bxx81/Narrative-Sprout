@@ -24,6 +24,22 @@ export function collectAncestors(
   return result;
 }
 
+/**
+ * Applies the permanent history cut (legacy `discardHistoryContext`): keeps
+ * ancestors NEWEST first until — and including — the first node carrying
+ * `metadata.discardHistoryContext`; everything older than that node is
+ * excluded from prompt history. The memory prefix is NOT affected (legacy
+ * kept the monologue summary across the cut).
+ */
+export function applyHistoryContextCut(ancestors: StoryNodeRecord[]): StoryNodeRecord[] {
+  const result: StoryNodeRecord[] = [];
+  for (const node of ancestors) {
+    result.push(node);
+    if (node.metadata.discardHistoryContext) break;
+  }
+  return result;
+}
+
 /** Memory state to use as the base for the NEXT turn = the parent's memory. */
 export function baseMemoryForNewNode(parent: StoryNodeRecord | null): MemoryState {
   return parent?.memory ?? { notes: {}, storyLog: [] };

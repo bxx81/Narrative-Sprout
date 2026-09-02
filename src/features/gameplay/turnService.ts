@@ -253,6 +253,11 @@ export interface ChoosePathParams {
   autoplayReasoning?: string;
   /** Autoplay decision call cost carried into this turn's total cost. */
   autoplayCost?: number;
+  /**
+   * Scene redo with context discard: the produced node permanently cuts
+   * prompt history for its branch (its own metadata carries the flag).
+   */
+  discardHistoryContext?: boolean;
 }
 
 /** Generates the next scene after a player choice and persists it. */
@@ -363,7 +368,7 @@ export async function choosePath(
       // textCost += autoPlayCost).
       generationCost: (generationCost ?? 0) + (params.autoplayCost ?? 0) || null,
       modelName,
-      discardHistoryContext: false,
+      discardHistoryContext: params.discardHistoryContext ?? false,
       refinePrompt: null,
       refinedFromNodeId: null,
       autoplayReasoning: params.autoplayReasoning ?? null,
