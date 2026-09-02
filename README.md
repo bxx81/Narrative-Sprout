@@ -56,6 +56,7 @@ The client id is embedded in the public build by design; restricting it to your 
 - Design decisions: `REDESIGN.md`
 - Contributor rules: `CONTRIBUTING.md`
 - AI-agent conventions: `AGENTS.md`
+- Knowledge base (architecture, features, services, data models): `knowledge/` — start at `knowledge/index.md`
 
 ## License
 

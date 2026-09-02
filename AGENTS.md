@@ -3,6 +3,8 @@
 Guidance for AI coding agents (and humans) working in this repository.
 The full design rationale lives in `REDESIGN.md`; this file is the working rulebook.
 
+**Knowledge base**: `knowledge/` contains a structured knowledge bundle (OKF) describing the project — architecture, features, services, data models, integrations, configuration, and operations. Start from `knowledge/index.md` and consult the relevant pages before working on unfamiliar areas.
+
 ## Project shape
 
 - React 19 + Vite 7 + Tailwind CSS 4 + TypeScript, runtime/tooling via Bun.
