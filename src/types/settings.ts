@@ -7,7 +7,8 @@ import { getInitialUiLanguage } from "../features/i18n/api";
  * Contains ONLY non-secret configuration. Anything machine-specific but
  * harmless (endpoints, model names) belongs here; anything secret belongs in
  * `src/types/credential.ts`. Generation settings are global-only — save slots
- * hold none of them.
+ * hold none of them — except `sceneTextLength`, which each save snapshots at
+ * creation (see types/game.ts).
  */
 export const SETTINGS_RECORD_KEY = "app" as const;
 

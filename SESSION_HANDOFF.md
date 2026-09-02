@@ -40,6 +40,7 @@
 | 6.9   | ✅ 完了（PR #15 merged） | 開発者向けオプション: Settings に Developer Options セクション（WebP 圧縮率セレクタ / 生成中の経過時間表示トグル / 429 自動リトライを Story Log Compaction から移動 / デバッグログトグル）。isDebug は URL query ではなく localStorage ベース（`nsDebug`）。実機確認済み（WebP サイズ変化 200KB→1.5MB、経過秒表示、query/トグルでの表示切替、dev モードでのオフ化） |
 | 6.9.1 | ✅ 完了（PR #16 merged） | LoadingOverlay の段階表示修正: 生成中ずっと「選択肢を生成中」になり a1111 プログレスにも遷移しないバグ（Legacy の spinnerState 段階追跡を port していなかった）→ `generationStage`（choice/scene/image）+ turnService の段階コールバックで復元。ストリーミング中も本文受信完了（sceneTextComplete）でスピナー復帰。実機確認済み（表示遷移・プログレス・復帰タイミング） |
 | 6.9.2 | ✅ 完了（PR #17 merged） | テーマ設定の添付フロー修正: 添付ボタンが mount 毎に 1 回しか機能しないバグ（live FileList を setState updater クロージャに渡し、`value=""` で空になっていた）→ ハンドラ内で即時スナップショット。front matter `theme:` を添付時にテーマ欄へ事前反映。実機確認済み（連続添付・テーマ反映・front matter 除去ペイロード） |
+| 6.9.3 | 🚧 実装完了・未コミット | sceneTextLength をセーブスロット毎に保持（Legacy 準拠・REDESIND §5.4 の例外規定追加）: `GameRecord.sceneTextLength`（optional、旧セーブはグローバル設定フォールバック）に作成時スナップショット、choose/refine/redo/rootRedo はスナップショット値で生成 |
 | 7     | 未着手（PWA 版完成後に着手の方針） | Tauri 版（`src-tauri` 専用ブランチ、stronghold 導入、dist は全ブランチ ignore 済み）                                                                      |
 
 ## Phase 2 の実機確認方法（自分で試すには）
@@ -98,6 +99,13 @@
 - **修正**: `handleFiles` を `File[]` 受けに変更し、**イベントハンドラ内で即時に `Array.from` でスナップショット**（file input は `e.target.value = ""` の前、drop は `dataTransfer.files`）してから setState に渡す。updater は生配列を参照するので評価タイミングに依存しない（spec 的に正しい形）。input の `key` リマウント（tracker リセット）も併せて維持。調査用 `[attach]` debug ログは原因確定後に除去済み。実機確認済み（2 回目・3 回目以降の連続添付 OK）。
 - **教訓**: FileList / DataTransfer など live 系オブジェクトを setState updater のクロージャに渡さない。ハンドラ内で即時スナップショット（`Array.from`）。
 - **front matter theme のテーマ欄反映（実機指摘対応）**: v2 では YAML front matter の `theme:` は startNewGame 内の `processAttachmentFiles` で解決され（生成のテーマに採用、テーマ欄の入力より優先・「最初の 1 つが有効」）、**テーマ欄には表示されなかった**。Legacy は「ファイル名に theme を含む .md/.txt の最初の `---` まで」を挿入する簡易ヒューリスティックだったため、UX 差として指摘された。v2 は `ThemeSetupScreen.handleFiles` でテキスト添付（text/plain / text/markdown / .md / .txt）を `File.text()` で読み `parseScenarioFile` して**最初の front matter theme を textarea に事前反映**（ファイル自体は従来どおり添付 = Start 時に本体が世界テキストになる）。画像等はスキップ、読み取り失敗は plain attachment 扱い。
+
+## Phase 6.9.3（sceneTextLength の per-save スナップショット）の要点
+
+- **背景（実機確認で判明）**: v2 は sceneTextLength をグローバル settings のみに持ち、セーブを読み込んでの続き生成も「読み込み時点の現在設定」で行っていた（REDESIGN §5.4「生成設定は完全にグローバル一本」）。Legacy はセーブデータ内 settings スナップショット（`activeLogDetail.settings.sceneTextLength`）を参照しており、800-1600 語（novel2）で作ったセーブが設定変更後も長さを保っていた。ユーザー承認のもと **Legacy 準拠（per-save）へ設計変更**。
+- **実装**: `GameRecord` に `sceneTextLength: string | undefined`（optional — 旧セーブ互換、backupPayload / ns-save も同じ schema を再利用するので自動対応）を追加。`turnService.startGame` が game レコード作成時に `params.sceneTextLength` を焼く。store の生成 4 フロー（choose / refine / redo non-root / rootRedo）は `activeGame.sceneTextLength ?? settings.sceneTextLength` を渡す（旧セーブはフォールバック）。rootRedo は元セーブのスナップショットを引き継ぐ。**startNewGame は現在の settings 値を焼く**（以後そのセーブは設定変更の影響を受けない）。他の生成設定（textModel・画像等）はグローバル一本のまま。
+- **REDESIGN.md 更新**: §5.4 に例外規定を追記、§5.2 の GameRecord コメント更新。types/{game,settings}.ts の doc コメントも同期。
+- **テスト**: `gameStore.sceneLength.test.ts` 3 cases（スナップショット値で生成（global が medium でも novel2 で出す）/ 旧セーブのフォールバック / startNewGame が snapshot を焼く）。fetch スタブで request の全 messages を結合して "Target scene length" 指示語（長さ指示は system ではなく user メッセージ側に入る点に注意）を検証。全 208 テストグリーン。
 
 ## Phase 6.8（redoScene）の要点
 
