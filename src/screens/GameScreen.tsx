@@ -74,6 +74,15 @@ const GameScreen: React.FC = () => {
   const isImageRegenerating = imageRegeneration.phase === "running";
   const isAutoplayDeciding = autoplayTurn.phase === "running";
   const isPageLoading = loading || isImageRegenerating || isAutoplayDeciding;
+  // Start time of whichever generation operation is running, for the optional
+  // elapsed-seconds display (legacy state.generationStartedAt).
+  const generationStartedAt: number | null = loading
+    ? new Date(generation.startedAt).getTime()
+    : isImageRegenerating
+      ? new Date(imageRegeneration.startedAt).getTime()
+      : isAutoplayDeciding
+        ? new Date(autoplayTurn.startedAt).getTime()
+        : null;
   const spinnerState: SpinnerState = isImageRegenerating
     ? "Image"
     : isAutoplayDeciding
@@ -379,6 +388,8 @@ const GameScreen: React.FC = () => {
         error={generation.phase === "failed" || imageRegeneration.phase === "failed"}
         // ライブ本文表示の間はオーバーレイを隠す（ストリーミング中）
         suppressed={loading && stream.status === "streaming" && stream.sceneText.length > 0}
+        showElapsedTime={settings.showElapsedTime}
+        generationStartedAt={generationStartedAt}
       />
 
       <RefineDialog

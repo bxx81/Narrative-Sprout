@@ -24,6 +24,8 @@ describe("SettingsRecord", () => {
       expect(parsed.data.imageGenerator).toBe("disabled");
       expect(parsed.data.a1111Endpoint).toBe("http://127.0.0.1:7860");
       expect(parsed.data.enableStoryLogCompaction).toBe(true);
+      expect(parsed.data.showElapsedTime).toBe(false);
+      expect(parsed.data.autoRetrySeconds).toBe(0);
     }
   });
 

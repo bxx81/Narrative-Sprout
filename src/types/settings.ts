@@ -220,6 +220,8 @@ export const settingsRecordSchema = z.object({
    * 0 disables the countdown (manual retry only).
    */
   autoRetrySeconds: z.number().int().min(0).max(300).default(0),
+  /** Show elapsed seconds in the loading overlay while generating. */
+  showElapsedTime: z.boolean().default(false),
   /** AI-translated UI bundles keyed by the user-typed language name. */
   aiTranslations: aiTranslationsSchema,
   /** IETF tags for AI-translated languages (display name → tag). */

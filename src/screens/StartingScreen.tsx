@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useGameStore } from "../store/gameStore";
 import { ROUTES } from "../app/routes";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
+import { ElapsedCounter } from "../components/game/LoadingOverlay";
 
 // テーマ送信後、APIの応答待ちをしている間表示される。応答後GameScreenに遷移する。
 
@@ -11,6 +12,7 @@ const StartingScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const generation = useGameStore((s) => s.generation);
+  const showElapsedTime = useGameStore((s) => s.settings?.showElapsedTime ?? false);
   const activeGame = useGameStore((s) => s.activeGame);
 
   // On success (start payload finished, game created), go to the play screen.
@@ -27,6 +29,11 @@ const StartingScreen: React.FC = () => {
       <div className="animate-fade-in font-serif-display mt-8 text-xl md:text-2xl">
         {t("loadingWeavingScene")}
       </div>
+      {generation.phase === "running" && showElapsedTime && (
+        <div className="mt-4">
+          <ElapsedCounter generationStartedAt={new Date(generation.startedAt).getTime()} />
+        </div>
+      )}
     </main>
   );
 };

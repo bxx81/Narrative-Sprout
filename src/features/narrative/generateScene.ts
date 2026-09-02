@@ -2,6 +2,7 @@ import { z } from "zod";
 import { OpenAiCompatibleClient, ApiError } from "../../lib/openAiClient";
 import type { ChatCompletionRequest } from "../../lib/openAiClient";
 import { buildSamplingParams, parseTextModelOptions } from "../../lib/modelOptions";
+import { debug } from "../../lib/debugLog";
 import type { MemoryDelta, SceneContent } from "../../types";
 import {
   buildSchemaPromptText,
@@ -113,6 +114,22 @@ async function callChatCompletion(params: {
     response_format: responseFormat as never,
     ...buildSamplingParams(modelOptions),
   };
+  const willStream = Boolean(params.onDelta && modelOptions.stream);
+  debug.groupCollapsed(`[llm] call ${modelOptions.model} (stream: ${willStream})`);
+  debug.log(
+    "messages:",
+    params.messages.map((message) => ({
+      role: message.role,
+      length: message.content.length,
+      preview: message.content.slice(0, 300),
+    })),
+  );
+  debug.log("request options:", {
+    strict: modelOptions.strict,
+    timeoutMs: modelOptions.timeoutMs,
+    baseUrl: modelOptions.baseUrl,
+  });
+  debug.groupEnd();
   const signal = params.signal
     ? AbortSignal.any([params.signal, AbortSignal.timeout(modelOptions.timeoutMs)])
     : AbortSignal.timeout(modelOptions.timeoutMs);
@@ -126,6 +143,7 @@ async function callChatCompletion(params: {
     } catch (error) {
       if (error instanceof ApiError && STREAM_REJECT_STATUSES.has(error.status)) {
         // This endpoint does not accept streaming: retry once in bulk.
+        debug.warn(`[llm] streaming rejected (HTTP ${error.status}); retrying in bulk mode`);
         response = await client.createChatCompletion(requestBody, { signal });
       } else {
         throw error;
@@ -134,6 +152,12 @@ async function callChatCompletion(params: {
   } else {
     response = await client.createChatCompletion(requestBody, { signal });
   }
+  debug.log("[llm] response:", {
+    model: response.model,
+    cost: response.usage?.cost,
+    finishReason: response.choices?.[0]?.finish_reason,
+    contentLength: response.choices?.[0]?.message?.content?.length ?? 0,
+  });
   const raw = response.choices?.[0]?.message?.content;
   if (typeof raw !== "string" || raw.length === 0) {
     const reason = response.error?.message ?? "empty content";

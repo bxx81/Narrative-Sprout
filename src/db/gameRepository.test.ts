@@ -175,6 +175,7 @@ describe("wipeRepository", () => {
       enableStoryLogCompaction: true,
       enableStreaming: true,
       autoRetrySeconds: 0,
+      showElapsedTime: false,
       aiTranslations: {},
       aiLanguageMappings: {},
     });
