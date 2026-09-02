@@ -319,5 +319,6 @@
   "apiKeyPrefixMismatchWarning": "このキーは OpenRouter のキーではないようです（期待される接頭辞: sk-or-）。エンドポイントかキーを確認してください。",
   "apiKeyPkceFailed": "OpenRouter から API キーを取得できませんでした。もう一度お試しください。",
   "autoRetryIntervalLabel": "429エラー時の自動リトライ間隔",
-  "autoRetryNever": "自動リトライしない"
+  "autoRetryNever": "自動リトライしない",
+  "generateThemeFailed": "テーマの生成に失敗しました。もう一度お試しください。"
 }

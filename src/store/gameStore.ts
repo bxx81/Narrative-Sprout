@@ -9,7 +9,9 @@ import { wipeRepository } from "../db/wipeRepository";
 import { db } from "../db/database";
 import { choosePath, refineScene, startGame } from "../features/gameplay/turnService";
 import { collectAncestors } from "../features/storytree/api";
+import { countWords } from "../features/narrative/api";
 import { decideAutoplayTurn } from "../features/autoplay/api";
+import { generateThemes } from "../features/theme/api";
 import { englishUiTexts } from "../features/i18n/api";
 import { translateUIText } from "../features/i18n/translateService";
 import { streamStore } from "./streamStore";
@@ -100,6 +102,9 @@ interface GameState {
   uiTranslation: AsyncOperation<UiTranslationPayload, never>;
   /** Progress (0..1) of the running UI translation. */
   uiTranslationProgress: number | null;
+  /** Theme ideas stocked from the last generation (Generate Idea). */
+  generatedThemes: string[];
+  themeGeneration: AsyncOperation<{ kind: "generate" }, never>;
   driveConnected: boolean;
   driveBackups: DriveFileMetadata[];
 
@@ -122,6 +127,15 @@ interface GameState {
   exportSave: (gameId: string) => Promise<void>;
   wipeAllData: () => Promise<void>;
   setViewingNode: (nodeId: string) => void;
+  /** Rewrites the viewed node's scene text in place (manual editing). */
+  updateSceneText: (nodeId: string, sceneText: string) => Promise<void>;
+  /**
+   * Pops the next stocked theme idea, or generates a fresh batch of 5 with
+   * the AI when the stock is empty (legacy onCycleTheme). Resolves with the
+   * theme text for the textarea, or null when generation was skipped.
+   * Rejects on generation failure (caller toasts).
+   */
+  cycleTheme: () => Promise<string | null>;
   /** Resumes play: sets the viewed node and moves the playhead (branch end). */
   resumeStoryAtNode: (nodeId: string, branchEndNodeId: string) => void;
   setChronicleTargetNode: (nodeId: string) => void;
@@ -193,6 +207,8 @@ export const useGameStore = create<GameState>()(
       autoplayTurn: { phase: "idle" },
       uiTranslation: { phase: "idle" },
       uiTranslationProgress: null,
+      generatedThemes: [],
+      themeGeneration: { phase: "idle" },
       // The Drive access token lives only in memory (googleAuth), so a fresh
       // page load always starts disconnected.
       driveConnected: hasDriveAccessToken(),
@@ -269,7 +285,11 @@ export const useGameStore = create<GameState>()(
         set({
           generation: { phase: "running", payload, startedAt: new Date().toISOString() },
         });
-        streamStore.begin(isStreamingEnabledForSettings(settings));
+        // The delta callback decides the API delivery mode (legacy
+        // beginStream): pass it only when streaming is actually enabled,
+        // otherwise the request goes out non-streamed.
+        const streamingEnabled = isStreamingEnabledForSettings(settings);
+        streamStore.begin(streamingEnabled);
         try {
           let resolvedTheme = theme;
           let attachmentTexts: string[] = [];
@@ -291,7 +311,9 @@ export const useGameStore = create<GameState>()(
               webpCompression: settings.webpCompression,
               memoryStrategy: settings.memoryStrategy,
               enableStoryLogCompaction: settings.enableStoryLogCompaction,
-              onSceneTextDelta: (accumulatedText) => streamStore.pushDelta(accumulatedText),
+              onSceneTextDelta: streamingEnabled
+                ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
+                : undefined,
             },
             { signal: streamStore.getSignal() ?? undefined },
           );
@@ -358,7 +380,9 @@ export const useGameStore = create<GameState>()(
         set({
           generation: { phase: "running", payload, startedAt: new Date().toISOString() },
         });
-        streamStore.begin(isStreamingEnabledForSettings(settings));
+        // See startNewGame: the delta callback presence selects the API mode.
+        const streamingEnabled = isStreamingEnabledForSettings(settings);
+        streamStore.begin(streamingEnabled);
         try {
           const imageGenConfig = await buildImageConfigForSettings(settings);
           const node = await choosePath(
@@ -378,7 +402,9 @@ export const useGameStore = create<GameState>()(
               enableStoryLogCompaction: settings.enableStoryLogCompaction,
               autoplayReasoning: options?.autoplayReasoning,
               autoplayCost: options?.autoplayCost,
-              onSceneTextDelta: (accumulatedText) => streamStore.pushDelta(accumulatedText),
+              onSceneTextDelta: streamingEnabled
+                ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
+                : undefined,
             },
             { signal: streamStore.getSignal() ?? undefined },
           );
@@ -419,7 +445,9 @@ export const useGameStore = create<GameState>()(
         const ancestors = parentNode ? collectAncestors(byId, parentNode.id, true) : [];
         const payload: GenerationPayload = { kind: "refine", nodeId, refinePrompt };
         set({ generation: { phase: "running", payload, startedAt: new Date().toISOString() } });
-        streamStore.begin(isStreamingEnabledForSettings(settings));
+        // See startNewGame: the delta callback presence selects the API mode.
+        const streamingEnabled = isStreamingEnabledForSettings(settings);
+        streamStore.begin(streamingEnabled);
         try {
           const imageGenConfig = await buildImageConfigForSettings(settings);
           const node = await refineScene(
@@ -438,7 +466,9 @@ export const useGameStore = create<GameState>()(
               webpCompression: settings.webpCompression,
               memoryStrategy: settings.memoryStrategy,
               enableStoryLogCompaction: settings.enableStoryLogCompaction,
-              onSceneTextDelta: (accumulatedText) => streamStore.pushDelta(accumulatedText),
+              onSceneTextDelta: streamingEnabled
+                ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
+                : undefined,
             },
             { signal: streamStore.getSignal() ?? undefined },
           );
@@ -560,6 +590,56 @@ export const useGameStore = create<GameState>()(
       },
 
       setViewingNode: (nodeId) => set({ viewingNodeId: nodeId }),
+
+      updateSceneText: async (nodeId, sceneText) => {
+        const node = get().nodes.find((n) => n.id === nodeId);
+        if (!node) return;
+        await gameRepository.updateNodeSceneText(nodeId, sceneText, countWords(sceneText));
+        set({
+          nodes: get().nodes.map((n) =>
+            n.id === nodeId
+              ? { ...n, scene: { ...n.scene, sceneText, sceneWordCount: countWords(sceneText) } }
+              : n,
+          ),
+        });
+      },
+
+      cycleTheme: async () => {
+        const state = get();
+        // Stocked ideas first: pop one without touching the network.
+        if (state.generatedThemes.length > 0) {
+          const [nextTheme, ...remaining] = state.generatedThemes;
+          set({ generatedThemes: remaining });
+          return nextTheme ?? null;
+        }
+        const { settings, openrouterApiKey } = state;
+        if (!settings || !openrouterApiKey) throw new Error("Setup incomplete.");
+        if (state.themeGeneration.phase === "running") return null;
+        const payload = { kind: "generate" } as const;
+        set({
+          themeGeneration: {
+            phase: "running",
+            payload,
+            startedAt: new Date().toISOString(),
+          },
+        });
+        try {
+          const themes = await generateThemes({
+            apiKey: openrouterApiKey,
+            textModel: settings.textModel,
+            language: settings.language,
+          });
+          const [first, ...rest] = themes;
+          set({
+            generatedThemes: rest.map((theme) => theme.themeText),
+            themeGeneration: { phase: "idle" },
+          });
+          return first?.themeText ?? null;
+        } catch (error) {
+          set({ themeGeneration: { phase: "failed", payload, error: error as Error } });
+          throw error;
+        }
+      },
 
       resumeStoryAtNode: (nodeId, branchEndNodeId) => {
         const { activeGame, nodes } = get();

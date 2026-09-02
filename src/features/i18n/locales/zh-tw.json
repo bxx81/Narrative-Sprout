@@ -319,5 +319,6 @@
   "apiKeyPrefixMismatchWarning": "此金鑰看起來不像 OpenRouter 金鑰（預期前綴：sk-or-）。請檢查端點或金鑰。",
   "apiKeyPkceFailed": "從 OpenRouter 取得 API 金鑰失敗。請再試一次。",
   "autoRetryIntervalLabel": "429 錯誤時的自動重試間隔",
-  "autoRetryNever": "不自動重試"
+  "autoRetryNever": "不自動重試",
+  "generateThemeFailed": "主題生成失敗。請再試一次。"
 }
