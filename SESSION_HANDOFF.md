@@ -42,6 +42,7 @@
 | 6.9.2 | ✅ 完了（PR #17 merged） | テーマ設定の添付フロー修正: 添付ボタンが mount 毎に 1 回しか機能しないバグ（live FileList を setState updater クロージャに渡し、`value=""` で空になっていた）→ ハンドラ内で即時スナップショット。front matter `theme:` を添付時にテーマ欄へ事前反映。実機確認済み（連続添付・テーマ反映・front matter 除去ペイロード） |
 | 6.9.3 | ✅ 完了（PR #18 merged） | sceneTextLength をセーブスロット毎に保持（Legacy 準拠・REDESIND §5.4 の例外規定追加）: `GameRecord.sceneTextLength`（optional、旧セーブはグローバル設定フォールバック）に作成時スナップショット、choose/refine/redo/rootRedo はスナップショット値で生成。実機確認済み（旧データフォールバック・新データの長さ保持） |
 | 6.9.4 | ✅ 完了（PR #19 merged） | JSON Schema クリーニング（Legacy cleanJsonSchemaForStructuredOutputs + removeUnsupported の移植）: zod v4 が出す `propertyNames`（z.record 由来・notes 等）と top-level `$schema` を response_format とプロンプト埋め込み schema から再帰除去。未対応モデルの 400 bad request 対策。実機確認済み（エラーを出していたモデルでの生成） |
+| 6.9.5 | 🚧 実装完了・未コミット | ビルドチャンク分割（vite.config manualChunks）: 単一 943 kB だったバンドルを index 555 / react 249 / zod 92 / i18next 43 kB に分離（PWA キャッシュ差分の軽減 + 500 kB 警告解消のため chunkSizeWarningLimit 600）。zod mini 化は「利得 gzip ~10 kB vs 全 schema の関数スタイル書き換えコスト」で見送り（§6.9.5 要点） |
 | 7     | 未着手（PWA 版完成後に着手の方針） | Tauri 版（`src-tauri` 専用ブランチ、stronghold 導入、dist は全ブランチ ignore 済み）                                                                      |
 
 ## Phase 2 の実機確認方法（自分で試すには）
@@ -100,6 +101,12 @@
 - **修正**: `handleFiles` を `File[]` 受けに変更し、**イベントハンドラ内で即時に `Array.from` でスナップショット**（file input は `e.target.value = ""` の前、drop は `dataTransfer.files`）してから setState に渡す。updater は生配列を参照するので評価タイミングに依存しない（spec 的に正しい形）。input の `key` リマウント（tracker リセット）も併せて維持。調査用 `[attach]` debug ログは原因確定後に除去済み。実機確認済み（2 回目・3 回目以降の連続添付 OK）。
 - **教訓**: FileList / DataTransfer など live 系オブジェクトを setState updater のクロージャに渡さない。ハンドラ内で即時スナップショット（`Array.from`）。
 - **front matter theme のテーマ欄反映（実機指摘対応）**: v2 では YAML front matter の `theme:` は startNewGame 内の `processAttachmentFiles` で解決され（生成のテーマに採用、テーマ欄の入力より優先・「最初の 1 つが有効」）、**テーマ欄には表示されなかった**。Legacy は「ファイル名に theme を含む .md/.txt の最初の `---` まで」を挿入する簡易ヒューリスティックだったため、UX 差として指摘された。v2 は `ThemeSetupScreen.handleFiles` でテキスト添付（text/plain / text/markdown / .md / .txt）を `File.text()` で読み `parseScenarioFile` して**最初の front matter theme を textarea に事前反映**（ファイル自体は従来どおり添付 = Start 時に本体が世界テキストになる）。画像等はスキップ、読み取り失敗は plain attachment 扱い。
+
+## Phase 6.9.5（ビルドチャンク分割）の要点
+
+- **背景**: `bun run build` で「Some chunks are larger than 500 kB」警告。v2 は単一チャンク 943.72 kB（gzip 302.25 kB）。Legacy は `manualChunks` で細かく分割（react 297 kB / index 249 kB / zod 39 kB — zod は mini 化済み）していた。
+- **実装**: `vite.config.ts` に `manualChunks`（zod / react 系（react + react-dom + react-router + react-i18next + react-hot-toast）/ i18next を分離）+ `chunkSizeWarningLimit: 600`。**結果: index 555 kB（gzip 181.6 kB）/ react 249 / zod 92 / i18next 43 kB**。vendor はバージョン変更時のみ更新されるため、リリースごとの再取得・precache 差分が index（gzip ~182 kB）に縮む。
+- **zod mini 化は見送り（判断記録）**: 実測で zod v4 の mini にも `z.toJSONSchema` は存在するため技術的には可能。ただし mini は**関数スタイル API**（`z.optional(z.string())` 形式、メソッドチェーン不可）で、v2 の全 schema コード（types/ 全部 + sceneSchema 等）の全面書き換えが必要。利得は実測で **gzip ~10 kB 程度**（フル 92 kB raw / 25.1 kB gzip → mini は Legacy 実績 39 kB raw ≒ 15 kB gzip 未満程度）。コストに見合わないためやらない。将来、初期ロードの大幅最適化が必要になったときに改めて検討（ロケール JSON の dynamic import 化のほうが効率が良い候補）。
 
 ## Phase 6.9.4（JSON Schema クリーニング）の要点
 
