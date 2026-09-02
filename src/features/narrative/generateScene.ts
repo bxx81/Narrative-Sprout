@@ -6,6 +6,7 @@ import { debug } from "../../lib/debugLog";
 import type { MemoryDelta, SceneContent } from "../../types";
 import {
   buildSchemaPromptText,
+  cleanJsonSchemaForStructuredOutputs,
   memoryUpdateResponseSchema,
   narratorSceneOnlyResponseSchema,
   narratorSceneResponseSchema,
@@ -99,7 +100,11 @@ async function callChatCompletion(params: {
         json_schema: {
           name: params.responseSchemaName,
           strict: true,
-          schema: z.toJSONSchema(params.responseSchema) as Record<string, unknown>,
+          // Some providers 400 on zod v4's `propertyNames` / `$schema`
+          // keywords — strip them (legacy cleanJsonSchemaForStructuredOutputs).
+          schema: cleanJsonSchemaForStructuredOutputs(
+            z.toJSONSchema(params.responseSchema),
+          ) as Record<string, unknown>,
         },
       }
     : { type: "json_object" as const };

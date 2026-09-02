@@ -101,12 +101,34 @@ export function sceneToWireResponse(
 }
 
 /**
+ * Recursively strips JSON Schema keywords that some structured-output
+ * providers reject with a 400 bad request (legacy
+ * `cleanJsonSchemaForStructuredOutputs` + `removeUnsupported`):
+ *
+ * - `propertyNames`: zod v4 emits it for key-unbounded records
+ *   (`z.record(z.string(), …)`, e.g. `notes`). The key type is already
+ *   `string`, so the keyword is redundant.
+ * - `$schema`: zod v4 emits a top-level draft declaration; several
+ *   OpenAI-compatible endpoints reject unknown top-level keywords.
+ */
+export function cleanJsonSchemaForStructuredOutputs(schema: unknown): unknown {
+  if (schema === null || typeof schema !== "object") return schema;
+  if (Array.isArray(schema)) return schema.map(cleanJsonSchemaForStructuredOutputs);
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(schema)) {
+    if (key === "propertyNames" || key === "$schema") continue;
+    result[key] = cleanJsonSchemaForStructuredOutputs(value);
+  }
+  return result;
+}
+
+/**
  * Prompt-embedded JSON schema text for non-strict providers
  * (`--strict=false`): the request uses `json_object` and the schema text is
  * appended to the system prompt instead.
  */
 export function buildSchemaPromptText(schema: z.ZodType): string {
-  return JSON.stringify(z.toJSONSchema(schema), null, 2);
+  return JSON.stringify(cleanJsonSchemaForStructuredOutputs(z.toJSONSchema(schema)), null, 2);
 }
 
 /** Scene-only response for split strategy (call 1): no notes/sceneSummary. */
