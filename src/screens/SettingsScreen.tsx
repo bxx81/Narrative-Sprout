@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { useGameStore } from "../store/gameStore";
 import type { ImageGeneratorType } from "../types/settings";
 import { parseTextModelOptions, DEFAULT_OPENROUTER_BASE_URL } from "../lib/modelOptions";
+import { isDebug, setDebugMode } from "../lib/debugLog";
 import { builtInLanguages } from "../features/i18n/api";
 import {
   consumePkceCallback,
@@ -309,6 +310,20 @@ const SettingsScreen: React.FC = () => {
     await wipeAllData();
   };
 
+  // The debug flag is a module-load constant, so the toggle can never flip in
+  // place: persist it, then offer an immediate reload to apply (the toggle
+  // shows the applied state after the reload). "Later" also works — the flag
+  // is stored and applies on the next page load.
+  const handleDebugLoggingToggle = async (checked: boolean) => {
+    setDebugMode(checked);
+    const result = await confirm({
+      message: t("debugReloadConfirmMessage"),
+      confirmLabel: t("debugReloadConfirmLabel"),
+      cancelLabel: t("cancelButton"),
+    });
+    if (result === true) window.location.reload();
+  };
+
   const renderSettingsComponent = () => {
     switch (settings.imageGenerator) {
       case "a1111":
@@ -558,24 +573,6 @@ const SettingsScreen: React.FC = () => {
               onChange={(e) => void updateSettings({ enableStoryLogCompaction: e.target.checked })}
             />
           </div>
-          <div className="mt-3">
-            <label htmlFor="auto-retry-interval" className="explanation-text-style">
-              {t("autoRetryIntervalLabel")}
-            </label>
-            <select
-              id="auto-retry-interval"
-              value={settings.autoRetrySeconds}
-              onChange={(e) => void updateSettings({ autoRetrySeconds: Number(e.target.value) })}
-              className="form-style mt-1"
-            >
-              <option value="0">{t("autoRetryNever")}</option>
-              <option value="15">15s</option>
-              <option value="30">30s</option>
-              <option value="60">60s</option>
-              <option value="90">90s</option>
-              <option value="120">120s</option>
-            </select>
-          </div>
         </SettingsSection>
 
         {/* Automatic API Key Setup (PKCE) Section */}
@@ -667,6 +664,76 @@ const SettingsScreen: React.FC = () => {
             </div>
 
             <BackupSection />
+          </Expander>
+        </SettingsSection>
+
+        {/* Developer Options Section (legacy dev options, trimmed to v2) */}
+        <SettingsSection ariaLabelledby="dev-options-heading">
+          <Expander
+            id="dev-options-heading"
+            ariacontrols="dev-options-content"
+            labelText={t("devOptionsTitle")}
+            className="text-yellow-600 dark:text-yellow-400"
+            icon={<Icon iconName="service_toolbox" />}
+          >
+            {isDebug && (
+              <>
+                <div>
+                  <label htmlFor="webp-compression-selector" className="explanation-text-style">
+                    {t("devOptionsWebpCompressionLabel")}
+                  </label>
+                  <select
+                    id="webp-compression-selector"
+                    value={settings.webpCompression}
+                    onChange={(e) =>
+                      void updateSettings({
+                        webpCompression: e.target.value as typeof settings.webpCompression,
+                      })
+                    }
+                    className="form-style mt-2"
+                  >
+                    <option value="normal">{t("webpCompressionNormalOption")}</option>
+                    <option value="high">{t("webpCompressionHighOption")}</option>
+                  </select>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="explanation-text-style">{t("showElapsedTimeLabel")}</span>
+                  <ToggleSwitch
+                    checked={settings.showElapsedTime}
+                    onChange={(e) => void updateSettings({ showElapsedTime: e.target.checked })}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="auto-retry-interval" className="explanation-text-style">
+                    {t("autoRetryIntervalLabel")}
+                  </label>
+                  <select
+                    id="auto-retry-interval"
+                    value={settings.autoRetrySeconds}
+                    onChange={(e) =>
+                      void updateSettings({ autoRetrySeconds: Number(e.target.value) })
+                    }
+                    className="form-style mt-2"
+                  >
+                    <option value="0">{t("autoRetryNever")}</option>
+                    <option value="15">15s</option>
+                    <option value="30">30s</option>
+                    <option value="60">60s</option>
+                    <option value="90">90s</option>
+                    <option value="120">120s</option>
+                  </select>
+                </div>
+              </>
+            )}
+            <div className="flex items-center justify-between gap-4">
+              <span className={`explanation-text-style ${isDebug ? "line-through" : ""}`}>
+                {t("debugLogsEnableLabel")}
+              </span>
+              <ToggleSwitch
+                checked={isDebug}
+                onChange={(e) => void handleDebugLoggingToggle(e.target.checked)}
+              />
+            </div>
           </Expander>
         </SettingsSection>
       </div>

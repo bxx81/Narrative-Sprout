@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from "react";
 import LoadingSpinner from "../ui/LoadingSpinner";
 import { useTranslation } from "react-i18next";
 
@@ -11,7 +12,37 @@ interface LoadingOverlayProps {
   error: boolean;
   /** ストリーミング中など本文をライブ表示する際、オーバーレイを隠す */
   suppressed?: boolean;
+  /** 開発者向けオプション: 生成中の経過秒を表示する */
+  showElapsedTime?: boolean;
+  /** 現在実行中の生成操作の開始時刻（epoch ms）。 */
+  generationStartedAt: number | null;
 }
+
+/**
+ * Live "Xs elapsed" counter (legacy ElapsedCounter): re-renders once per
+ * second while the generation operation it tracks keeps the same start time.
+ */
+export const ElapsedCounter: React.FC<{ generationStartedAt: number }> = ({
+  generationStartedAt,
+}) => {
+  const { t } = useTranslation();
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  useEffect(() => {
+    const tick = () => {
+      setElapsedSeconds(Math.floor((Date.now() - generationStartedAt) / 1000));
+    };
+    tick();
+    const intervalId = setInterval(tick, 1000);
+    return () => clearInterval(intervalId);
+  }, [generationStartedAt]);
+
+  return (
+    <div className="text-text-text text-xs tracking-widest opacity-60">
+      {t("elapsedTime", { seconds: elapsedSeconds })}
+    </div>
+  );
+};
 
 const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
   isPageLoading,
@@ -20,6 +51,8 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
   imageGenerator,
   error,
   suppressed = false,
+  showElapsedTime = false,
+  generationStartedAt,
 }) => {
   const { t } = useTranslation();
   const isVisible = isPageLoading && !error && !suppressed;
@@ -58,6 +91,9 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
           <div className="text-text-text animate-pulse font-[Inter] text-xs tracking-[0.2em]">
             {spinnerLabel}
           </div>
+          {showElapsedTime && generationStartedAt != null && (
+            <ElapsedCounter generationStartedAt={generationStartedAt} />
+          )}
         </div>
       </div>
     </div>

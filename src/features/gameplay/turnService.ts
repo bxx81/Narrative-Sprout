@@ -17,6 +17,7 @@ import {
 } from "../narrative/api";
 import { baseMemoryForNewNode } from "../storytree/api";
 import { resolveMemoryStrategy } from "../narrative/api";
+import { debug } from "../../lib/debugLog";
 import { compactMemory, shouldCompactStoryLog, splitStoryLog } from "../memory/api";
 import {
   assetRecordFromDataUrl,
@@ -92,6 +93,7 @@ export async function startGame(
   params: StartGameParams,
   options?: { signal?: AbortSignal },
 ): Promise<{ game: GameRecord; rootNode: StoryNodeRecord }> {
+  debug.log("[turn] startGame:", params.theme);
   const attachmentTexts = params.attachmentTexts ?? [];
   const strategy = resolveMemoryStrategy(params.memoryStrategy, params.sceneTextLength);
 
@@ -265,6 +267,11 @@ export async function choosePath(
   params: ChoosePathParams,
   options?: { signal?: AbortSignal },
 ): Promise<StoryNodeRecord> {
+  debug.log("[turn] choosePath:", {
+    choiceText: params.choiceText,
+    historyNodes: params.ancestors.length,
+    discardHistoryContext: Boolean(params.discardHistoryContext),
+  });
   const attachmentTexts = params.attachmentTexts ?? params.game.attachmentTexts ?? [];
   const baseMemory = baseMemoryForNewNode(params.parentNode);
   const strategy = resolveMemoryStrategy(params.memoryStrategy, params.sceneTextLength);
@@ -432,6 +439,11 @@ export async function refineScene(
 ): Promise<StoryNodeRecord> {
   const attachmentTexts = params.attachmentTexts ?? params.game.attachmentTexts ?? [];
   const isRoot = params.targetNode.parentNodeId === null;
+  debug.log("[turn] refineScene:", {
+    targetNodeId: params.targetNode.id,
+    isRoot,
+    instruction: params.refinePrompt,
+  });
 
   const baseMemory = isRoot
     ? { notes: {}, storyLog: [] }
