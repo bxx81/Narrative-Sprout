@@ -74,6 +74,9 @@ const GameScreen: React.FC = () => {
   const isImageRegenerating = imageRegeneration.phase === "running";
   const isAutoplayDeciding = autoplayTurn.phase === "running";
   const isPageLoading = loading || isImageRegenerating || isAutoplayDeciding;
+  // Stage of the running narrative generation (legacy state.spinnerState):
+  // follows the pipeline text → image so the overlay can show progress.
+  const generationStage = useGameStore((s) => s.generationStage);
   // Start time of whichever generation operation is running, for the optional
   // elapsed-seconds display (legacy state.generationStartedAt).
   const generationStartedAt: number | null = loading
@@ -88,9 +91,13 @@ const GameScreen: React.FC = () => {
     : isAutoplayDeciding
       ? "Autoplay"
       : loading
-        ? generation.payload.kind === "choice"
-          ? "Choice"
-          : "Scene"
+        ? generationStage === "image"
+          ? "Image"
+          : generationStage === "scene"
+            ? "Scene"
+            : generation.payload.kind === "choice" || generation.payload.kind === "redo"
+              ? "Choice"
+              : "Scene"
         : null;
 
   // Streaming display state (out-of-band store; see streamStore)
@@ -386,8 +393,16 @@ const GameScreen: React.FC = () => {
         imageGenerationProgress={imageGenerationProgress}
         imageGenerator={settings.imageGenerator}
         error={generation.phase === "failed" || imageRegeneration.phase === "failed"}
-        // ライブ本文表示の間はオーバーレイを隠す（ストリーミング中）
-        suppressed={loading && stream.status === "streaming" && stream.sceneText.length > 0}
+        // ライブ本文表示の間はオーバーレイを隠す（ストリーミング中）。
+        // ただし本文の受信が完了したら残り JSON（choices/notes 等）の生成中に
+        // スピナーを復帰させる。画像生成段階でも復帰（Legacy 同様）。
+        suppressed={
+          loading &&
+          stream.status === "streaming" &&
+          stream.sceneText.length > 0 &&
+          !stream.sceneTextComplete &&
+          generationStage !== "image"
+        }
         showElapsedTime={settings.showElapsedTime}
         generationStartedAt={generationStartedAt}
       />
