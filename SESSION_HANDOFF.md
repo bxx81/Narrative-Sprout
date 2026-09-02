@@ -39,6 +39,7 @@
 | 6.8   | ✅ 完了（PR #14 merged） | redoScene（Regenerate Scene）: 非ルート=同一選択肢の sibling 再ロール（Keep/Discard 3択 confirm、Discard で履歴永久切断）、ルート=新セーブスロット生成（現セーブ保持）。実機確認済み（Keep/Discard の送信ペイロード、ルート再生成の新規スロット） |
 | 6.9   | ✅ 完了（PR #15 merged） | 開発者向けオプション: Settings に Developer Options セクション（WebP 圧縮率セレクタ / 生成中の経過時間表示トグル / 429 自動リトライを Story Log Compaction から移動 / デバッグログトグル）。isDebug は URL query ではなく localStorage ベース（`nsDebug`）。実機確認済み（WebP サイズ変化 200KB→1.5MB、経過秒表示、query/トグルでの表示切替、dev モードでのオフ化） |
 | 6.9.1 | ✅ 完了（PR #16 merged） | LoadingOverlay の段階表示修正: 生成中ずっと「選択肢を生成中」になり a1111 プログレスにも遷移しないバグ（Legacy の spinnerState 段階追跡を port していなかった）→ `generationStage`（choice/scene/image）+ turnService の段階コールバックで復元。ストリーミング中も本文受信完了（sceneTextComplete）でスピナー復帰。実機確認済み（表示遷移・プログレス・復帰タイミング） |
+| 6.9.2 | ✅ 完了（PR #17 merged） | テーマ設定の添付フロー修正: 添付ボタンが mount 毎に 1 回しか機能しないバグ（live FileList を setState updater クロージャに渡し、`value=""` で空になっていた）→ ハンドラ内で即時スナップショット。front matter `theme:` を添付時にテーマ欄へ事前反映。実機確認済み（連続添付・テーマ反映・front matter 除去ペイロード） |
 | 7     | 未着手（PWA 版完成後に着手の方針） | Tauri 版（`src-tauri` 専用ブランチ、stronghold 導入、dist は全ブランチ ignore 済み）                                                                      |
 
 ## Phase 2 の実機確認方法（自分で試すには）
