@@ -41,6 +41,7 @@
 | 6.9.1 | ✅ 完了（PR #16 merged） | LoadingOverlay の段階表示修正: 生成中ずっと「選択肢を生成中」になり a1111 プログレスにも遷移しないバグ（Legacy の spinnerState 段階追跡を port していなかった）→ `generationStage`（choice/scene/image）+ turnService の段階コールバックで復元。ストリーミング中も本文受信完了（sceneTextComplete）でスピナー復帰。実機確認済み（表示遷移・プログレス・復帰タイミング） |
 | 6.9.2 | ✅ 完了（PR #17 merged） | テーマ設定の添付フロー修正: 添付ボタンが mount 毎に 1 回しか機能しないバグ（live FileList を setState updater クロージャに渡し、`value=""` で空になっていた）→ ハンドラ内で即時スナップショット。front matter `theme:` を添付時にテーマ欄へ事前反映。実機確認済み（連続添付・テーマ反映・front matter 除去ペイロード） |
 | 6.9.3 | ✅ 完了（PR #18 merged） | sceneTextLength をセーブスロット毎に保持（Legacy 準拠・REDESIND §5.4 の例外規定追加）: `GameRecord.sceneTextLength`（optional、旧セーブはグローバル設定フォールバック）に作成時スナップショット、choose/refine/redo/rootRedo はスナップショット値で生成。実機確認済み（旧データフォールバック・新データの長さ保持） |
+| 6.9.4 | 🚧 実装完了・未コミット | JSON Schema クリーニング（Legacy cleanJsonSchemaForStructuredOutputs + removeUnsupported の移植）: zod v4 が出す `propertyNames`（z.record 由来・notes 等）と top-level `$schema` を response_format とプロンプト埋め込み schema から再帰除去。未対応モデルの 400 bad request 対策 |
 | 7     | 未着手（PWA 版完成後に着手の方針） | Tauri 版（`src-tauri` 専用ブランチ、stronghold 導入、dist は全ブランチ ignore 済み）                                                                      |
 
 ## Phase 2 の実機確認方法（自分で試すには）
@@ -99,6 +100,12 @@
 - **修正**: `handleFiles` を `File[]` 受けに変更し、**イベントハンドラ内で即時に `Array.from` でスナップショット**（file input は `e.target.value = ""` の前、drop は `dataTransfer.files`）してから setState に渡す。updater は生配列を参照するので評価タイミングに依存しない（spec 的に正しい形）。input の `key` リマウント（tracker リセット）も併せて維持。調査用 `[attach]` debug ログは原因確定後に除去済み。実機確認済み（2 回目・3 回目以降の連続添付 OK）。
 - **教訓**: FileList / DataTransfer など live 系オブジェクトを setState updater のクロージャに渡さない。ハンドラ内で即時スナップショット（`Array.from`）。
 - **front matter theme のテーマ欄反映（実機指摘対応）**: v2 では YAML front matter の `theme:` は startNewGame 内の `processAttachmentFiles` で解決され（生成のテーマに採用、テーマ欄の入力より優先・「最初の 1 つが有効」）、**テーマ欄には表示されなかった**。Legacy は「ファイル名に theme を含む .md/.txt の最初の `---` まで」を挿入する簡易ヒューリスティックだったため、UX 差として指摘された。v2 は `ThemeSetupScreen.handleFiles` でテキスト添付（text/plain / text/markdown / .md / .txt）を `File.text()` で読み `parseScenarioFile` して**最初の front matter theme を textarea に事前反映**（ファイル自体は従来どおり添付 = Start 時に本体が世界テキストになる）。画像等はスキップ、読み取り失敗は plain attachment 扱い。
+
+## Phase 6.9.4（JSON Schema クリーニング）の要点
+
+- **背景**: zod v4 の `z.toJSONSchema` は `z.record(z.string(), …)`（notes / facts 等）に対して **`propertyNames: { type: "string" }`** を出力し、narrator schema にも含まれる（実測確認）。**structured outputs で `propertyNames` 未対応のモデルは 400 bad request を返す**。さらに top-level に `$schema`（draft 宣言）も出力され、未対応エンドポイントはこれも拒否しうる。Legacy は `zodResponseFormat` 内の `removeUnsupported`（$schema + propertyNames）と `cleanJsonSchemaForStructuredOutputs`（propertyNames 再帰除去・response_format 全体に適用）で対処していたが、v2 は `z.toJSONSchema` を直接使っており port を漏らしていた。
+- **実装**: `features/narrative/sceneSchema.ts` に `cleanJsonSchemaForStructuredOutputs(schema: unknown): unknown`（`propertyNames` + `$schema` を再帰除去。オブジェクト/配列対応）を新設し、(1) `generateScene.callChatCompletion` の `json_schema.schema`（response_format）と (2) `buildSchemaPromptText`（`--strict=false` 時の system プロンプト埋め込み）の両方に適用。`features/narrative/api.ts` から export。
+- **テスト**: `sceneSchema.test.ts` 3 cases（narrator schema から両キーワード除去・他キー保持 / ネストと配列 / プロンプト埋め込みテキストにも含まれない）。全 211 テストグリーン。
 
 ## Phase 6.9.3（sceneTextLength の per-save スナップショット）の要点
 

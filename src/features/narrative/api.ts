@@ -1,5 +1,5 @@
 export { applyMemoryDelta } from "./memoryMerge";
-export { sceneToWireResponse } from "./sceneSchema";
+export { sceneToWireResponse, cleanJsonSchemaForStructuredOutputs } from "./sceneSchema";
 export {
   buildCompactionPrompt,
   buildMemoryUpdatePrompt,
