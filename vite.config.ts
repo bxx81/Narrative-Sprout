@@ -8,6 +8,36 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(version),
   },
+  build: {
+    // Vendor chunks (zod 90 kB / react 243 kB raw) are split below for PWA
+    // cache efficiency: app code changes every release, vendors only with
+    // version bumps, so per-release re-downloads stay small. The largest
+    // realistic chunk is the app bundle itself (~550 kB raw, ~180 kB gzip),
+    // hence the raised warning limit.
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        // Vendor separation for PWA cache efficiency: the app code changes on
+        // every release, but these vendors only change with their versions —
+        // splitting keeps the per-release re-download (and precache diff)
+        // small. Zod alone is heavy (v4 full bundle); splitting it also
+        // clears the 500 kB chunk warning.
+        manualChunks(id) {
+          if (id.includes("node_modules/zod/")) return "zod";
+          if (
+            id.includes("node_modules/react/") ||
+            id.includes("node_modules/react-dom/") ||
+            id.includes("node_modules/react-router/") ||
+            id.includes("node_modules/react-i18next/") ||
+            id.includes("node_modules/react-hot-toast/")
+          ) {
+            return "react";
+          }
+          if (id.includes("node_modules/i18next/")) return "i18next";
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     tailwindcss(),
