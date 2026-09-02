@@ -35,7 +35,7 @@
 | 6     | ✅ 完了（PR #10 merged） | i18n（5言語バンドル + AI 動的翻訳 + 言語セレクタ）、オートプレイ（reasoning チェーン永続化）、SSE ストリーミング（live 本文表示 + per-model opt-out）、PWA 修正（SW registration + manifest アイコン）。実機確認済み（言語切替・翻訳・ストリーミング・オートプレイ動作）。UI 差分（Legacy との見た目の違い）は後に回す判断 |
 | 6.5   | ✅ 完了（PR #11 merged） | モデル文字列オプション完全対応（`--BaseURL` で NIM 等のカスタムエンドポイント接続を実機確認済み）+ OpenRouter PKCE キー自動取得（credentials ストアへの保存を実機確認済み） |
 | 6.6   | ✅ 完了（PR #12 merged） | react-hot-toast 導入（バックアップ/Drive/PKCE/インポート/エクスポート/AI翻訳の通知）、グローバルエラーダイアログ（ErrorDialog + errorClassification）、生成失敗のリトライ（payload 保持 + retryGeneration/dismissError）、429 自動リトライ設定。実機確認済み（各種トースト・リトライ成功）。hooks 順序違反クラッシュと翻訳トースト再発火は実装中に発見・修正済み |
-| 6.7   | 🚧 実装完了・未コミット | 本文手動編集（UPDATE_SCENE 相当の in-place 書き換え + メニュー Edit ボタン）+ Generate Idea（テーマ自動生成、keywordSets 5個/呼び出し、cycleTheme でストック消費→枯渇時 AI 生成）+ ストリーミング OFF でも API が stream:true になるバグ修正（表示のみ切替だった） |
+| 6.7   | ✅ 完了（PR #13 merged） | 本文手動編集（UPDATE_SCENE 相当の in-place 書き換え + メニュー Edit ボタン）+ Generate Idea（テーマ自動生成、keywordSets 5個/呼び出し、cycleTheme でストック消費→枯渇時 AI 生成）+ ストリーミング OFF でも API が stream:true になるバグ修正（表示のみ切替だった）。実機確認済み（テーマ生成・失敗トースト・ストリーミング ON/OFF・編集の次生成反映） |
 | 7     | 未着手（PWA 版完成後に着手の方針） | Tauri 版（`src-tauri` 専用ブランチ、stronghold 導入、dist は全ブランチ ignore 済み）                                                                      |
 
 ## Phase 2 の実機確認方法（自分で試すには）
