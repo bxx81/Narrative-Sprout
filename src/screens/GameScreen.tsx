@@ -24,9 +24,6 @@ const ordinal = (n: number): string => {
   return n + (suffixes[(value - 20) % 10] ?? suffixes[value] ?? suffixes[0]!);
 };
 
-const isAbortError = (error: Error): boolean =>
-  error.name === "AbortError" || error.name === "TimeoutError";
-
 /**
  * The main game screen: scene image, text, choices, and navigation controls.
  * PC shows a sticky two-pane layout; mobile stacks vertically (legacy look).
@@ -297,20 +294,6 @@ const GameScreen: React.FC = () => {
           viewingNodeId={viewingNodeId}
           choicePreset={choicePresetSignal}
         />
-      )}
-
-      {generation.phase === "failed" && (
-        <p className="mt-4 text-center text-sm font-semibold text-danger">
-          {isAbortError(generation.error)
-            ? t("errorAborted")
-            : t("generationFailed", { message: generation.error.message })}
-        </p>
-      )}
-
-      {imageRegeneration.phase === "failed" && (
-        <p className="mt-4 text-center text-sm font-semibold text-danger">
-          {t("imageRegenerationFailed", { message: imageRegeneration.error.message })}
-        </p>
       )}
 
       {(loading || isAutoplayDeciding) && stream.status !== "idle" && (

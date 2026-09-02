@@ -317,5 +317,7 @@
   "invalidModelOption": "模型設定無效。請使用 \"provider/model\" 加可選的 \"--option=value\" 參數。",
   "modelOptionsHelp": "尾端參數：--BaseURL=https://...（自訂 OpenAI 相容端點）--temperature=0.7 --top_p --top_k --max_tokens --timeout --reasoning=true|low|high --kwargs_reasoning --only=provider --strict=false --stream=false",
   "apiKeyPrefixMismatchWarning": "此金鑰看起來不像 OpenRouter 金鑰（預期前綴：sk-or-）。請檢查端點或金鑰。",
-  "apiKeyPkceFailed": "從 OpenRouter 取得 API 金鑰失敗。請再試一次。"
+  "apiKeyPkceFailed": "從 OpenRouter 取得 API 金鑰失敗。請再試一次。",
+  "autoRetryIntervalLabel": "429 錯誤時的自動重試間隔",
+  "autoRetryNever": "不自動重試"
 }

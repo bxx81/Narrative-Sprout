@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { useGameStore } from "../store/gameStore";
 import type { DriveFileMetadata } from "../features/backup/api";
@@ -35,20 +36,16 @@ export function BackupSection() {
 
   const [passphrase, setPassphrase] = useState("");
   const [busy, setBusy] = useState(false);
-  const [statusText, setStatusText] = useState<string | null>(null);
-  const [errorText, setErrorText] = useState<string | null>(null);
   const [backupFile, setBackupFile] = useState<File | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [confirmingDeleteFileId, setConfirmingDeleteFileId] = useState<string | null>(null);
 
   async function runOperation(operation: () => Promise<string>): Promise<void> {
     setBusy(true);
-    setErrorText(null);
-    setStatusText(null);
     try {
-      setStatusText(await operation());
+      toast.success(await operation());
     } catch (error) {
-      setErrorText(error instanceof Error ? error.message : t("operationFailed"));
+      toast.error(error instanceof Error ? error.message : t("operationFailed"));
     } finally {
       setBusy(false);
     }
@@ -292,9 +289,6 @@ export function BackupSection() {
           </ul>
         )}
       </div>
-
-      {statusText && <p className="text-primary mt-3 text-xs">{statusText}</p>}
-      {errorText && <p className="mt-3 text-xs font-semibold text-danger">{errorText}</p>}
     </section>
   );
 }

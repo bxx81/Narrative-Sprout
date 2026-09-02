@@ -215,6 +215,11 @@ export const settingsRecordSchema = z.object({
   enableStoryLogCompaction: z.boolean().default(true),
   /** Live text streaming from the narrative model (per-model opt-out possible). */
   enableStreaming: z.boolean().default(true),
+  /**
+   * Automatic retry interval for 429 (rate limited) failures, in seconds.
+   * 0 disables the countdown (manual retry only).
+   */
+  autoRetrySeconds: z.number().int().min(0).max(300).default(0),
   /** AI-translated UI bundles keyed by the user-typed language name. */
   aiTranslations: aiTranslationsSchema,
   /** IETF tags for AI-translated languages (display name → tag). */

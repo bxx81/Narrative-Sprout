@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeEach } from "bun:test";
 import { db } from "../db/database";
 import { useGameStore } from "./gameStore";
+import { defaultSettingsRecord } from "../types";
 import type { GameRecord, StoryNodeRecord } from "../types";
 
 // Minimal record factories for navigation-flow tests (store-level; the UI
@@ -115,5 +116,68 @@ describe("gameStore scene navigation (playhead)", () => {
     const s = useGameStore.getState();
     expect(s.viewingNodeId).toBe(byRole.leaf1.id);
     expect(s.currentNodeId).toBe(byRole.leaf1.id);
+  });
+});
+
+describe("gameStore generation retry (error dialog)", () => {
+  beforeEach(async () => {
+    await db.delete();
+    await db.open();
+    useGameStore.setState({
+      activeGame: null,
+      nodes: [],
+      viewingNodeId: null,
+      currentNodeId: null,
+      generation: { phase: "idle" },
+      imageRegeneration: { phase: "idle" },
+    });
+  });
+
+  function seedActiveState() {
+    const game = makeGame("root");
+    const root = makeNode(game.id, null, 1);
+    useGameStore.setState({
+      settings: {
+        ...defaultSettingsRecord,
+        // An empty model string makes the narrative call fail synchronously
+        // ("Model setting is invalid") without touching the network.
+        textModel: "",
+      },
+      openrouterApiKey: "sk-or-test",
+      activeGame: game,
+      nodes: [root],
+      viewingNodeId: root.id,
+      currentNodeId: root.id,
+    });
+    return { game, root };
+  }
+
+  test("a failed choice retains its payload for the retry dialog", async () => {
+    const { root } = seedActiveState();
+    await useGameStore.getState().choose("open the door");
+    const s = useGameStore.getState();
+    expect(s.generation.phase).toBe("failed");
+    if (s.generation.phase !== "failed") return;
+    expect(s.generation.payload).toEqual({
+      kind: "choice",
+      choiceText: "open the door",
+    });
+    expect(s.generation.error.message).toContain("Model setting is invalid");
+    expect(s.viewingNodeId).toBe(root.id); // unchanged on failure
+  });
+
+  test("retryGeneration re-runs the failed action and dismissError clears it", async () => {
+    seedActiveState();
+    await useGameStore.getState().choose("open the door");
+    // Still an invalid model: the retry re-runs and fails again (payload kept).
+    await useGameStore.getState().retryGeneration();
+    let s = useGameStore.getState();
+    expect(s.generation.phase).toBe("failed");
+    if (s.generation.phase !== "failed") return;
+    expect(s.generation.payload).toEqual({ kind: "choice", choiceText: "open the door" });
+
+    useGameStore.getState().dismissError();
+    s = useGameStore.getState();
+    expect(s.generation.phase).toBe("idle");
   });
 });

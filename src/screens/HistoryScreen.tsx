@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import toast from "react-hot-toast";
 import { useNavigate } from "react-router";
 import { useGameStore } from "../store/gameStore";
 import type { StoryNodeRecord } from "../types";
@@ -103,7 +104,6 @@ const HistoryScreen: React.FC = () => {
   const nodes = useGameStore((s) => s.nodes);
   const exportSave = useGameStore((s) => s.exportSave);
   const [isExporting, setIsExporting] = React.useState(false);
-  const [exportError, setExportError] = React.useState<string | null>(null);
 
   const endNodes = useMemo(() => {
     const parentIds = new Set(nodes.flatMap((n) => (n.parentNodeId ? [n.parentNodeId] : [])));
@@ -115,11 +115,12 @@ const HistoryScreen: React.FC = () => {
   const handleExport = async () => {
     if (!activeGame || isExporting) return;
     setIsExporting(true);
-    setExportError(null);
     try {
       await exportSave(activeGame.id);
+      toast.success(t("toastDownloadSavedataSuccess"));
     } catch (error) {
-      setExportError(error instanceof Error ? error.message : t("exportFailed"));
+      console.error("[export] save export failed", error);
+      toast.error(error instanceof Error ? error.message : t("exportFailed"));
     } finally {
       setIsExporting(false);
     }
@@ -154,9 +155,6 @@ const HistoryScreen: React.FC = () => {
           {t("downloadSavedataButton")}
         </Button>
       </div>
-      {exportError && (
-        <p className="mb-4 text-center text-sm font-semibold text-danger">{exportError}</p>
-      )}
       <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {endNodes.map((node) => (
           <li key={node.id}>

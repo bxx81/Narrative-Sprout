@@ -174,6 +174,7 @@ describe("wipeRepository", () => {
       memoryStrategy: "single",
       enableStoryLogCompaction: true,
       enableStreaming: true,
+      autoRetrySeconds: 0,
       aiTranslations: {},
       aiLanguageMappings: {},
     });

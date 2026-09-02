@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useDebouncedExternalState } from "../hooks/useDebouncedExternalState";
 import { useNavigate, useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
+import toast from "react-hot-toast";
 import { useGameStore } from "../store/gameStore";
 import type { ImageGeneratorType } from "../types/settings";
 import { parseTextModelOptions, DEFAULT_OPENROUTER_BASE_URL } from "../lib/modelOptions";
@@ -230,7 +231,6 @@ const SettingsScreen: React.FC = () => {
 
   const [key, setKey] = useState("");
   const [targetLanguage, setTargetLanguage] = useState("");
-  const [pkceStatus, setPkceStatus] = useState<string | null>(null);
   const pkceProcessedRef = useRef(false);
 
   const cameFromPath = location.state?.from as string | undefined;
@@ -249,13 +249,23 @@ const SettingsScreen: React.FC = () => {
     exchangeCodeForApiKey(callback.code)
       .then((newKey) => {
         void saveApiKey(newKey);
-        setPkceStatus(t("apiKeyPkceSuccess"));
+        toast.success(t("apiKeyPkceSuccess"));
       })
       .catch((error) => {
         console.error("[pkce] key exchange failed", error);
-        setPkceStatus(t("apiKeyPkceFailed"));
+        toast.error(t("apiKeyPkceFailed"));
       });
   }, [saveApiKey, t]);
+
+  // Surface AI translation failures as a toast: the store rethrows after
+  // recording the failed phase, so the toast fires exactly once at the moment
+  // of failure (never on screen remounts).
+  const handleTranslateUi = () => {
+    const trimmed = targetLanguage.trim();
+    if (!trimmed || isTranslating) return;
+    setTargetLanguage("");
+    translateUi(trimmed).catch(() => toast.error(t("aiTranslationError")));
+  };
 
   if (!settings) return null;
 
@@ -284,13 +294,6 @@ const SettingsScreen: React.FC = () => {
       void saveApiKey(key.trim());
       setKey("");
     }
-  };
-
-  const handleTranslateUi = () => {
-    const trimmed = targetLanguage.trim();
-    if (!trimmed || isTranslating) return;
-    setTargetLanguage("");
-    void translateUi(trimmed);
   };
 
   const handleDeleteAllData = async () => {
@@ -555,6 +558,24 @@ const SettingsScreen: React.FC = () => {
               onChange={(e) => void updateSettings({ enableStoryLogCompaction: e.target.checked })}
             />
           </div>
+          <div className="mt-3">
+            <label htmlFor="auto-retry-interval" className="explanation-text-style">
+              {t("autoRetryIntervalLabel")}
+            </label>
+            <select
+              id="auto-retry-interval"
+              value={settings.autoRetrySeconds}
+              onChange={(e) => void updateSettings({ autoRetrySeconds: Number(e.target.value) })}
+              className="form-style mt-1"
+            >
+              <option value="0">{t("autoRetryNever")}</option>
+              <option value="15">15s</option>
+              <option value="30">30s</option>
+              <option value="60">60s</option>
+              <option value="90">90s</option>
+              <option value="120">120s</option>
+            </select>
+          </div>
         </SettingsSection>
 
         {/* Automatic API Key Setup (PKCE) Section */}
@@ -574,17 +595,6 @@ const SettingsScreen: React.FC = () => {
             <Icon iconName="key" />
             {t("apiKeyPkceButton")}
           </Button>
-          {pkceStatus && (
-            <p
-              className={`mt-2 text-center text-xs font-semibold ${
-                pkceStatus === t("apiKeyPkceSuccess")
-                  ? "text-lime-600 dark:text-lime-400"
-                  : "text-danger"
-              }`}
-            >
-              {pkceStatus}
-            </p>
-          )}
         </SettingsSection>
 
         {/* API Key Section */}
