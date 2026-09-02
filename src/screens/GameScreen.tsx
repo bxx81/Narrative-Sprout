@@ -11,6 +11,8 @@ import GameNavButtons from "../components/game/GameNavButtons";
 import ImageDisplay from "../components/game/ImageDisplay";
 import LoadingOverlay, { type SpinnerState } from "../components/game/LoadingOverlay";
 import ZoomOverlay from "../components/game/ZoomOverlay";
+import HelpTooltip from "../components/ui/HelpTooltip";
+import { Icon } from "../components/ui/Icon";
 import GameChoices, { LongPressMs } from "../components/game/GameChoices";
 import ModelNameDisplay from "../components/game/ModelNameDisplay";
 import RefineDialog from "../components/game/RefineDialog";
@@ -47,6 +49,7 @@ const GameScreen: React.FC = () => {
   const choose = useGameStore((s) => s.choose);
   const refine = useGameStore((s) => s.refine);
   const goToTitle = useGameStore((s) => s.goToTitle);
+  const updateSceneText = useGameStore((s) => s.updateSceneText);
   const runAutoplayTurn = useGameStore((s) => s.runAutoplayTurn);
   const dismissAutoplayEndingComment = useGameStore((s) => s.dismissAutoplayEndingComment);
   const cancelGeneration = useGameStore((s) => s.cancelGeneration);
@@ -64,6 +67,8 @@ const GameScreen: React.FC = () => {
   const [isZoomed, setIsZoomed] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [refineOpen, setRefineOpen] = useState(false);
+  const [isEditingScene, setIsEditingScene] = useState(false);
+  const sceneEditRef = useRef<HTMLTextAreaElement>(null);
 
   const loading = generation.phase === "running";
   const isImageRegenerating = imageRegeneration.phase === "running";
@@ -142,6 +147,20 @@ const GameScreen: React.FC = () => {
 
   const handleCancelGeneration = () => {
     cancelGeneration();
+  };
+
+  const handleOpenEdit = () => {
+    setIsEditingScene(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingScene(false);
+  };
+
+  const handleApplyEdit = () => {
+    if (!viewingNodeId || !sceneEditRef.current) return;
+    setIsEditingScene(false);
+    void updateSceneText(viewingNodeId, sceneEditRef.current.value);
   };
 
   const openZoom = () => {
@@ -263,11 +282,42 @@ const GameScreen: React.FC = () => {
       </div>
 
       <div className="font-serif-display select-text selection:bg-lime-500/30">
-        <MainText
-          text={isStreamingLive ? stream.sceneText : scene.sceneText}
-          streamingCursor={isStreamingLive && !stream.sceneTextComplete}
-        />
-        {isCurrentStoryOver && !isStreamingLive && scene.storyClosingText && (
+        {isEditingScene && !loading ? (
+          <div>
+            <HelpTooltip content={t("helpEditSceneText")} />
+            <textarea
+              ref={sceneEditRef}
+              defaultValue={scene.sceneText}
+              rows={10}
+              className="border-text-border m-0 mt-2 w-full resize-y border-2 text-sm"
+              disabled={loading}
+            ></textarea>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <Button
+                intent="circle"
+                onClick={handleCancelEdit}
+                title={t("cancelButton")}
+                aria-label={t("cancelButton")}
+              >
+                <Icon iconName="close" />
+              </Button>
+              <Button
+                intent="circle"
+                onClick={handleApplyEdit}
+                title={t("applyEditButtonLabel")}
+                aria-label={t("applyEditButtonLabel")}
+              >
+                <Icon iconName="check" />
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <MainText
+            text={isStreamingLive ? stream.sceneText : scene.sceneText}
+            streamingCursor={isStreamingLive && !stream.sceneTextComplete}
+          />
+        )}
+        {isCurrentStoryOver && !isStreamingLive && !isEditingScene && scene.storyClosingText && (
           <>
             <Divider className="my-8" />
             <MainText text={scene.storyClosingText} className="font-semibold" />
@@ -361,7 +411,7 @@ const GameScreen: React.FC = () => {
           </button>
 
           <nav className="text-bg-color border-text-border sticky top-0 z-50 flex items-center justify-center gap-3 border-y p-3">
-            <GameNavButtons onOpenRefine={() => setRefineOpen(true)} />
+            <GameNavButtons onOpenRefine={() => setRefineOpen(true)} onOpenEdit={handleOpenEdit} />
           </nav>
 
           <main className="bg-text-bg flex flex-col items-center p-6 pb-12">{mainText}</main>
@@ -385,7 +435,10 @@ const GameScreen: React.FC = () => {
               </button>
 
               <nav className="body-bg-color border-text-border/20 z-3 flex items-center gap-3 rounded-2xl border p-3 px-5 shadow-lg">
-                <GameNavButtons onOpenRefine={() => setRefineOpen(true)} />
+                <GameNavButtons
+                  onOpenRefine={() => setRefineOpen(true)}
+                  onOpenEdit={handleOpenEdit}
+                />
               </nav>
             </div>
           </aside>

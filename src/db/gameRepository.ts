@@ -38,6 +38,24 @@ export const gameRepository = {
     await db.assets.put(asset);
   },
 
+  /**
+   * In-place scene text rewrite (manual editing, legacy UPDATE_SCENE): the
+   * same node keeps its position in the tree; the next turn's prompt history
+   * rebuilds from the stored scene, so edits flow into future generations.
+   * `sceneWordCount` is refreshed so the divider stays consistent.
+   */
+  async updateNodeSceneText(
+    nodeId: string,
+    sceneText: string,
+    sceneWordCount: number,
+  ): Promise<void> {
+    await db.transaction("rw", db.nodes, async () => {
+      const node = await db.nodes.get(nodeId);
+      if (!node) return;
+      await db.nodes.put({ ...node, scene: { ...node.scene, sceneText, sceneWordCount } });
+    });
+  },
+
   async listGames(): Promise<GameRecord[]> {
     return db.games.orderBy("lastPlayedAt").reverse().toArray();
   },

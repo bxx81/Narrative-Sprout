@@ -319,5 +319,6 @@
   "apiKeyPrefixMismatchWarning": "This key does not look like an OpenRouter key (expected prefix: sk-or-). Check the endpoint or the key.",
   "apiKeyPkceFailed": "Failed to get the API key from OpenRouter. Please try again.",
   "autoRetryIntervalLabel": "Automatic retry interval if 429 error",
-  "autoRetryNever": "Never"
+  "autoRetryNever": "Never",
+  "generateThemeFailed": "Theme generation failed. Please try again."
 }

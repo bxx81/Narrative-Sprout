@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
+import toast from "react-hot-toast";
 import { useGameStore } from "../store/gameStore";
 import { ROUTES } from "../app/routes";
 import A1111ImageSettings from "../components/settings/A1111ImageSettings";
@@ -28,6 +29,9 @@ const ThemeSetupScreen: React.FC = () => {
   const saveCredential = useGameStore((s) => s.saveCredential);
   const huggingFaceToken = useGameStore((s) => s.huggingFaceToken);
   const nvidiaNimToken = useGameStore((s) => s.nvidiaNimToken);
+  const generatedThemes = useGameStore((s) => s.generatedThemes);
+  const themeGeneration = useGameStore((s) => s.themeGeneration);
+  const cycleTheme = useGameStore((s) => s.cycleTheme);
 
   const [theme, setTheme] = useState("");
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
@@ -36,6 +40,18 @@ const ThemeSetupScreen: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
 
   const loading = generation.phase === "running";
+  const isGeneratingThemes = themeGeneration.phase === "running";
+
+  // Legacy onCycleTheme: apply the returned idea to the textarea; failures
+  // toast exactly once (the store rethrows after recording the phase).
+  const handleGenerateIdea = async () => {
+    try {
+      const nextTheme = await cycleTheme();
+      if (nextTheme) setTheme(nextTheme);
+    } catch {
+      toast.error(t("generateThemeFailed"));
+    }
+  };
 
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -191,6 +207,18 @@ const ThemeSetupScreen: React.FC = () => {
                   >
                     <Icon iconName="attach_file_add" />
                     {t("uploadImageButton")}
+                  </Button>
+                  <Button
+                    onClick={() => void handleGenerateIdea()}
+                    disabled={!apiKey || loading || isGeneratingThemes}
+                    intent="primary"
+                    size="small"
+                    title={t("generateThemeTooltip")}
+                    isWorking={isGeneratingThemes}
+                  >
+                    {!isGeneratingThemes && <Icon iconName="psychiatry" />}
+                    {t("generateThemeButton")}
+                    {generatedThemes.length > 0 ? ` (${generatedThemes.length})` : ""}
                   </Button>
                 </div>
                 <p className="support-text-color text-xs">

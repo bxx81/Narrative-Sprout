@@ -23,7 +23,10 @@ const isShortcutBlocked = (element: Element | null) => {
  * the v2 store). Autoplay toggles from the menu; refine and delete branch
  * also live here.
  */
-const GameNavButtons: React.FC<{ onOpenRefine: () => void }> = ({ onOpenRefine }) => {
+const GameNavButtons: React.FC<{ onOpenRefine: () => void; onOpenEdit: () => void }> = ({
+  onOpenRefine,
+  onOpenEdit,
+}) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const confirm = useConfirm();
@@ -252,6 +255,16 @@ const GameNavButtons: React.FC<{ onOpenRefine: () => void }> = ({ onOpenRefine }
               aria-label={t("refineSceneButtonLabel")}
             >
               <Icon iconName="auto_awesome_mosaic" />
+            </Button>
+
+            <Button
+              intent="circle"
+              disabled={busy}
+              onClick={() => closeMenuAnd(onOpenEdit)}
+              title={t("editSceneButtonLabel")}
+              aria-label={t("editSceneButtonLabel")}
+            >
+              <Icon iconName="edit" />
             </Button>
 
             <Button

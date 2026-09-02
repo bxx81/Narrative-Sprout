@@ -35,6 +35,7 @@
 | 6     | ✅ 完了（PR #10 merged） | i18n（5言語バンドル + AI 動的翻訳 + 言語セレクタ）、オートプレイ（reasoning チェーン永続化）、SSE ストリーミング（live 本文表示 + per-model opt-out）、PWA 修正（SW registration + manifest アイコン）。実機確認済み（言語切替・翻訳・ストリーミング・オートプレイ動作）。UI 差分（Legacy との見た目の違い）は後に回す判断 |
 | 6.5   | ✅ 完了（PR #11 merged） | モデル文字列オプション完全対応（`--BaseURL` で NIM 等のカスタムエンドポイント接続を実機確認済み）+ OpenRouter PKCE キー自動取得（credentials ストアへの保存を実機確認済み） |
 | 6.6   | ✅ 完了（PR #12 merged） | react-hot-toast 導入（バックアップ/Drive/PKCE/インポート/エクスポート/AI翻訳の通知）、グローバルエラーダイアログ（ErrorDialog + errorClassification）、生成失敗のリトライ（payload 保持 + retryGeneration/dismissError）、429 自動リトライ設定。実機確認済み（各種トースト・リトライ成功）。hooks 順序違反クラッシュと翻訳トースト再発火は実装中に発見・修正済み |
+| 6.7   | 🚧 実装完了・未コミット | 本文手動編集（UPDATE_SCENE 相当の in-place 書き換え + メニュー Edit ボタン）+ Generate Idea（テーマ自動生成、keywordSets 5個/呼び出し、cycleTheme でストック消費→枯渇時 AI 生成）+ ストリーミング OFF でも API が stream:true になるバグ修正（表示のみ切替だった） |
 | 7     | 未着手（PWA 版完成後に着手の方針） | Tauri 版（`src-tauri` 専用ブランチ、stronghold 導入、dist は全ブランチ ignore 済み）                                                                      |
 
 ## Phase 2 の実機確認方法（自分で試すには）
@@ -61,6 +62,15 @@
 - **エラーダイアログ** (`src/components/ErrorDialog.tsx`): Legacy ErrorDisplay（modal variant）の移植。AppLayout にグローバルマウントされ、`generation` / `imageRegeneration` の `failed` phase で表示。分類は `src/lib/errorClassification.ts`（`classifyError`）: ApiError 429→`errorApiOverloaded`（retryable）、401/402/403→非 retryable、AbortError→`errorAborted`（onlyInformation、Dismiss のみ）、TimeoutError→`errorApiGeneric`、それ以外→メッセージ保持+retryable。タイトルは retryable→`errorStumbleTitle` / 非retryable→`errorOccurredTitle`。7行超メッセージは `errorShowMore/Less` でクランプ。429 + `settings.autoRetrySeconds > 0` でカウントダウン表示→自動リトライ（`errorAutoRetry`、秒数は Settings > Story Log Compaction セクション内の新セレクト `autoRetryIntervalLabel`、0=Never）。Dismiss は start 失敗時のみ `/setup` へ遷移（Legacy の Starting status 扱い相当）。
 - **リトライ**: `gameStore.ts` の `GenerationPayload` を discriminated union に拡張（start: theme+attachmentFiles / choice: choiceText+autoplayReasoning+autoplayCost / refine: nodeId+refinePrompt）し、failed phase に保持（Legacy `lastActionForRetry` 相当）。`retryGeneration()` が payload 種別で `startNewGame` / `choose` / `refine` / `regenerateImage` を再実行。`dismissError()` で failed→idle。StartingScreen の独自失敗表示は削除（グローバルダイアログに一本化）。GameScreen のインライン失敗テキストも削除。
 - **テスト**: `lib/errorClassification.test.ts` 6 cases、`gameStore.test.ts` にリトライ 2 cases（不正 textModel でネットワークなしに同期的失敗→payload 保持確認→retry 再実行→dismiss で idle）。全 192 テストグリーン。
+
+## Phase 6.7（本文手動編集 + Generate Idea）の要点
+
+- **本文手動編集**（Legacy UPDATE_SCENE の移植）: `gameRepository.updateNodeSceneText(nodeId, sceneText, sceneWordCount)` が単一ノードを in-place 書き換え（新しいノード/分岐は作らない）。`gameStore.updateSceneText` がノード配列も同時に更新し、`countWords` で語数を再計算。**次ターンのプロンプト履歴は保存済み scene から `sceneToWireResponse` で再構築されるため、編集は以後の生成に自動反映される**（Tooltip の意図どおり）。UI は GameNavButtons メニューに Edit ボタン（`edit` アイコン）→ GameScreen が `isEditingScene` ローカル state で textarea（uncontrolled defaultValue）+ Apply/Cancel（`check`/`close` アイコン）に切替。RefineDialog と同じ `onOpenEdit` prop パターン。storyClosingText や choices は編集対象外（Legacy 同様）。バリデーションなし（Legacy 同様、空文字も許容）。
+- **Generate Idea**（Legacy themeService の移植）: `src/features/theme/` 新設。`themeGeneratorData.ts` は Legacy から実データをコピー（WORLDVIEWS 37 / GENRES 12 / TONES 19、日本語エントリ）。`generateThemes` がキーワードセット 5 組（ランダム抽出）で 1 呼び出し、`themes: [{title, description}]` を json_schema（strict=false なら json_object + プロンプト埋め込み）で取得し `"Title: description"` 形式の文字列に変換（title/description 欠損はスキップ）。モデル・オプション・タイムアウトは textModel 文字列から共通解析。
+- **store**（`gameStore.ts`）: `generatedThemes: string[]` + `themeGeneration: AsyncOperation` + `cycleTheme()`。ストックがあれば AI 呼び出しなしで 1 つ pop して返し、空なら生成して先頭を返す（残り 4 をストック、Legacy SET_GENERATED_THEMES 相当）。失敗時は failed phase を記録して rethrow（翻訳と同じパターン — 呼び出し側 ThemeSetupScreen が catch して `generateThemeFailed` トースト）。ボタンは Legacy 同様 `psychiatry` アイコン + 残数 `(N)` 表示、`isWorking` でビジー表示。
+- **テスト**: `gameStore.themeAndEdit.test.ts` 3 cases（ストック pop / 生成失敗 rethrow / in-place 編集 + 語数更新 + DB 反映）。全 195 テストグリーン。
+- **ストリーミング配信モードのバグ修正（実機確認で発見）**: `enableStreaming` スイッチが表示にしか効かず、API 呼び出しは常に `stream: true` だった。原因: `callChatCompletion` は `onDelta` の有無で配信方式を選ぶが、store が `onSceneTextDelta` を無条件に渡していた（`streamStore.begin(false)` は表示モード「generating」にするだけ）。修正: store の 3 フロー（start/choose/refine）で `streamingEnabled = isStreamingEnabledForSettings(settings)` を計算し、false なら `onSceneTextDelta` を渡さない（Legacy beginStream 準拠）。per-model `--stream=false` は従来どおり `modelOptions.stream` チェックで効く。回帰テスト: `gameStore.streaming.test.ts`（fetch スタブでリクエストボディをキャプチャし、OFF で `stream` フィールドなし / ON で `stream: true` を検証）。全 197 テストグリーン。
+- **スコープ外とした Legacy 機能**: 開発者オプション（デバッグ用）、redoScene（Regenerate Scene / 文脈破棄 — discardHistoryContext フロー。将来要れば移植）。E キー編集ショートカットも未移植（メニュー経由のみ）。
 
 ## Phase 6（i18n / オートプレイ / ストリーミング / PWA）の要点
 

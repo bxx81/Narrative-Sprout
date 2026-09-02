@@ -319,5 +319,6 @@
   "apiKeyPrefixMismatchWarning": "该密钥看起来不像 OpenRouter 密钥（预期前缀：sk-or-）。请检查端点或密钥。",
   "apiKeyPkceFailed": "从 OpenRouter 获取 API 密钥失败。请重试。",
   "autoRetryIntervalLabel": "429 错误时的自动重试间隔",
-  "autoRetryNever": "不自动重试"
+  "autoRetryNever": "不自动重试",
+  "generateThemeFailed": "主题生成失败。请重试。"
 }
