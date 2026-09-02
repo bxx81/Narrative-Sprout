@@ -5,8 +5,11 @@ import { memoryDeltaSchema, memoryStateSchema, sceneContentSchema } from "./scen
 /**
  * Core persisted records (REDESIGN.md §5.2).
  *
- * - `GameRecord`      : one playthrough (save slot header). Holds NO settings
- *                       or secrets — those are global (§5.4).
+ * - `GameRecord`      : one playthrough (save slot header). Holds NO secrets
+ *                       and no other settings — those are global (§5.4) —
+ *                       except `sceneTextLength`, snapshotted per save so
+ *                       later generations keep the length the save was
+ *                       created with (legacy per-save behavior).
  * - `StoryNodeRecord` : one turn of the story tree. Its image asset lives in
  *                       the `assets` store keyed by the same node id (§5.3);
  *                       there is intentionally no asset reference field here.
@@ -42,6 +45,13 @@ export const gameRecordSchema = z.object({
   latestNodeId: storyNodeIdSchema.nullable(),
   /** Attachment texts for this game (YAML front matter already resolved, {a|b} applied). Per-game world data, not generation settings. */
   attachmentTexts: attachmentTextsSchema,
+  /**
+   * Scene length order snapshotted when the save was created: later
+   * generations for this save use it instead of the current global setting
+   * (legacy per-save behavior). Optional so old saves parse — they fall
+   * back to the global setting at the call site.
+   */
+  sceneTextLength: z.string().optional(),
 });
 export type GameRecord = z.infer<typeof gameRecordSchema>;
 

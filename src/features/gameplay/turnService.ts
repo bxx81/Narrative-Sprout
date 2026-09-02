@@ -229,6 +229,9 @@ export async function startGame(
     lastPlayedAt: now,
     latestNodeId: nodeId,
     attachmentTexts,
+    // Snapshot the scene length the save is created with: later generations
+    // of this save keep using it (legacy per-save behavior).
+    sceneTextLength: params.sceneTextLength,
   };
 
   let asset: import("../../types/asset").AssetRecord | null = null;

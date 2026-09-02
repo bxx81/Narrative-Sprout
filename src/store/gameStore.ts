@@ -423,7 +423,9 @@ export const useGameStore = create<GameState>()(
               ancestors,
               choiceText,
               language: settings.language,
-              sceneTextLength: settings.sceneTextLength,
+              // Per-save snapshot (legacy behavior); old saves fall back to
+              // the current global setting.
+              sceneTextLength: activeGame.sceneTextLength ?? settings.sceneTextLength,
               attachmentTexts: activeGame.attachmentTexts ?? [],
               imageGenConfig,
               webpCompression: settings.webpCompression,
@@ -504,7 +506,9 @@ export const useGameStore = create<GameState>()(
               ancestors,
               refinePrompt,
               language: settings.language,
-              sceneTextLength: settings.sceneTextLength,
+              // Per-save snapshot (legacy behavior); old saves fall back to
+              // the current global setting.
+              sceneTextLength: activeGame.sceneTextLength ?? settings.sceneTextLength,
               attachmentTexts: activeGame.attachmentTexts ?? [],
               imageGenConfig,
               webpCompression: settings.webpCompression,
@@ -581,7 +585,9 @@ export const useGameStore = create<GameState>()(
                 model: settings.textModel,
                 theme: sourceGame.title,
                 language: settings.language,
-                sceneTextLength: settings.sceneTextLength,
+                // Root redo keeps the save's own length order (legacy
+                // performRootRegenerate), falling back to the global setting.
+                sceneTextLength: sourceGame.sceneTextLength ?? settings.sceneTextLength,
                 attachmentTexts: sourceGame.attachmentTexts ?? [],
                 imageGenConfig,
                 webpCompression: settings.webpCompression,
@@ -655,7 +661,9 @@ export const useGameStore = create<GameState>()(
               ancestors,
               choiceText: targetNode.choiceText,
               language: settings.language,
-              sceneTextLength: settings.sceneTextLength,
+              // Per-save snapshot (legacy behavior); old saves fall back to
+              // the current global setting.
+              sceneTextLength: activeGame.sceneTextLength ?? settings.sceneTextLength,
               attachmentTexts: activeGame.attachmentTexts ?? [],
               imageGenConfig,
               webpCompression: settings.webpCompression,
