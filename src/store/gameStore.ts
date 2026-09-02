@@ -8,7 +8,7 @@ import { assetRepository } from "../db/assetRepository";
 import { wipeRepository } from "../db/wipeRepository";
 import { db } from "../db/database";
 import { choosePath, refineScene, startGame } from "../features/gameplay/turnService";
-import { collectAncestors } from "../features/storytree/api";
+import { collectAncestors, applyHistoryContextCut } from "../features/storytree/api";
 import { countWords } from "../features/narrative/api";
 import { decideAutoplayTurn } from "../features/autoplay/api";
 import { generateThemes } from "../features/theme/api";
@@ -57,7 +57,9 @@ type GenerationPayload =
       autoplayReasoning?: string;
       autoplayCost?: number;
     }
-  | { kind: "refine"; nodeId: string; refinePrompt: string };
+  | { kind: "refine"; nodeId: string; refinePrompt: string }
+  | { kind: "redo"; nodeId: string; discardHistoryContext: boolean }
+  | { kind: "rootRedo"; gameId: string; rootId: string };
 
 interface AutoplayDecisionPayload {
   kind: "decision";
@@ -121,6 +123,13 @@ interface GameState {
     options?: { autoplayReasoning?: string; autoplayCost?: number },
   ) => Promise<void>;
   refine: (nodeId: string, refinePrompt: string) => Promise<void>;
+  /**
+   * Regenerates the viewed scene as a sibling re-roll of the same choice
+   * (legacy redoScene). Root nodes create a NEW save slot instead; the
+   * current save remains. `discardHistoryContext` permanently cuts prompt
+   * history older than the produced node.
+   */
+  redoScene: (nodeId: string, discardHistoryContext: boolean) => Promise<void>;
   regenerateImage: (nodeId: string) => Promise<void>;
   deleteBranch: (nodeId: string) => Promise<{ gameDeleted: boolean }>;
   deleteSave: (gameId: string) => Promise<void>;
@@ -369,7 +378,7 @@ export const useGameStore = create<GameState>()(
         if (!parentNode) return;
 
         const byId = new Map(state.nodes.map((n) => [n.id, n]));
-        const ancestors = collectAncestors(byId, viewingNodeId, true);
+        const ancestors = applyHistoryContextCut(collectAncestors(byId, viewingNodeId, true));
 
         const payload: GenerationPayload = {
           kind: "choice",
@@ -441,8 +450,10 @@ export const useGameStore = create<GameState>()(
           ? (state.nodes.find((n) => n.id === targetNode.parentNodeId) ?? null)
           : null;
         const byId = new Map(state.nodes.map((n) => [n.id, n]));
-        // ancestors of parent for context
-        const ancestors = parentNode ? collectAncestors(byId, parentNode.id, true) : [];
+        // ancestors of parent for context (permanent discard cuts applied)
+        const ancestors = parentNode
+          ? applyHistoryContextCut(collectAncestors(byId, parentNode.id, true))
+          : [];
         const payload: GenerationPayload = { kind: "refine", nodeId, refinePrompt };
         set({ generation: { phase: "running", payload, startedAt: new Date().toISOString() } });
         // See startNewGame: the delta callback presence selects the API mode.
@@ -481,6 +492,135 @@ export const useGameStore = create<GameState>()(
           const newAssets = await loadAssetsForNodes([node.id]);
           set({
             nodes: updatedNodes,
+            assets: { ...get().assets, ...newAssets },
+            activeGame: updatedGame,
+            viewingNodeId: node.id,
+            currentNodeId: node.id,
+            generation: { phase: "idle" },
+          });
+        } catch (error) {
+          set({ generation: { phase: "failed", payload, error: error as Error } });
+        } finally {
+          streamStore.end();
+        }
+      },
+
+      redoScene: async (nodeId, discardHistoryContext) => {
+        const state = get();
+        const { settings, openrouterApiKey, activeGame } = state;
+        if (!settings || !openrouterApiKey || !activeGame) return;
+        if (state.generation.phase === "running") return;
+        if (state.autoplay) return; // manual action: blocked during autoplay
+        const targetNode = state.nodes.find((n) => n.id === nodeId);
+        if (!targetNode) return;
+        const isRoot = targetNode.parentNodeId === null;
+
+        if (isRoot) {
+          // Root redo: a NEW save slot with the same theme + world texts; the
+          // current save remains untouched (legacy performRootRegenerate).
+          const sourceGame = activeGame;
+          const payload: GenerationPayload = {
+            kind: "rootRedo",
+            gameId: sourceGame.id,
+            rootId: nodeId,
+          };
+          set({
+            generation: { phase: "running", payload, startedAt: new Date().toISOString() },
+          });
+          const streamingEnabled = isStreamingEnabledForSettings(settings);
+          streamStore.begin(streamingEnabled);
+          try {
+            const imageGenConfig = await buildImageConfigForSettings(settings);
+            const { game, rootNode } = await startGame(
+              {
+                apiKey: openrouterApiKey,
+                model: settings.textModel,
+                theme: sourceGame.title,
+                language: settings.language,
+                sceneTextLength: settings.sceneTextLength,
+                attachmentTexts: sourceGame.attachmentTexts ?? [],
+                imageGenConfig,
+                webpCompression: settings.webpCompression,
+                memoryStrategy: settings.memoryStrategy,
+                enableStoryLogCompaction: settings.enableStoryLogCompaction,
+                onSceneTextDelta: streamingEnabled
+                  ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
+                  : undefined,
+              },
+              { signal: streamStore.getSignal() ?? undefined },
+            );
+            const assets = await loadAssetsForNodes([rootNode.id]);
+            const games = await gameRepository.listGames();
+            set({
+              games,
+              activeGame: game,
+              nodes: [rootNode],
+              assets,
+              viewingNodeId: rootNode.id,
+              currentNodeId: rootNode.id,
+              generation: { phase: "idle" },
+            });
+          } catch (error) {
+            set({ generation: { phase: "failed", payload, error: error as Error } });
+          } finally {
+            streamStore.end();
+          }
+          return;
+        }
+
+        // Non-root redo: sibling re-roll of the same choice under the same
+        // parent. With discard, NO prior turns enter the prompt (the produced
+        // node carries the flag, cutting history permanently for the branch).
+        const parentNode = targetNode.parentNodeId
+          ? (state.nodes.find((n) => n.id === targetNode.parentNodeId) ?? null)
+          : null;
+        if (!parentNode || !targetNode.choiceText) return;
+        const byId = new Map(state.nodes.map((n) => [n.id, n]));
+        const ancestors = discardHistoryContext
+          ? []
+          : applyHistoryContextCut(collectAncestors(byId, parentNode.id, true));
+        const payload: GenerationPayload = {
+          kind: "redo",
+          nodeId,
+          discardHistoryContext,
+        };
+        set({
+          generation: { phase: "running", payload, startedAt: new Date().toISOString() },
+        });
+        const streamingEnabled = isStreamingEnabledForSettings(settings);
+        streamStore.begin(streamingEnabled);
+        try {
+          const imageGenConfig = await buildImageConfigForSettings(settings);
+          const node = await choosePath(
+            {
+              apiKey: openrouterApiKey,
+              model: settings.textModel,
+              game: activeGame,
+              parentNode,
+              ancestors,
+              choiceText: targetNode.choiceText,
+              language: settings.language,
+              sceneTextLength: settings.sceneTextLength,
+              attachmentTexts: activeGame.attachmentTexts ?? [],
+              imageGenConfig,
+              webpCompression: settings.webpCompression,
+              memoryStrategy: settings.memoryStrategy,
+              enableStoryLogCompaction: settings.enableStoryLogCompaction,
+              discardHistoryContext,
+              onSceneTextDelta: streamingEnabled
+                ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
+                : undefined,
+            },
+            { signal: streamStore.getSignal() ?? undefined },
+          );
+          const updatedGame = {
+            ...activeGame,
+            latestNodeId: node.id,
+            lastPlayedAt: node.createdAt,
+          };
+          const newAssets = await loadAssetsForNodes([node.id]);
+          set({
+            nodes: [...get().nodes, node],
             assets: { ...get().assets, ...newAssets },
             activeGame: updatedGame,
             viewingNodeId: node.id,
@@ -725,6 +865,14 @@ export const useGameStore = create<GameState>()(
               break;
             case "refine":
               await get().refine(payload.nodeId, payload.refinePrompt);
+              break;
+            case "redo":
+              await get().redoScene(payload.nodeId, payload.discardHistoryContext);
+              break;
+            case "rootRedo":
+              // The failed generation never switched the active game, so the
+              // source save is still loaded and its root id remains valid.
+              await get().redoScene(payload.rootId, false);
               break;
           }
           return;

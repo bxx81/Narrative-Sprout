@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { StoryNodeRecord } from "../../types";
-import { collectAncestors } from "./treeTraversal";
+import { collectAncestors, applyHistoryContextCut } from "./treeTraversal";
 
 function node(id: string, parentNodeId: string | null, turnNumber: number): StoryNodeRecord {
   return {
@@ -51,5 +51,27 @@ describe("collectAncestors", () => {
 
   test("root with includeSelf=false is empty", () => {
     expect(collectAncestors(nodes, "root")).toEqual([]);
+  });
+});
+
+describe("applyHistoryContextCut (permanent discardHistoryContext cut)", () => {
+  function flagged(n: StoryNodeRecord): StoryNodeRecord {
+    return { ...n, metadata: { ...n.metadata, discardHistoryContext: true } };
+  }
+
+  const chain = [node("b", "a", 3), node("a", "root", 2), node("root", null, 1)];
+
+  test("keeps the whole chain when no node carries the flag", () => {
+    expect(applyHistoryContextCut(chain).map((n) => n.id as string)).toEqual(["b", "a", "root"]);
+  });
+
+  test("keeps nodes until and including the flagged node, cutting older ones", () => {
+    const cutChain = [chain[0]!, flagged(chain[1]!), chain[2]!];
+    expect(applyHistoryContextCut(cutChain).map((n) => n.id as string)).toEqual(["b", "a"]);
+  });
+
+  test("a flag on the newest node cuts everything else immediately", () => {
+    const cutChain = [flagged(chain[0]!), chain[1]!, chain[2]!];
+    expect(applyHistoryContextCut(cutChain).map((n) => n.id as string)).toEqual(["b"]);
   });
 });

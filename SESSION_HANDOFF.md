@@ -36,6 +36,7 @@
 | 6.5   | ✅ 完了（PR #11 merged） | モデル文字列オプション完全対応（`--BaseURL` で NIM 等のカスタムエンドポイント接続を実機確認済み）+ OpenRouter PKCE キー自動取得（credentials ストアへの保存を実機確認済み） |
 | 6.6   | ✅ 完了（PR #12 merged） | react-hot-toast 導入（バックアップ/Drive/PKCE/インポート/エクスポート/AI翻訳の通知）、グローバルエラーダイアログ（ErrorDialog + errorClassification）、生成失敗のリトライ（payload 保持 + retryGeneration/dismissError）、429 自動リトライ設定。実機確認済み（各種トースト・リトライ成功）。hooks 順序違反クラッシュと翻訳トースト再発火は実装中に発見・修正済み |
 | 6.7   | ✅ 完了（PR #13 merged） | 本文手動編集（UPDATE_SCENE 相当の in-place 書き換え + メニュー Edit ボタン）+ Generate Idea（テーマ自動生成、keywordSets 5個/呼び出し、cycleTheme でストック消費→枯渇時 AI 生成）+ ストリーミング OFF でも API が stream:true になるバグ修正（表示のみ切替だった）。実機確認済み（テーマ生成・失敗トースト・ストリーミング ON/OFF・編集の次生成反映） |
+| 6.8   | 🚧 実装完了・未コミット | redoScene（Regenerate Scene）: 非ルート=同一選択肢の sibling 再ロール（Keep/Discard 3択 confirm、Discard で履歴永久切断）、ルート=新セーブスロット生成（現セーブ保持） |
 | 7     | 未着手（PWA 版完成後に着手の方針） | Tauri 版（`src-tauri` 専用ブランチ、stronghold 導入、dist は全ブランチ ignore 済み）                                                                      |
 
 ## Phase 2 の実機確認方法（自分で試すには）
@@ -70,6 +71,16 @@
 - **store**（`gameStore.ts`）: `generatedThemes: string[]` + `themeGeneration: AsyncOperation` + `cycleTheme()`。ストックがあれば AI 呼び出しなしで 1 つ pop して返し、空なら生成して先頭を返す（残り 4 をストック、Legacy SET_GENERATED_THEMES 相当）。失敗時は failed phase を記録して rethrow（翻訳と同じパターン — 呼び出し側 ThemeSetupScreen が catch して `generateThemeFailed` トースト）。ボタンは Legacy 同様 `psychiatry` アイコン + 残数 `(N)` 表示、`isWorking` でビジー表示。
 - **テスト**: `gameStore.themeAndEdit.test.ts` 3 cases（ストック pop / 生成失敗 rethrow / in-place 編集 + 語数更新 + DB 反映）。全 195 テストグリーン。
 - **ストリーミング配信モードのバグ修正（実機確認で発見）**: `enableStreaming` スイッチが表示にしか効かず、API 呼び出しは常に `stream: true` だった。原因: `callChatCompletion` は `onDelta` の有無で配信方式を選ぶが、store が `onSceneTextDelta` を無条件に渡していた（`streamStore.begin(false)` は表示モード「generating」にするだけ）。修正: store の 3 フロー（start/choose/refine）で `streamingEnabled = isStreamingEnabledForSettings(settings)` を計算し、false なら `onSceneTextDelta` を渡さない（Legacy beginStream 準拠）。per-model `--stream=false` は従来どおり `modelOptions.stream` チェックで効く。回帰テスト: `gameStore.streaming.test.ts`（fetch スタブでリクエストボディをキャプチャし、OFF で `stream` フィールドなし / ON で `stream: true` を検証）。全 197 テストグリーン。
+
+## Phase 6.8（redoScene）の要点
+
+- **Legacy セマンティクス**: redo は「同一選択肢の sibling 再ロール」で refine（指示付き）と対になる機能。`discardHistoryContext` の切断は `promptService.buildContextForApi` で実現されており、**フラグ付きノード自体は履歴に含み、それより古い世代を永久に除外**（未来のノードから遡ってもフラグに到達した時点で停止）。メモリ接頭辞（notes/storyLog）は切断の対象外で親から継承。
+- **v2 実装**: `features/storytree/treeTraversal.ts` に `applyHistoryContextCut(ancestors)` 純粋関数（フラグに到達するまで（含む）保持）を追加し、store の **choose / refine / redoScene すべて**の ancestors 計算に適用（フラグはノードの metadata に永続化済みなので将来のターンにも効く）。`turnService.choosePath` に `discardHistoryContext?: boolean` パラメータを追加し、生成ノードの metadata に反映。
+- **store `redoScene(nodeId, discardHistoryContext)`**: payload 種別 `{ kind: "redo"; nodeId; discardHistoryContext }` / `{ kind: "rootRedo"; gameId; rootId }` を追加（retryGeneration も対応 — rootRedo 失敗時は旧ゲームがアクティブのままなので rootId 再実行で OK）。非ルート: 親ノード配下の sibling として `choosePath`（choiceText は対象ノードから引き継ぎ）。discard 時は ancestors を空配列に（= 履歴なし、メモリのみ）。ルート: `startGame` を同一 theme + attachmentTexts で呼び**新セーブスロットを生成**しアクティブを切替（現セーブは残る、Legacy performRootRegenerate 相当）。ストリーミング/キャンセル/リトライは choose と同じ配線。autoplay 中は手動操作として拒否。
+- **ConfirmationProvider**: `neutralLabel` オプションを追加（3 択ダイアログ）。`confirm()` の戻り値を `boolean | "neutral" | null` に拡張（既存呼び出しの `result !== true` はそのまま互換）。
+- **UI**: GameNavButtons メニューに Redo ボタン（`redo` アイコン）。ルート viewing 时は `redoRootConfirmMessage` 単 confirm、非ルートは Keep（`redoSceneConfirmKeep` → discard=false）/ Discard（`redoSceneConfirmDiscard` → discard=true）/ Cancel の 3 択。choiceText が空の非ルートノードは何もしない（Legacy 同様）。
+- **テスト**: `treeTraversal.test.ts` に cut 3 cases、`gameStore.redo.test.ts` 3 cases（sibling 再ロール / discard フラグ永続化 / ルート redo で games 2 件 + 旧セーブ保持）。全 203 テストグリーン。
+- **意図的に未実装**: 開発者オプション（デバッグ用）。E/R キー等の redo/edit ショートカットは未移植（メニュー経由のみ）。
 - **スコープ外とした Legacy 機能**: 開発者オプション（デバッグ用）、redoScene（Regenerate Scene / 文脈破棄 — discardHistoryContext フロー。将来要れば移植）。E キー編集ショートカットも未移植（メニュー経由のみ）。
 
 ## Phase 6（i18n / オートプレイ / ストリーミング / PWA）の要点
