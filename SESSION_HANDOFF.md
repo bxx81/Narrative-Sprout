@@ -38,6 +38,7 @@
 | 6.7   | ✅ 完了（PR #13 merged） | 本文手動編集（UPDATE_SCENE 相当の in-place 書き換え + メニュー Edit ボタン）+ Generate Idea（テーマ自動生成、keywordSets 5個/呼び出し、cycleTheme でストック消費→枯渇時 AI 生成）+ ストリーミング OFF でも API が stream:true になるバグ修正（表示のみ切替だった）。実機確認済み（テーマ生成・失敗トースト・ストリーミング ON/OFF・編集の次生成反映） |
 | 6.8   | ✅ 完了（PR #14 merged） | redoScene（Regenerate Scene）: 非ルート=同一選択肢の sibling 再ロール（Keep/Discard 3択 confirm、Discard で履歴永久切断）、ルート=新セーブスロット生成（現セーブ保持）。実機確認済み（Keep/Discard の送信ペイロード、ルート再生成の新規スロット） |
 | 6.9   | ✅ 完了（PR #15 merged） | 開発者向けオプション: Settings に Developer Options セクション（WebP 圧縮率セレクタ / 生成中の経過時間表示トグル / 429 自動リトライを Story Log Compaction から移動 / デバッグログトグル）。isDebug は URL query ではなく localStorage ベース（`nsDebug`）。実機確認済み（WebP サイズ変化 200KB→1.5MB、経過秒表示、query/トグルでの表示切替、dev モードでのオフ化） |
+| 6.9.1 | 🚧 実装完了・未コミット | LoadingOverlay の段階表示修正: 生成中ずっと「選択肢を生成中」になり a1111 プログレスにも遷移しないバグ（Legacy の spinnerState 段階追跡を port していなかった）→ `generationStage`（choice/scene/image）+ turnService の段階コールバックで復元 |
 | 7     | 未着手（PWA 版完成後に着手の方針） | Tauri 版（`src-tauri` 専用ブランチ、stronghold 導入、dist は全ブランチ ignore 済み）                                                                      |
 
 ## Phase 2 の実機確認方法（自分で試すには）
@@ -81,6 +82,13 @@
 - **debug ログの配置**: `generateScene.ts` の `callChatCompletion`（全 LLM 呼び出しの入口）に `debug.groupCollapsed("[llm] call …")`（モデル・各メッセージの role/長さ/先頭300字・strict/timeout/baseUrl）、応答ログ（model/cost/finishReason/contentLength）、ストリーミング拒否フォールバック時 `debug.warn`。`turnService.ts` の startGame/choosePath/refineScene 先頭に 1 行（choosePath は historyNodes 数と discardHistoryContext を出力 — **履歴切断のデバッグにそのまま使える**）。既存の `console.error`/`console.warn`（エラー系）は常に出るべきなので触っていない。
 - **テスト**: `lib/debugLog.test.ts`（setDebugMode の永続化 1 case）、`types/settings.test.ts` に showElapsedTime/autoRetrySeconds の default 検証を追記。全 204 テストグリーン。
 - **意図的に未実装**: Legacy の開発者オプションのうち Visual test リンク（v2 に test ページなし）、Import sample savedata、添付ファイル送信形式（file/string）、テキスト生成前の画像モデルアンロード。E/R キーショートカット同様、必要になった時点で追加。
+
+## Phase 6.9.1（LoadingOverlay 段階表示修正）の要点
+
+- **原因**: v2 は GameScreen の `spinnerState` を `generation.payload.kind` から**静的導出**していた（kind === "choice" → 終始「選択肢を生成中」）。Legacy は生成パイプラインの各段階で `onSpinnerStateChange("Text"/"Image")` コールバックが store を更新しており、テキスト生成中は Scene、画像生成中は Image（+ a1111/comfyui プログレス）に遷移する。v2 では port を省略していたため画像段階に遷移せず、`nowProgress = spinnerState === "Image" && …` のプログレス表示も永遠に出なかった。加えて通常ターンの画像生成では `onProgress` が store まで配線されていなかった（画像再生成ボタン `regenerateImage` のみ）。
+- **実装**: store に `generationStage: "choice" | "scene" | "image" | null`（session のみ）を追加。`turnService` に `TurnServiceOptions`（`onTextGenerationStart` / `onImageGenerationStart` / `onImageGenerationProgress`）を導入し、テキスト生成直前・画像生成直前・progress で呼ぶ（startGame / choosePath / refineScene の 3 経路、`generateSceneImage` に onProgress を渡す）。store の 5 フロー（start/choose/refine/redo/rootRedo）が running 開始時に stage を choice/scene で初期化 + `imageGenerationProgress: null` リセット、完了/失敗で progress を null に。GameScreen の spinnerState は stage 優先（image > scene > kind フォールバック）、`suppressed` に `generationStage !== "image"` を追加（**ストリーミング本文表示から画像生成への復帰** — streamStore.status は finally まで streaming のままなので、これがないと画像オーバーレイが隠れ続ける）。「Choice」表示は選択肢クリック直後の一瞬のみ（Legacy 同様）。
+- **テスト**: `gameStore.stage.test.ts` — choose の fetch スタブ内で `generationStage` を観測し、開始直後 "choice" → テキスト呼び出し時 "scene" を検証。全 205 テストグリーン。
+- **スピナー復帰タイミング（Legacy での追加対応の移植）**: `suppressed` に `!stream.sceneTextComplete` を追加。ストリーミング中は本文受信完了（sceneText の閉じクォート検出）までオーバーレイを隠し、完了後は残り JSON（choices/notes/imagePrompt 等）の生成中にスピナーを再表示する（stage は "scene" のまま → 「シーンを生成中」表示）。
 
 ## Phase 6.8（redoScene）の要点
 

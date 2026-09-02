@@ -95,6 +95,12 @@ interface GameState {
   imageRegeneration: AsyncOperation<ImageRegenerationPayload, never>;
   /** Progress (0..1) of the running image generation, when reportable. */
   imageGenerationProgress: number | null;
+  /**
+   * Current stage of the running narrative generation for the loading
+   * overlay (legacy state.spinnerState): "choice"/"scene" while the text
+   * call runs, "image" once the scene image call begins. Session-only.
+   */
+  generationStage: "choice" | "scene" | "image" | null;
   /** Autoplay driver: the player AI keeps choosing while true (session-only). */
   autoplay: boolean;
   /** Retrospective player-AI comment shown once when an autoplay run ends. */
@@ -211,6 +217,7 @@ export const useGameStore = create<GameState>()(
       generation: { phase: "idle" },
       imageRegeneration: { phase: "idle" },
       imageGenerationProgress: null,
+      generationStage: null,
       autoplay: false,
       autoplayEndingComment: null,
       autoplayTurn: { phase: "idle" },
@@ -293,6 +300,8 @@ export const useGameStore = create<GameState>()(
         const payload: GenerationPayload = { kind: "start", theme, attachmentFiles };
         set({
           generation: { phase: "running", payload, startedAt: new Date().toISOString() },
+          generationStage: "scene",
+          imageGenerationProgress: null,
         });
         // The delta callback decides the API delivery mode (legacy
         // beginStream): pass it only when streaming is actually enabled,
@@ -324,7 +333,12 @@ export const useGameStore = create<GameState>()(
                 ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
                 : undefined,
             },
-            { signal: streamStore.getSignal() ?? undefined },
+            {
+              signal: streamStore.getSignal() ?? undefined,
+              onTextGenerationStart: () => set({ generationStage: "scene" }),
+              onImageGenerationStart: () => set({ generationStage: "image" }),
+              onImageGenerationProgress: (progress) => set({ imageGenerationProgress: progress }),
+            },
           );
           const assets = await loadAssetsForNodes([rootNode.id]);
           set({
@@ -334,9 +348,13 @@ export const useGameStore = create<GameState>()(
             viewingNodeId: rootNode.id,
             currentNodeId: rootNode.id,
             generation: { phase: "idle" },
+            imageGenerationProgress: null,
           });
         } catch (error) {
-          set({ generation: { phase: "failed", payload, error: error as Error } });
+          set({
+            generation: { phase: "failed", payload, error: error as Error },
+            imageGenerationProgress: null,
+          });
         } finally {
           streamStore.end();
         }
@@ -388,6 +406,8 @@ export const useGameStore = create<GameState>()(
         };
         set({
           generation: { phase: "running", payload, startedAt: new Date().toISOString() },
+          generationStage: "choice",
+          imageGenerationProgress: null,
         });
         // See startNewGame: the delta callback presence selects the API mode.
         const streamingEnabled = isStreamingEnabledForSettings(settings);
@@ -415,7 +435,12 @@ export const useGameStore = create<GameState>()(
                 ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
                 : undefined,
             },
-            { signal: streamStore.getSignal() ?? undefined },
+            {
+              signal: streamStore.getSignal() ?? undefined,
+              onTextGenerationStart: () => set({ generationStage: "scene" }),
+              onImageGenerationStart: () => set({ generationStage: "image" }),
+              onImageGenerationProgress: (progress) => set({ imageGenerationProgress: progress }),
+            },
           );
           const updatedNodes = [...get().nodes, node];
           const updatedGame = {
@@ -431,9 +456,13 @@ export const useGameStore = create<GameState>()(
             viewingNodeId: node.id,
             currentNodeId: node.id,
             generation: { phase: "idle" },
+            imageGenerationProgress: null,
           });
         } catch (error) {
-          set({ generation: { phase: "failed", payload, error: error as Error } });
+          set({
+            generation: { phase: "failed", payload, error: error as Error },
+            imageGenerationProgress: null,
+          });
         } finally {
           streamStore.end();
         }
@@ -455,7 +484,11 @@ export const useGameStore = create<GameState>()(
           ? applyHistoryContextCut(collectAncestors(byId, parentNode.id, true))
           : [];
         const payload: GenerationPayload = { kind: "refine", nodeId, refinePrompt };
-        set({ generation: { phase: "running", payload, startedAt: new Date().toISOString() } });
+        set({
+          generation: { phase: "running", payload, startedAt: new Date().toISOString() },
+          generationStage: "scene",
+          imageGenerationProgress: null,
+        });
         // See startNewGame: the delta callback presence selects the API mode.
         const streamingEnabled = isStreamingEnabledForSettings(settings);
         streamStore.begin(streamingEnabled);
@@ -481,7 +514,12 @@ export const useGameStore = create<GameState>()(
                 ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
                 : undefined,
             },
-            { signal: streamStore.getSignal() ?? undefined },
+            {
+              signal: streamStore.getSignal() ?? undefined,
+              onTextGenerationStart: () => set({ generationStage: "scene" }),
+              onImageGenerationStart: () => set({ generationStage: "image" }),
+              onImageGenerationProgress: (progress) => set({ imageGenerationProgress: progress }),
+            },
           );
           const updatedNodes = [...get().nodes, node];
           const updatedGame = {
@@ -497,9 +535,13 @@ export const useGameStore = create<GameState>()(
             viewingNodeId: node.id,
             currentNodeId: node.id,
             generation: { phase: "idle" },
+            imageGenerationProgress: null,
           });
         } catch (error) {
-          set({ generation: { phase: "failed", payload, error: error as Error } });
+          set({
+            generation: { phase: "failed", payload, error: error as Error },
+            imageGenerationProgress: null,
+          });
         } finally {
           streamStore.end();
         }
@@ -526,6 +568,8 @@ export const useGameStore = create<GameState>()(
           };
           set({
             generation: { phase: "running", payload, startedAt: new Date().toISOString() },
+            generationStage: "scene",
+            imageGenerationProgress: null,
           });
           const streamingEnabled = isStreamingEnabledForSettings(settings);
           streamStore.begin(streamingEnabled);
@@ -547,7 +591,12 @@ export const useGameStore = create<GameState>()(
                   ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
                   : undefined,
               },
-              { signal: streamStore.getSignal() ?? undefined },
+              {
+                signal: streamStore.getSignal() ?? undefined,
+                onTextGenerationStart: () => set({ generationStage: "scene" }),
+                onImageGenerationStart: () => set({ generationStage: "image" }),
+                onImageGenerationProgress: (progress) => set({ imageGenerationProgress: progress }),
+              },
             );
             const assets = await loadAssetsForNodes([rootNode.id]);
             const games = await gameRepository.listGames();
@@ -559,9 +608,13 @@ export const useGameStore = create<GameState>()(
               viewingNodeId: rootNode.id,
               currentNodeId: rootNode.id,
               generation: { phase: "idle" },
+              imageGenerationProgress: null,
             });
           } catch (error) {
-            set({ generation: { phase: "failed", payload, error: error as Error } });
+            set({
+              generation: { phase: "failed", payload, error: error as Error },
+              imageGenerationProgress: null,
+            });
           } finally {
             streamStore.end();
           }
@@ -586,6 +639,8 @@ export const useGameStore = create<GameState>()(
         };
         set({
           generation: { phase: "running", payload, startedAt: new Date().toISOString() },
+          generationStage: "choice",
+          imageGenerationProgress: null,
         });
         const streamingEnabled = isStreamingEnabledForSettings(settings);
         streamStore.begin(streamingEnabled);
@@ -611,7 +666,12 @@ export const useGameStore = create<GameState>()(
                 ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
                 : undefined,
             },
-            { signal: streamStore.getSignal() ?? undefined },
+            {
+              signal: streamStore.getSignal() ?? undefined,
+              onTextGenerationStart: () => set({ generationStage: "scene" }),
+              onImageGenerationStart: () => set({ generationStage: "image" }),
+              onImageGenerationProgress: (progress) => set({ imageGenerationProgress: progress }),
+            },
           );
           const updatedGame = {
             ...activeGame,
@@ -626,9 +686,13 @@ export const useGameStore = create<GameState>()(
             viewingNodeId: node.id,
             currentNodeId: node.id,
             generation: { phase: "idle" },
+            imageGenerationProgress: null,
           });
         } catch (error) {
-          set({ generation: { phase: "failed", payload, error: error as Error } });
+          set({
+            generation: { phase: "failed", payload, error: error as Error },
+            imageGenerationProgress: null,
+          });
         } finally {
           streamStore.end();
         }

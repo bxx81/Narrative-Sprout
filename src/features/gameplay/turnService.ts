@@ -31,6 +31,21 @@ function newUuid(): string {
   return crypto.randomUUID();
 }
 
+/**
+ * Per-call UI callbacks (legacy onSpinnerStateChange + image progress):
+ * the store updates its generation stage so the loading overlay can follow
+ * the pipeline (text → image) instead of showing a static label.
+ */
+export interface TurnServiceOptions {
+  signal?: AbortSignal;
+  /** The narration call is about to start. */
+  onTextGenerationStart?: () => void;
+  /** The scene image generation is about to start. */
+  onImageGenerationStart?: () => void;
+  /** a1111/comfyui progress while the scene image generates (0..1). */
+  onImageGenerationProgress?: (progress: number) => void;
+}
+
 export interface StartGameParams {
   apiKey: string;
   model: string;
@@ -91,7 +106,7 @@ async function maybeCompactMemory(params: {
  */
 export async function startGame(
   params: StartGameParams,
-  options?: { signal?: AbortSignal },
+  options?: TurnServiceOptions,
 ): Promise<{ game: GameRecord; rootNode: StoryNodeRecord }> {
   debug.log("[turn] startGame:", params.theme);
   const attachmentTexts = params.attachmentTexts ?? [];
@@ -110,6 +125,7 @@ export async function startGame(
   let modelName: string | null = null;
   let notesDraft = "";
 
+  options?.onTextGenerationStart?.();
   if (strategy === "single") {
     const generated = await generateNarration({
       apiKey: params.apiKey,
@@ -218,10 +234,12 @@ export async function startGame(
   let asset: import("../../types/asset").AssetRecord | null = null;
   if (params.imageGenConfig && params.imageGenConfig.generator !== "disabled") {
     try {
+      options?.onImageGenerationStart?.();
       const dataUrl = await generateSceneImage({
         imagePrompt: scene.imagePrompt,
         negativeImagePrompt: scene.negativeImagePrompt,
         imageGenConfig: params.imageGenConfig,
+        onProgress: options?.onImageGenerationProgress,
         signal: options?.signal,
       });
       const quality = webpQualityForCompression(params.webpCompression ?? "normal");
@@ -265,7 +283,7 @@ export interface ChoosePathParams {
 /** Generates the next scene after a player choice and persists it. */
 export async function choosePath(
   params: ChoosePathParams,
-  options?: { signal?: AbortSignal },
+  options?: TurnServiceOptions,
 ): Promise<StoryNodeRecord> {
   debug.log("[turn] choosePath:", {
     choiceText: params.choiceText,
@@ -292,6 +310,7 @@ export async function choosePath(
   let generationCost: number | null = null;
   let modelName: string | null = null;
 
+  options?.onTextGenerationStart?.();
   if (strategy === "single") {
     const generated = await generateNarration({
       apiKey: params.apiKey,
@@ -386,10 +405,12 @@ export async function choosePath(
   let asset: import("../../types/asset").AssetRecord | null = null;
   if (params.imageGenConfig && params.imageGenConfig.generator !== "disabled") {
     try {
+      options?.onImageGenerationStart?.();
       const dataUrl = await generateSceneImage({
         imagePrompt: scene!.imagePrompt,
         negativeImagePrompt: scene!.negativeImagePrompt,
         imageGenConfig: params.imageGenConfig,
+        onProgress: options?.onImageGenerationProgress,
         signal: options?.signal,
       });
       const quality = webpQualityForCompression(params.webpCompression ?? "normal");
@@ -435,7 +456,7 @@ export interface RefineSceneParams {
  */
 export async function refineScene(
   params: RefineSceneParams,
-  options?: { signal?: AbortSignal },
+  options?: TurnServiceOptions,
 ): Promise<StoryNodeRecord> {
   const attachmentTexts = params.attachmentTexts ?? params.game.attachmentTexts ?? [];
   const isRoot = params.targetNode.parentNodeId === null;
@@ -497,6 +518,7 @@ export async function refineScene(
   let generationCost: number | null = null;
   let modelName: string | null = null;
 
+  options?.onTextGenerationStart?.();
   if (strategy === "single") {
     const generated = await generateNarration({
       apiKey: params.apiKey,
@@ -590,10 +612,12 @@ export async function refineScene(
   let asset: import("../../types/asset").AssetRecord | null = null;
   if (params.imageGenConfig && params.imageGenConfig.generator !== "disabled") {
     try {
+      options?.onImageGenerationStart?.();
       const dataUrl = await generateSceneImage({
         imagePrompt: scene!.imagePrompt,
         negativeImagePrompt: scene!.negativeImagePrompt,
         imageGenConfig: params.imageGenConfig,
+        onProgress: options?.onImageGenerationProgress,
         signal: options?.signal,
       });
       const quality = webpQualityForCompression(params.webpCompression ?? "normal");
