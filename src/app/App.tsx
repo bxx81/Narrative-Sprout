@@ -12,6 +12,7 @@ import { Toaster } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import i18n from "../features/i18n/config";
 import { getLanguageCode, applyLanguageDocumentEffects } from "../features/i18n/api";
+import { setWordCountLanguage } from "../features/narrative/api";
 import { useGameStore } from "../store/gameStore";
 import ErrorDialog from "../components/ErrorDialog";
 import { ROUTES, isNeedPadding, isVisibleSettingsButton } from "./routes";
@@ -101,6 +102,9 @@ const AppLayout: React.FC = () => {
     }
     void i18n.changeLanguage(languageCode);
     applyLanguageDocumentEffects(settings.uiLanguage, settings.aiLanguageMappings);
+    // The word counter follows the narrative language (legacy langCode
+    // passed to the Intl.Segmenter word count).
+    setWordCountLanguage(getLanguageCode(settings.language, settings.aiLanguageMappings));
   }, [settings, uiLanguage, aiLanguageMappings, aiTranslationTexts]);
 
   // Full data wipe reloads the app with this flag set; show the completion

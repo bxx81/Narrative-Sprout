@@ -11,6 +11,6 @@ export {
   generateNarration,
   generateSceneOnly,
   generateStoryLogCompaction,
-  countWords,
 } from "./generateScene";
+export { countWords, setWordCountLanguage } from "./wordCount";
 export { resolveMemoryStrategy } from "./resolveMemoryStrategy";
