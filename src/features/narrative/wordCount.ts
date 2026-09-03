@@ -10,9 +10,7 @@ let segmenter: Intl.Segmenter | null = null;
 /** Rebuilds the word segmenter for an IETF language tag (null resets it). */
 export function setWordCountLanguage(languageCode: string | undefined): void {
   try {
-    segmenter = languageCode
-      ? new Intl.Segmenter(languageCode, { granularity: "word" })
-      : null;
+    segmenter = languageCode ? new Intl.Segmenter(languageCode, { granularity: "word" }) : null;
   } catch (error) {
     console.warn("[narrative] invalid word count language ignored", languageCode, error);
     segmenter = null;
