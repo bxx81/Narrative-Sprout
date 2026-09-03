@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import LoadingSpinner from "../ui/LoadingSpinner";
 import { useTranslation } from "react-i18next";
+import styles from "./LoadingOverlay.module.css";
 
 export type SpinnerState = "Scene" | "Image" | "Choice" | "Autoplay" | null;
 
@@ -66,12 +67,12 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
 
   const spinnerLabel =
     spinnerState === "Scene"
-      ? t("loadingScene")
+      ? t("loadingScene", { lng: "en" })
       : spinnerState === "Image"
-        ? t("loadingImage")
+        ? t("loadingImage", { lng: "en" })
         : spinnerState === "Choice"
-          ? t("loadingChoice")
-          : t("loadingAutoplay");
+          ? t("loadingChoice", { lng: "en" })
+          : t("loadingAutoplay", { lng: "en" });
 
   return (
     <div className="animate-fade-in pointer-events-none fixed inset-0 z-110 flex items-center justify-center will-change-auto">
@@ -82,13 +83,15 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
             progress={nowProgress ? imageGenerationProgress : null}
           />
           {nowProgress && (
-            <div className="text-text-text absolute text-lg font-bold">
+            <div className={`text-text-text absolute text-lg ${styles["font-overlay"]}`}>
               {Math.round(Math.max(0, Math.min(100, imageGenerationProgress * 100)))}%
             </div>
           )}
         </div>
         <div className="flex flex-col items-center gap-1.5">
-          <div className="text-text-text animate-pulse font-[Inter] text-xs tracking-[0.2em]">
+          <div
+            className={`text-text-text animate-pulse ${styles["font-overlay"]} text-xs tracking-[0.2em]`}
+          >
             {spinnerLabel}
           </div>
           {showElapsedTime && generationStartedAt != null && (

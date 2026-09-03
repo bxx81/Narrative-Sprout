@@ -118,7 +118,7 @@ const TextModelInput = React.memo(
             type="text"
             value={localValue}
             onChange={(e) => setLocalValue(e.target.value)}
-            className={`form-style ${isInvalid ? "form-style-invalid" : "form-style-valid"}`}
+            className={`form-style font-mono ${isInvalid ? "form-style-invalid" : "form-style-valid"}`}
           />
           {isInvalid && (
             <p className="mt-1 text-xs font-semibold text-red-500">{t("invalidModelOption")}</p>
@@ -502,7 +502,7 @@ const SettingsScreen: React.FC = () => {
               intent="danger"
               size="medium"
               onClick={() => void deleteAiTranslation(uiLanguage)}
-              className="w-full"
+              className="w-full mt-3"
             >
               {t("aiTranslationDeleteButton")}
             </Button>
@@ -726,9 +726,7 @@ const SettingsScreen: React.FC = () => {
               </>
             )}
             <div className="flex items-center justify-between gap-4">
-              <span className={`explanation-text-style ${isDebug ? "line-through" : ""}`}>
-                {t("debugLogsEnableLabel")}
-              </span>
+              <span className="explanation-text-style">{t("debugLogsEnableLabel")}</span>
               <ToggleSwitch
                 checked={isDebug}
                 onChange={(e) => void handleDebugLoggingToggle(e.target.checked)}

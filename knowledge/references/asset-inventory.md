@@ -3,7 +3,7 @@ type: Reference
 title: Asset Inventory (v2)
 description: Bundled images, fonts, icons, and locales shipped with Narrative Sprout v2.
 tags: [assets, images, fonts, locales]
-timestamp: 2026-09-02T00:00:00Z
+timestamp: 2026-09-03T00:00:00Z
 source: public/, src/features/i18n/locales/
 ---
 
@@ -25,7 +25,7 @@ All static files live in Vite-standard `public/` (served at root). Heavy media s
 
 # Fonts & Styles
 
-`public/s/`: per-language stylesheets (`en/ja/zh/zh-tw/zh-hk/ko/ar/he/hi/lo/th.css`, `icons.css` for Material icons) + self-hosted WOFF2 families (Inter, Cormorant Garamond, Molle, BIZ UD Gothic/Mincho, Noto Sans/Serif variants incl. SC/TC/HK/KR/Hebrew/Devanagari/Lao/Thai, Kufi/Naskh Arabic) + `OFL.txt`. `index.html` loads `icons.css` + `en.css` globally; the rest load per language (see [Localization](/configuration/localization.md)).
+`public/s/`: per-language stylesheets (`en/ja/zh/zh-tw/zh-hk/ko/ar/he/hi/lo/th.css`, `icons.css` for Material icons) + self-hosted WOFF2 families (Inter, Cormorant Garamond, Molle, BIZ UD Gothic/Mincho, Noto Sans/Serif variants incl. SC/TC/HK/KR/Hebrew/Devanagari/Lao/Thai, Kufi/Naskh Arabic) + `OFL.txt`. `index.html` loads `icons.css` + `en.css` globally; the rest load per language (see [Localization](/configuration/localization.md)). `icons.css` points at `font.woff2`, a Material Symbols Rounded subset (opsz 24, weight 300) generated from the `IconName` union by `bun run update:icons` — see [Development Setup](/operations/development.md).
 
 # Locales
 

@@ -47,7 +47,7 @@ const A1111ImageSettingsComponent: React.FC<A1111ImageSettingsProps> = ({
           value={localEndpoint}
           onChange={(e) => setLocalEndpoint(e.target.value)}
           placeholder={t("a1111EndpointLabel")}
-          className="form-style"
+          className="form-style font-mono"
           disabled={loading}
         />
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">

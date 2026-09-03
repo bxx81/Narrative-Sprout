@@ -3,6 +3,11 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { version } from "./package.json";
+import license from "rollup-plugin-license";
+import path from "path";
+import fs from "fs-extra";
+
+const outDir = path.resolve(import.meta.dirname, "./dist");
 
 export default defineConfig({
   define: {
@@ -69,6 +74,64 @@ export default defineConfig({
           { src: "icons/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
           { src: "icons/android-chrome-512x512.png", sizes: "512x512", type: "image/png" },
         ],
+      },
+    }),
+    license({
+      sourcemap: true,
+      thirdParty: {
+        allow: "(MIT OR Apache-2.0 OR ISC)",
+        includePrivate: false,
+        multipleVersions: true,
+        output: {
+          file: path.join(path.resolve(import.meta.dirname, "./public/legal"), "license.html"),
+          encoding: "utf-8",
+          template(dependencies) {
+            const body = dependencies
+              .map((dep) => {
+                const repository =
+                  dep.repository && typeof dep.repository === "object"
+                    ? dep.repository.url
+                    : dep.repository;
+                const author =
+                  dep.author && typeof dep.author === "object" ? dep.author.name : dep.author;
+
+                return [
+                  `Name: ${dep.name}`,
+                  `Version: ${dep.version}`,
+                  `License: ${dep.license}`,
+                  `Private: ${dep.private}`,
+                  `Description: ${dep.description || ""}`,
+                  `Repository: ${repository || ""}`,
+                  `Homepage: ${dep.homepage || ""}`,
+                  `Author: ${author || ""}`,
+                  `License Text:`,
+                  `===`,
+                  ``,
+                  dep.licenseText || "",
+                  ``,
+                  `---`,
+                ].join("\n");
+              })
+              .join("\n\n");
+            const addLicense = `FALLBACK_BG_SVG: https://www.svgbackgrounds.com/set/free-svg-backgrounds-and-patterns/ Free SVG Backgrounds and Patterns by SVGBackgrounds.com
+Error sound: https://pixabay.com/sound-effects/film-special-effects-error-08-206492/
+Notification sound: https://pixabay.com/sound-effects/film-special-effects-system-notification-199277/`;
+
+            const fullHtml = `<html>\n<pre>\n${body}\n${addLicense}\n</pre>\n</html>`;
+
+            // ビルド出力先へも直接書き込む
+            try {
+              if (!fs.existsSync(outDir)) {
+                fs.ensureDirSync(outDir);
+              }
+              fs.writeFileSync(path.join(outDir, "license.html"), fullHtml, "utf-8");
+            } catch (e) {
+              console.error("Failed to write license.html to outDir:", e);
+            }
+
+            return fullHtml;
+          },
+        },
       },
     }),
   ],

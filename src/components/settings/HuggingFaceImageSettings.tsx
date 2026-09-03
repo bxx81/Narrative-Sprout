@@ -52,7 +52,7 @@ const HuggingFaceImageSettingsComponent: React.FC<HuggingFaceImageSettingsProps>
           value={localSpaceId}
           onChange={(e) => setLocalSpaceId(e.target.value)}
           placeholder={t("huggingFaceSpaceIdLabel")}
-          className="form-style"
+          className="form-style font-mono"
           disabled={loading}
         />
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">

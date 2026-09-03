@@ -233,11 +233,13 @@ const GameScreen: React.FC = () => {
     loading && stream.status === "streaming"
       ? displayTurnNumberText(displayTurnNumber, stream.wordCount, t)
       : [
-          turnNumber && (currentCost || sceneWordCount) ? t("dividerThisPrefix") : "",
-          turnNumber ? t("dividerTurn", { ordinal: ordinal(turnNumber) }) : "",
-          currentCost ? t("dividerCost", { cost: currentCost }) : "",
-          currentCost && sceneWordCount ? t("dividerAnd") : "",
-          sceneWordCount ? t("dividerWordsLong", { words: sceneWordCount }) : "",
+          turnNumber && (currentCost || sceneWordCount)
+            ? t("dividerThisPrefix", { lng: "en" })
+            : "",
+          turnNumber ? t("dividerTurn", { ordinal: ordinal(turnNumber), lng: "en" }) : "",
+          currentCost ? t("dividerCost", { cost: currentCost, lng: "en" }) : "",
+          currentCost && sceneWordCount ? t("dividerAnd", { lng: "en" }) : "",
+          sceneWordCount ? t("dividerWordsLong", { words: sceneWordCount, lng: "en" }) : "",
         ]
           .join(" ")
           .trim();
@@ -372,7 +374,8 @@ const GameScreen: React.FC = () => {
 
       {modelName ? (
         <div className="dividers-style my-16">
-          {t("generatedBy")} <ModelNameDisplay key={viewingNodeId} modelName={modelName} />
+          {t("generatedBy", { lng: "en" })}{" "}
+          <ModelNameDisplay key={viewingNodeId} modelName={modelName} />
         </div>
       ) : (
         <Divider className="my-16" />
@@ -484,12 +487,16 @@ function displayTurnNumberText(
   t: (key: string, options?: Record<string, unknown>) => string,
 ): string {
   if (!displayTurnNumber) {
-    return wordCount > 0 ? t("dividerWordsSoFarOnly", { words: wordCount }) : "";
+    return wordCount > 0 ? t("dividerWordsSoFarOnly", { words: wordCount, lng: "en" }) : "";
   }
   if (wordCount <= 0) {
-    return t("dividerTurn", { ordinal: ordinal(displayTurnNumber) });
+    return t("dividerTurn", { ordinal: ordinal(displayTurnNumber), lng: "en" });
   }
-  return t("dividerWordsSoFar", { ordinal: ordinal(displayTurnNumber), words: wordCount });
+  return t("dividerWordsSoFar", {
+    ordinal: ordinal(displayTurnNumber),
+    words: wordCount,
+    lng: "en",
+  });
 }
 
 export default GameScreen;

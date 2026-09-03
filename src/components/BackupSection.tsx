@@ -1,6 +1,7 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
+import { useConfirm } from "../hooks/useConfirm";
 import { useGameStore } from "../store/gameStore";
 import type { DriveFileMetadata } from "../features/backup/api";
 import Button from "./ui/Button";
@@ -22,6 +23,7 @@ function formatDriveBackupMetadata(backup: DriveFileMetadata): string {
 
 export function BackupSection() {
   const { t } = useTranslation();
+  const confirm = useConfirm();
   const downloadEncryptedBackup = useGameStore((s) => s.downloadEncryptedBackup);
   const restoreBackupFromFile = useGameStore((s) => s.restoreBackupFromFile);
   const importSaveFromFile = useGameStore((s) => s.importSaveFromFile);
@@ -38,7 +40,6 @@ export function BackupSection() {
   const [busy, setBusy] = useState(false);
   const [backupFile, setBackupFile] = useState<File | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
-  const [confirmingDeleteFileId, setConfirmingDeleteFileId] = useState<string | null>(null);
 
   async function runOperation(operation: () => Promise<string>): Promise<void> {
     setBusy(true);
@@ -51,72 +52,27 @@ export function BackupSection() {
     }
   }
 
+  async function handleDeleteBackup(backup: DriveFileMetadata): Promise<void> {
+    const result = await confirm({
+      title: t("deleteButton"),
+      message: t("deleteDriveBackupConfirm", { name: backup.name }),
+      confirmLabel: t("deleteButton"),
+      cancelLabel: t("cancelButton"),
+      isDestructive: true,
+      icon: "delete",
+    });
+    if (result !== true) return;
+    await runOperation(async () => {
+      await deleteGoogleDriveBackup(backup.fileId);
+      return t("deletedFromDrive", { name: backup.name });
+    });
+  }
+
   return (
-    <section className="bg-text-bg text-body-text rounded-lg p-4 shadow-md">
-      <h3 className="mb-1 flex items-center gap-2 font-semibold">
-        <Icon iconName="database" />
-        {t("backupRestoreTitle")}
-      </h3>
-      <p className="support-text-color mb-3 text-xs">{t("backupRestoreDescription")}</p>
-
-      <label className="support-text-color mb-3 block text-xs">
-        {t("passphraseLabel")}
-        <input
-          type="password"
-          value={passphrase}
-          onChange={(e) => setPassphrase(e.target.value)}
-          className="form-style mt-1"
-          placeholder={t("backupPassphrasePlaceholder")}
-          autoComplete="new-password"
-        />
-      </label>
-
-      <div className="flex flex-col gap-3">
-        <div className="form-layout-style flex-wrap items-center">
-          <Button
-            intent="primary"
-            size="small"
-            isWorking={busy}
-            disabled={busy || passphrase.length === 0}
-            onClick={() =>
-              void runOperation(async () => {
-                await downloadEncryptedBackup(passphrase);
-                return t("encryptedBackupDownloaded");
-              })
-            }
-          >
-            {t("downloadBackupButton")}
-          </Button>
-
-          <input
-            type="file"
-            accept=".nsbak,application/json"
-            className="form-style flex-1 py-1.5 text-xs"
-            onChange={(e) => setBackupFile(e.target.files?.[0] ?? null)}
-          />
-          <Button
-            intent="secondary"
-            size="small"
-            disabled={busy || !backupFile || passphrase.length === 0}
-            onClick={() => {
-              const file = backupFile;
-              if (!file) return;
-              void runOperation(async () => {
-                const summary = await restoreBackupFromFile(file, passphrase);
-                setBackupFile(null);
-                return t("restoredSummary", {
-                  games: summary.restoredGameCount,
-                  nodes: summary.restoredNodeCount,
-                  images: summary.restoredAssetCount,
-                });
-              });
-            }}
-          >
-            {t("restoreFromFileButton")}
-          </Button>
-        </div>
-
-        <div className="form-layout-style flex-wrap items-center">
+    <>
+      <div className="border-text-border mt-4 border-t pt-3">
+        <h4 className="text-sm font-semibold">{t("loadSavedataButton")}</h4>
+        <div className="form-layout-style flex-wrap items-center pt-2">
           <input
             type="file"
             accept=".zip"
@@ -144,151 +100,186 @@ export function BackupSection() {
           </Button>
         </div>
       </div>
+      <section className="bg-text-bg text-body-text rounded-lg p-4 shadow-md">
+        <h3 className="mb-1 flex items-center gap-2 font-semibold">
+          <Icon iconName="database" />
+          {t("backupRestoreTitle")}
+        </h3>
+        <p className="support-text-color mb-3 text-xs">{t("backupRestoreDescription")}</p>
 
-      <div className="border-text-border mt-4 border-t pt-3">
-        <div className="form-layout-style flex-wrap items-center">
-          <h4 className="text-sm font-semibold">{t("googleDriveTitle")}</h4>
-          {driveConnected ? (
-            <>
-              <Button
-                intent="alt"
-                size="small"
-                isWorking={busy}
-                disabled={busy || passphrase.length === 0}
-                onClick={() =>
-                  void runOperation(async () => {
-                    const { fileName } = await uploadBackupToGoogleDrive(passphrase);
-                    return t("uploadedToDrive", { fileName });
-                  })
-                }
-              >
-                <Icon iconName="cloud_upload" />
-                {t("backUpToDriveButton")}
-              </Button>
-              <Button
-                intent="secondary"
-                size="small"
-                disabled={busy}
-                onClick={() =>
-                  void runOperation(async () => {
-                    await refreshGoogleDriveBackups();
-                    return t("backupListRefreshed");
-                  })
-                }
-              >
-                {t("refreshButton")}
-              </Button>
-              <Button
-                intent="secondary"
-                size="small"
-                disabled={busy}
-                onClick={() =>
-                  void runOperation(async () => {
-                    await disconnectGoogleDrive();
-                    return t("disconnectedFromDrive");
-                  })
-                }
-              >
-                <Icon iconName="logout" />
-                {t("disconnectButton")}
-              </Button>
-            </>
-          ) : (
+        <label className="support-text-color mb-3 block text-xs">
+          {t("passphraseLabel")}
+          <input
+            type="password"
+            value={passphrase}
+            onChange={(e) => setPassphrase(e.target.value)}
+            className="form-style mt-1"
+            placeholder={t("backupPassphrasePlaceholder")}
+            autoComplete="new-password"
+          />
+        </label>
+
+        <div className="flex flex-col gap-3">
+          <div className="mt-4 form-layout-style flex-wrap items-center">
+            <input
+              type="file"
+              accept=".nsbak,application/json"
+              className="form-style flex-1 py-1.5 text-xs"
+              onChange={(e) => setBackupFile(e.target.files?.[0] ?? null)}
+            />
             <Button
-              intent="primary"
+              intent="secondary"
               size="small"
-              isWorking={busy}
-              disabled={busy}
-              onClick={() =>
+              disabled={busy || !backupFile || passphrase.length === 0}
+              onClick={() => {
+                const file = backupFile;
+                if (!file) return;
                 void runOperation(async () => {
-                  await connectGoogleDrive();
-                  return t("connectedToDrive");
-                })
-              }
+                  const summary = await restoreBackupFromFile(file, passphrase);
+                  setBackupFile(null);
+                  return t("restoredSummary", {
+                    games: summary.restoredGameCount,
+                    nodes: summary.restoredNodeCount,
+                    images: summary.restoredAssetCount,
+                  });
+                });
+              }}
             >
-              <Icon iconName="login" />
-              {t("connectGoogleDriveButton")}
+              {t("restoreFromFileButton")}
             </Button>
-          )}
+          </div>
+          <Button
+            intent="primary"
+            size="small"
+            isWorking={busy}
+            disabled={busy || passphrase.length === 0}
+            onClick={() =>
+              void runOperation(async () => {
+                await downloadEncryptedBackup(passphrase);
+                return t("encryptedBackupDownloaded");
+              })
+            }
+            className="w-full"
+          >
+            {t("downloadBackupButton")}
+          </Button>
         </div>
 
-        {driveConnected && driveBackups.length === 0 && (
-          <p className="support-text-color mt-2 text-xs">{t("noDriveBackupsYet")}</p>
-        )}
-
-        {driveConnected && driveBackups.length > 0 && (
-          <ul className="mt-2 space-y-1">
-            {driveBackups.map((backup) => (
-              <li
-                key={backup.fileId}
-                className="bg-body-bg flex flex-wrap items-center justify-between gap-2 rounded px-2 py-1.5 text-xs"
+        <div className="border-text-border mt-4 border-t pt-3">
+          <div className="form-layout-style flex-wrap items-center">
+            <h4 className="text-sm font-semibold">{t("googleDriveTitle")}</h4>
+            {driveConnected ? (
+              <>
+                <Button
+                  intent="alt"
+                  size="small"
+                  isWorking={busy}
+                  disabled={busy || passphrase.length === 0}
+                  onClick={() =>
+                    void runOperation(async () => {
+                      const { fileName } = await uploadBackupToGoogleDrive(passphrase);
+                      return t("uploadedToDrive", { fileName });
+                    })
+                  }
+                >
+                  <Icon iconName="cloud_upload" />
+                  {t("backUpToDriveButton")}
+                </Button>
+                <Button
+                  intent="secondary"
+                  size="small"
+                  disabled={busy}
+                  onClick={() =>
+                    void runOperation(async () => {
+                      await refreshGoogleDriveBackups();
+                      return t("backupListRefreshed");
+                    })
+                  }
+                >
+                  {t("refreshButton")}
+                </Button>
+                <Button
+                  intent="secondary"
+                  size="small"
+                  disabled={busy}
+                  onClick={() =>
+                    void runOperation(async () => {
+                      await disconnectGoogleDrive();
+                      return t("disconnectedFromDrive");
+                    })
+                  }
+                >
+                  <Icon iconName="logout" />
+                  {t("disconnectButton")}
+                </Button>
+              </>
+            ) : (
+              <Button
+                intent="primary"
+                size="small"
+                isWorking={busy}
+                disabled={busy}
+                onClick={() =>
+                  void runOperation(async () => {
+                    await connectGoogleDrive();
+                    return t("connectedToDrive");
+                  })
+                }
               >
-                <span className="min-w-0 flex-1 truncate" title={backup.name}>
-                  {backup.name}
-                  <span className="support-text-color ml-2">
-                    {formatDriveBackupMetadata(backup)}
+                <Icon iconName="login" />
+                {t("connectGoogleDriveButton")}
+              </Button>
+            )}
+          </div>
+
+          {driveConnected && driveBackups.length === 0 && (
+            <p className="support-text-color mt-2 text-xs">{t("noDriveBackupsYet")}</p>
+          )}
+
+          {driveConnected && driveBackups.length > 0 && (
+            <ul className="mt-2 space-y-1">
+              {driveBackups.map((backup) => (
+                <li
+                  key={backup.fileId}
+                  className="bg-body-bg flex flex-wrap items-center justify-between gap-2 rounded px-2 py-1.5 text-xs"
+                >
+                  <span className="min-w-0 flex-1 truncate" title={backup.name}>
+                    {backup.name}
+                    <span className="support-text-color ml-2">
+                      {formatDriveBackupMetadata(backup)}
+                    </span>
                   </span>
-                </span>
-                <span className="flex shrink-0 gap-1">
-                  <Button
-                    intent="secondary"
-                    size="small-circle"
-                    className="px-2"
-                    disabled={busy || passphrase.length === 0}
-                    onClick={() =>
-                      void runOperation(async () => {
-                        const summary = await restoreGoogleDriveBackup(backup.fileId, passphrase);
-                        return t("restoredFromDriveSummary", {
-                          count: summary.restoredGameCount,
-                          name: backup.name,
-                        });
-                      })
-                    }
-                  >
-                    {t("restoreButton")}
-                  </Button>
-                  {confirmingDeleteFileId === backup.fileId ? (
-                    <>
-                      <Button
-                        intent="danger"
-                        size="small-circle"
-                        className="px-2"
-                        disabled={busy}
-                        onClick={() => {
-                          setConfirmingDeleteFileId(null);
-                          void runOperation(async () => {
-                            await deleteGoogleDriveBackup(backup.fileId);
-                            return t("deletedFromDrive", { name: backup.name });
-                          });
-                        }}
-                      >
-                        {t("confirmButton")}
-                      </Button>
-                      <Button
-                        intent="secondary"
-                        size="small-circle"
-                        className="px-2"
-                        onClick={() => setConfirmingDeleteFileId(null)}
-                      >
-                        {t("cancelButton")}
-                      </Button>
-                    </>
-                  ) : (
+                  <span className="flex shrink-0 gap-1">
                     <Button
-                      intent="secondary"
-                      size="small-circle"
-                      className="px-2 hover:bg-red-800"
-                      onClick={() => setConfirmingDeleteFileId(backup.fileId)}
+                      intent="circle"
+                      disabled={busy || passphrase.length === 0}
+                      onClick={() =>
+                        void runOperation(async () => {
+                          const summary = await restoreGoogleDriveBackup(backup.fileId, passphrase);
+                          return t("restoredFromDriveSummary", {
+                            count: summary.restoredGameCount,
+                            name: backup.name,
+                          });
+                        })
+                      }
+                      title={t("restoreButton")}
                     >
-                      {t("deleteButton")}
+                      <Icon iconName="cloud_download" />
                     </Button>
-                  )}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </section>
+                    <Button
+                      intent="circle"
+                      onClick={() => void handleDeleteBackup(backup)}
+                      title={t("deleteButton")}
+                    >
+                      <Icon iconName="delete" />
+                    </Button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+    </>
   );
 }
