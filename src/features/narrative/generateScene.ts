@@ -12,30 +12,13 @@ import {
   narratorSceneResponseSchema,
   storyLogCompactionResponseSchema,
 } from "./sceneSchema";
+import { countWords } from "./wordCount";
 
 /**
  * Statuses that mean the provider rejected streaming itself (legacy
  * STREAM_REJECT_STATUSES); the call then falls back to bulk delivery once.
  */
 const STREAM_REJECT_STATUSES = new Set([400, 404, 415, 422]);
-
-/** CJK characters: kana, CJK ideographs and punctuation, fullwidth forms. */
-const CJK_CHAR_PATTERN =
-  /[\u3040-\u30ff\u31f0-\u31ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u3000-\u303f\uff01-\uff60]/g;
-
-export function countWords(text: string): number {
-  const withoutSpaces = text.replace(/\s/g, "");
-  if (withoutSpaces.length === 0) return 0;
-  // CJK prose has no spaces: splitting on whitespace would just count
-  // paragraphs (a 4-paragraph Japanese scene reported "4 words long",
-  // which looked like it was counting the choices). Count characters when
-  // CJK characters dominate; whitespace words otherwise.
-  const cjkCount = withoutSpaces.match(CJK_CHAR_PATTERN)?.length ?? 0;
-  if (cjkCount / withoutSpaces.length > 0.3) {
-    return withoutSpaces.length;
-  }
-  return text.trim().split(/\s+/).filter(Boolean).length;
-}
 
 export class NarrationError extends Error {
   constructor(
