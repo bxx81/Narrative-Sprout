@@ -4,6 +4,7 @@ import {
   buildMemoryUpdatePrompt,
   buildOpeningPrompt,
   buildTurnPrompt,
+  minWordsTarget,
 } from "./promptBuilder";
 import type { StoryNodeRecord } from "../../types";
 
@@ -204,5 +205,22 @@ describe("buildCompactionPrompt", () => {
     expect(messages[0].content).toContain("old summary");
     // attachment resolved: flag:x truthy -> cond shown
     expect(messages[0].content).toContain("cond");
+  });
+});
+
+describe("minWordsTarget", () => {
+  test("legacy length orders map to their lower word bound", () => {
+    expect(minWordsTarget("short")).toBe(50);
+    expect(minWordsTarget("medium")).toBe(100);
+    expect(minWordsTarget("detailed")).toBe(100);
+    expect(minWordsTarget("verbose")).toBe(200);
+    expect(minWordsTarget("novel")).toBe(400);
+    expect(minWordsTarget("novel2")).toBe(800);
+    expect(minWordsTarget("long")).toBe(200);
+  });
+
+  test("default maps to 50; unknown values fall back to medium", () => {
+    expect(minWordsTarget("default")).toBe(50);
+    expect(minWordsTarget("unknown-length")).toBe(100);
   });
 });

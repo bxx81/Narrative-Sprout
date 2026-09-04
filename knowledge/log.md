@@ -22,3 +22,9 @@
   * `data-model/state-management.md` — services receive state as parameters; `cancelGeneration` aborts via `streamStore.cancel()`.
   * `services/storage-service.md` — added `putAsset` / `getNode` to `gameRepository` capabilities.
   * `overview/architecture.md` — clarified that `*Service.ts` filenames inside features are internals, not a service layer.
+
+## 2026-09-04
+* **Addition**: Legacy-style Stop-generating button (fixed `navigator` circle, `cancelGeneration` → `streamStore.cancel()`) on both `GameScreen` and `StartingScreen`.
+* **Addition**: `StartingScreen` streaming UI ported from legacy: word-count pseudo progress bar (capped 90%; A1111/ComfyUI continue as `0.9 + 0.1 × imageGenerationProgress`, no-image-generator setups reach 100% at `sceneTextComplete`, progress-less generators hold at 90%) and a pipeline-following loading message (`generationStage` → `loadingWeavingScene`/`loadingPaintingScene`).
+* **Addition**: `minWordsTarget` / `MIN_WORDS` in `promptBuilder.ts` (exposed via `features/narrative/api.ts`) — numeric lower word bounds per `sceneTextLength`; backs the pseudo progress bar. Unit tests added.
+* **Correction**: `features/streaming.md` and `features/game-loop.md` no longer describe `StartingScreen` as spinner + static label; `features/narrative-generation.md` documents the min-word bounds.
