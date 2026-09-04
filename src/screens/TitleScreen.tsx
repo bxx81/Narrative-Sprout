@@ -185,7 +185,7 @@ const TitleScreen: React.FC = () => {
         </div>
         <div>
           <a
-            href={REPOSITORY_URL + "/releases"}
+            href={REPOSITORY_URL + "/commits/main/"}
             target="_blank"
             rel="noopener noreferrer"
             className="version-link"
