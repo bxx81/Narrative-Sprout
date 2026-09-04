@@ -206,7 +206,7 @@ const GameScreen: React.FC = () => {
   // During streaming the final data does not exist yet: show the submitted
   // choice and a faked turn number to avoid mismatching the previous scene.
   const streamingChoice =
-    loading && stream.status !== "idle" && generation.payload.kind === "choice"
+    isStreamingLive && generation.payload.kind === "choice"
       ? (generation.payload.choiceText ?? null)
       : null;
   const displayChoiceText = streamingChoice ?? choiceText;
@@ -229,20 +229,17 @@ const GameScreen: React.FC = () => {
   // records saved with the old (paragraph-counting) counter display correctly.
   const sceneWordCount = countWords(scene.sceneText);
 
-  const currentDividerText =
-    loading && stream.status === "streaming"
-      ? displayTurnNumberText(displayTurnNumber, stream.wordCount, t)
-      : [
-          turnNumber && (currentCost || sceneWordCount)
-            ? t("dividerThisPrefix", { lng: "en" })
-            : "",
-          turnNumber ? t("dividerTurn", { ordinal: ordinal(turnNumber), lng: "en" }) : "",
-          currentCost ? t("dividerCost", { cost: currentCost, lng: "en" }) : "",
-          currentCost && sceneWordCount ? t("dividerAnd", { lng: "en" }) : "",
-          sceneWordCount ? t("dividerWordsLong", { words: sceneWordCount, lng: "en" }) : "",
-        ]
-          .join(" ")
-          .trim();
+  const currentDividerText = isStreamingLive
+    ? displayTurnNumberText(displayTurnNumber, stream.wordCount, t)
+    : [
+        turnNumber && (currentCost || sceneWordCount) ? t("dividerThisPrefix", { lng: "en" }) : "",
+        turnNumber ? t("dividerTurn", { ordinal: ordinal(turnNumber), lng: "en" }) : "",
+        currentCost ? t("dividerCost", { cost: currentCost, lng: "en" }) : "",
+        currentCost && sceneWordCount ? t("dividerAnd", { lng: "en" }) : "",
+        sceneWordCount ? t("dividerWordsLong", { words: sceneWordCount, lng: "en" }) : "",
+      ]
+        .join(" ")
+        .trim();
 
   const mainText = (
     <article className="animate-fade-in w-full max-w-2xl md:min-w-[20rem]">
