@@ -97,29 +97,41 @@ export default defineConfig({
                 const author =
                   dep.author && typeof dep.author === "object" ? dep.author.name : dep.author;
 
-                return [
-                  `Name: ${dep.name}`,
-                  `Version: ${dep.version}`,
-                  `License: ${dep.license}`,
-                  `Private: ${dep.private}`,
-                  `Description: ${dep.description || ""}`,
-                  `Repository: ${repository || ""}`,
-                  `Homepage: ${dep.homepage || ""}`,
-                  `Author: ${author || ""}`,
-                  `License Text:`,
-                  `===`,
-                  ``,
-                  dep.licenseText || "",
-                  ``,
-                  `---`,
-                ].join("\n");
+                return `<table style="width: fit-content;"><tbody>
+<tr><th scope="row">Name</th><td>${dep.name}</td></tr>
+<tr><th scope="row">Version</th><td>${dep.version}</td></tr>
+<tr><th scope="row">License</th><td>${dep.license}</td></tr>
+<tr><th scope="row">Description</th><td>${dep.description || ""}</td></tr>
+<tr><th scope="row">Repository</th><td>${repository || ""}</td></tr>
+<tr><th scope="row">Homepage</th><td>${dep.homepage || ""}</td></tr>
+<tr><th scope="row">Author</th><td>${author || ""}</td></tr>
+</tbody></table>
+<details>
+<summary role="button" class="outline secondary">License Text:</summary>
+<p style="word-break: auto-phrase; margin: 2rem;">
+${dep.licenseText?.replaceAll("\n", "<br />") || ""}
+</p>
+</details>
+<hr />`;
               })
               .join("\n\n");
-            const addLicense = `FALLBACK_BG_SVG: https://www.svgbackgrounds.com/set/free-svg-backgrounds-and-patterns/ Free SVG Backgrounds and Patterns by SVGBackgrounds.com
+            const addLicense = `<p style="word-break: auto-phrase;">
+FALLBACK_BG_SVG: https://www.svgbackgrounds.com/set/free-svg-backgrounds-and-patterns/ Free SVG Backgrounds and Patterns by SVGBackgrounds.com
 Error sound: https://pixabay.com/sound-effects/film-special-effects-error-08-206492/
-Notification sound: https://pixabay.com/sound-effects/film-special-effects-system-notification-199277/`;
+Notification sound: https://pixabay.com/sound-effects/film-special-effects-system-notification-199277/
+</p>`.replaceAll("\n", "<br />");
 
-            const fullHtml = `<html>\n<pre>\n${body}\n${addLicense}\n</pre>\n</html>`;
+            const fullHtml = `<!DOCTYPE html><html>
+<head>
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+></head>
+<main class="container">
+${body}
+${addLicense}
+</main>
+</html>`;
 
             // ビルド出力先へも直接書き込む
             try {
