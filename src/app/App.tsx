@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -8,11 +8,12 @@ import {
   useLocation,
   useNavigate,
 } from "react-router";
-import { Toaster } from "react-hot-toast";
+import { Toaster, useToasterStore } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import i18n from "../features/i18n/config";
 import { getLanguageCode, applyLanguageDocumentEffects } from "../features/i18n/api";
 import { setWordCountLanguage } from "../features/narrative/api";
+import { playSound } from "../features/sound/api";
 import { useGameStore } from "../store/gameStore";
 import ErrorDialog from "../components/ErrorDialog";
 import { ROUTES, isNeedPadding, isVisibleSettingsButton } from "./routes";
@@ -36,6 +37,21 @@ function RequireActiveGame() {
     return <Navigate to={ROUTES.HOME} replace />;
   }
   return <Outlet />;
+}
+
+/** Plays the notification chime whenever a new toast appears. */
+function ToastSoundPlayer() {
+  const toasts = useToasterStore().toasts;
+  const announcedToastIds = useRef(new Set<string>());
+  useEffect(() => {
+    for (const toast of toasts) {
+      if (!announcedToastIds.current.has(toast.id)) {
+        announcedToastIds.current.add(toast.id);
+        playSound("notification");
+      }
+    }
+  }, [toasts]);
+  return null;
 }
 
 export function App() {
@@ -148,6 +164,8 @@ const AppLayout: React.FC = () => {
       </Routes>
 
       <ErrorDialog />
+
+      <ToastSoundPlayer />
 
       {/* Legacy-styled top-center notification toasts (auto-close) */}
       <Toaster

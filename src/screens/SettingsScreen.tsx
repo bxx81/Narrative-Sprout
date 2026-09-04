@@ -43,6 +43,7 @@ interface OpenRouterModel {
 const TextModelInput = React.memo(
   ({ value, onChange }: { value: string; onChange: (val: string) => void }) => {
     const { t } = useTranslation();
+    const confirm = useConfirm();
     const [localValue, setLocalValue] = useDebouncedExternalState(value, onChange);
     const parsed = parseTextModelOptions(localValue);
     const isInvalid = !parsed.isValid;
@@ -50,7 +51,6 @@ const TextModelInput = React.memo(
     const [models, setModels] = useState<OpenRouterModel[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [hasLoaded, setHasLoaded] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
     const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -63,7 +63,6 @@ const TextModelInput = React.memo(
       abortControllerRef.current = controller;
 
       setIsLoading(true);
-      setError(null);
 
       try {
         const response = await fetch("https://openrouter.ai/api/v1/models", {
@@ -83,7 +82,14 @@ const TextModelInput = React.memo(
           return; // ignore aborts
         }
         console.error(err);
-        setError(err instanceof Error ? err.message : t("failedToFetchModels"));
+        const result = await confirm({
+          title: t("failedToFetchModels"),
+          message: err instanceof Error ? err.message : t("failedToFetchModels"),
+          confirmLabel: t("retryButton"),
+          cancelLabel: t("cancelButton"),
+          icon: "warning",
+        });
+        if (result === true) void handleFetchModels();
       } finally {
         if (abortControllerRef.current === controller) {
           setIsLoading(false);
@@ -118,7 +124,7 @@ const TextModelInput = React.memo(
             type="text"
             value={localValue}
             onChange={(e) => setLocalValue(e.target.value)}
-            className={`form-style ${isInvalid ? "form-style-invalid" : "form-style-valid"}`}
+            className={`form-style font-mono ${isInvalid ? "form-style-invalid" : "form-style-valid"}`}
           />
           {isInvalid && (
             <p className="mt-1 text-xs font-semibold text-red-500">{t("invalidModelOption")}</p>
@@ -143,21 +149,6 @@ const TextModelInput = React.memo(
             <div className="flex items-center justify-center gap-2 py-2 text-zinc-500 dark:text-zinc-400">
               <LoadingSpinner strokeWidth={6} className="h-5 w-5 text-indigo-500" />
               <span className="animate-pulse">{t("loadingModelsText")}</span>
-            </div>
-          )}
-
-          {error && (
-            <div className="mt-2 flex flex-col items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-600 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400">
-              <p className="text-center font-semibold">{error}</p>
-              <Button
-                type="button"
-                intent="secondary"
-                size="small"
-                onClick={() => void handleFetchModels()}
-                className="px-3 py-1 text-xs"
-              >
-                {t("retryButton")}
-              </Button>
             </div>
           )}
 
@@ -191,7 +182,7 @@ const TextModelInput = React.memo(
                   title={t("reloadModelsTooltip")}
                   className="flex aspect-square h-full items-center justify-center p-2"
                 >
-                  <Icon iconName="autorenew" />
+                  <Icon iconName="autorenew" className="text-base!" />
                 </Button>
               </div>
             </div>
@@ -268,6 +259,28 @@ const SettingsScreen: React.FC = () => {
     translateUi(trimmed).catch(() => toast.error(t("aiTranslationError")));
   };
 
+  // Notify once per mount while no API key is stored (legacy inline notice,
+  // now a toast; re-fires if the key is removed while the screen is open).
+  useEffect(() => {
+    if (!apiKey) toast.error(t("apiKeyModalDescriptionShort"));
+  }, [apiKey, t]);
+
+  // Surface the OpenRouter key prefix mismatch as a toast (legacy inline
+  // warning): fires when the mismatch appears and re-arms once it clears.
+  const isApiKeyPrefixMismatch =
+    apiKey !== null &&
+    !isApiKeyPrefixValid(parseTextModelOptions(settings?.textModel ?? ""), apiKey);
+  const notifiedPrefixMismatchRef = useRef(false);
+  useEffect(() => {
+    if (!isApiKeyPrefixMismatch) {
+      notifiedPrefixMismatchRef.current = false;
+      return;
+    }
+    if (notifiedPrefixMismatchRef.current) return;
+    notifiedPrefixMismatchRef.current = true;
+    toast.error(t("apiKeyPrefixMismatchWarning"));
+  }, [isApiKeyPrefixMismatch, t]);
+
   if (!settings) return null;
 
   const uiLanguage = settings.uiLanguage;
@@ -278,7 +291,6 @@ const SettingsScreen: React.FC = () => {
   );
   const isCurrentAiLanguage = aiLanguagesSet.has(uiLanguage);
   const isTranslating = uiTranslation.phase === "running";
-  const parsedModel = parseTextModelOptions(settings.textModel);
 
   const handleReturnToStartClick = async () => {
     navigate(ROUTES.HOME, { replace: true, viewTransition: true });
@@ -382,8 +394,6 @@ const SettingsScreen: React.FC = () => {
       </div>
 
       <div>
-        {!apiKey && <p className="text-danger">{t("apiKeyModalDescriptionShort")}</p>}
-
         {/* Game Actions Section */}
         {showReturnToStartButton && (
           <SettingsSection
@@ -481,28 +491,23 @@ const SettingsScreen: React.FC = () => {
               size="medium"
               onClick={handleTranslateUi}
               disabled={isTranslating || !targetLanguage.trim()}
-              className="sm:w-40"
+              className="sm:w-50"
+              isWorking={isTranslating}
             >
-              {isTranslating ? t("aiTranslatingButton") : t("aiTranslationButton")}
+              {isTranslating
+                ? uiTranslationProgress !== null
+                  ? `${Math.round(uiTranslationProgress * 100)}%`
+                  : t("aiTranslatingButton")
+                : t("aiTranslationButton")}
             </Button>
           </div>
-          {isTranslating && (
-            <div className="flex items-center justify-center gap-2 py-1 text-zinc-500 dark:text-zinc-400">
-              <LoadingSpinner strokeWidth={6} className="h-4 w-4 text-indigo-500" />
-              <span className="animate-pulse text-xs">
-                {uiTranslationProgress !== null
-                  ? `${Math.round(uiTranslationProgress * 100)}%`
-                  : t("aiTranslatingButton")}
-              </span>
-            </div>
-          )}
           {isCurrentAiLanguage && (
             <Button
               type="button"
               intent="danger"
               size="medium"
               onClick={() => void deleteAiTranslation(uiLanguage)}
-              className="w-full"
+              className="w-full mt-3"
             >
               {t("aiTranslationDeleteButton")}
             </Button>
@@ -633,11 +638,6 @@ const SettingsScreen: React.FC = () => {
                 {apiKey ? t("updateApiKeyButton") : t("apiKeySaveButton")}
               </Button>
             </form>
-            {apiKey && !isApiKeyPrefixValid(parsedModel, apiKey) && (
-              <p className="text-xs font-semibold text-red-500">
-                {t("apiKeyPrefixMismatchWarning")}
-              </p>
-            )}
             <p className="support-text-color text-xs">{t("apiKeyStoredLocallyNote")}</p>
           </Expander>
         </SettingsSection>
@@ -726,9 +726,7 @@ const SettingsScreen: React.FC = () => {
               </>
             )}
             <div className="flex items-center justify-between gap-4">
-              <span className={`explanation-text-style ${isDebug ? "line-through" : ""}`}>
-                {t("debugLogsEnableLabel")}
-              </span>
+              <span className="explanation-text-style">{t("debugLogsEnableLabel")}</span>
               <ToggleSwitch
                 checked={isDebug}
                 onChange={(e) => void handleDebugLoggingToggle(e.target.checked)}

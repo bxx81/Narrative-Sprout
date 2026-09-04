@@ -17,7 +17,7 @@ Installable standalone PWA with offline UI, via `vite-plugin-pwa` (`registerType
 
 # Caching
 
-- **Precache** (`globPatterns: **/*.{js,css,html,json,svg,ico}`): app chunks, styles, HTML, and the **bundled locale JSON** — so the UI works offline. Versioned vendor chunks (`react`/`zod`/`i18next`) keep per-release precache diffs small.
+- **Precache** (`globPatterns: **/*.{js,css,html,json,svg,ico,ogg}`): app chunks, styles, HTML, the **bundled locale JSON**, and the UI sound effects (`public/sounds/*.ogg`, ~70 KB total) — so the UI works offline. Versioned vendor chunks (`react`/`zod`/`i18next`) keep per-release precache diffs small.
 - **Runtime `CacheFirst`** (`static-assets`, 300 entries / 30 days): `/(images|s)/…(webp|woff2?|ttf|otf)` — heavy title backgrounds and font files. `webp` is deliberately excluded from precache (initial install would be huge).
 - LLM/image/Drive API calls are never cached (network-only).
 

@@ -23,6 +23,23 @@ function lengthInstruction(sceneTextLength: string): string {
   return LENGTH_INSTRUCTIONS[sceneTextLength] ?? LENGTH_INSTRUCTIONS["medium"]!;
 }
 
+/** Lower word bound per sceneTextLength setting (matches legacy length orders).
+ * The starting screen's pseudo progress bar divides received words by it. */
+const MIN_WORDS: Record<string, number> = {
+  short: 50,
+  medium: 100,
+  default: 50,
+  detailed: 100,
+  verbose: 200,
+  novel: 400,
+  novel2: 800,
+  long: 200,
+};
+
+export function minWordsTarget(sceneTextLength: string): number {
+  return MIN_WORDS[sceneTextLength] ?? MIN_WORDS["medium"]!;
+}
+
 const OPENING_USER_NOTE =
   "This is the opening scene based on the World Theme above. Begin the story now.";
 

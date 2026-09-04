@@ -5,6 +5,7 @@ export {
   buildMemoryUpdatePrompt,
   buildOpeningPrompt,
   buildTurnPrompt,
+  minWordsTarget,
 } from "./promptBuilder";
 export {
   generateMemoryUpdate,

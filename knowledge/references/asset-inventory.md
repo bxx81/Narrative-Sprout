@@ -1,15 +1,15 @@
 ---
 type: Reference
 title: Asset Inventory (v2)
-description: Bundled images, fonts, icons, and locales shipped with Narrative Sprout v2.
-tags: [assets, images, fonts, locales]
-timestamp: 2026-09-02T00:00:00Z
+description: Bundled images, fonts, icons, sounds, and locales shipped with Narrative Sprout v2.
+tags: [assets, images, fonts, sounds, locales]
+timestamp: 2026-09-04T00:00:00Z
 source: public/, src/features/i18n/locales/
 ---
 
 # Overview
 
-All static files live in Vite-standard `public/` (served at root). Heavy media stays out of the PWA precache (runtime `CacheFirst` instead).
+All static files live in Vite-standard `public/` (served at root). Heavy media stays out of the PWA precache (runtime `CacheFirst` instead); the small UI sound effects are precached.
 
 # Images
 
@@ -23,9 +23,13 @@ All static files live in Vite-standard `public/` (served at root). Heavy media s
 
 `public/icons/`: `android-chrome-192x192.png` + `android-chrome-512x512.png` (PWA manifest), `apple-touch-icon-180x180.png`, `favicon-16x16.png` / `favicon-32x32.png` / `favicon.ico`.
 
+# Sounds
+
+`public/sounds/`: `done.ogg`, `notification.ogg`, `error.ogg` (~20–28 KB each) — UI chimes for generation completion, toasts, and the error dialog (see [Sound Effects](/features/sound-effects.md)). Pixabay sources, attributed in the generated `public/legal/license.html`. Included in the PWA precache (`ogg` in `globPatterns`).
+
 # Fonts & Styles
 
-`public/s/`: per-language stylesheets (`en/ja/zh/zh-tw/zh-hk/ko/ar/he/hi/lo/th.css`, `icons.css` for Material icons) + self-hosted WOFF2 families (Inter, Cormorant Garamond, Molle, BIZ UD Gothic/Mincho, Noto Sans/Serif variants incl. SC/TC/HK/KR/Hebrew/Devanagari/Lao/Thai, Kufi/Naskh Arabic) + `OFL.txt`. `index.html` loads `icons.css` + `en.css` globally; the rest load per language (see [Localization](/configuration/localization.md)).
+`public/s/`: per-language stylesheets (`en/ja/zh/zh-tw/zh-hk/ko/ar/he/hi/lo/th.css`, `icons.css` for Material icons) + self-hosted WOFF2 families (Inter, Cormorant Garamond, Molle, BIZ UD Gothic/Mincho, Noto Sans/Serif variants incl. SC/TC/HK/KR/Hebrew/Devanagari/Lao/Thai, Kufi/Naskh Arabic) + `OFL.txt`. `index.html` loads `icons.css` + `en.css` globally; the rest load per language (see [Localization](/configuration/localization.md)). `icons.css` points at `font.woff2`, a Material Symbols Rounded subset (opsz 24, weight 300) generated from the `IconName` union by `bun run update:icons` — see [Development Setup](/operations/development.md).
 
 # Locales
 

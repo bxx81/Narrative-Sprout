@@ -79,7 +79,43 @@
     text-wrap: pretty;
 
     &:lang(ja) {
-      font-family: "BIZ UDPGothic", sans-serif;
+      font-family: "Noto Sans", "BIZ UDPGothic", sans-serif;
+    }
+
+    &:lang(zh) {
+      font-family: "Noto Sans SC", "Noto Sans", sans-serif;
+    }
+
+    &:is(:lang(zh-hant), :lang(zh-tw)) {
+      font-family: "Noto Sans TC", "Noto Sans", sans-serif;
+    }
+
+    &:lang(zh-hk) {
+      font-family: "Noto Sans HK", "Noto Sans", sans-serif;
+    }
+
+    &:lang(ko) {
+      font-family: "Noto Sans KR", "Noto Sans", sans-serif;
+    }
+
+    &:lang(hi) {
+      font-family: "Noto Sans Devanagari", "Noto Sans", sans-serif;
+    }
+
+    &:lang(th) {
+      font-family: "Noto Sans Thai", "Noto Sans", sans-serif;
+    }
+
+    &:lang(lo) {
+      font-family: "Noto Sans Lao", "Noto Sans", sans-serif;
+    }
+
+    &:lang(he) {
+      font-family: "Noto Sans Hebrew", "Noto Sans", sans-serif;
+    }
+
+    &:lang(ar) {
+      font-family: "Noto Kufi Arabic", "Noto Sans", sans-serif;
     }
   }
   * {
@@ -265,7 +301,43 @@
     line-height: 1.8;
 
     &:lang(ja) {
-      font-family: "BIZ UDPMincho", serif;
+      font-family: "Noto Serif", "BIZ UDPMincho", serif;
+    }
+
+    &:lang(zh) {
+      font-family: "Noto Serif SC", "Noto Serif", serif;
+    }
+
+    &:is(:lang(zh-hant), :lang(zh-tw)) {
+      font-family: "Noto Serif TC", "Noto Serif", serif;
+    }
+
+    &:lang(zh-hk) {
+      font-family: "Noto Serif HK", "Noto Serif", serif;
+    }
+
+    &:lang(ko) {
+      font-family: "Noto Serif KR", "Noto Serif", serif;
+    }
+
+    &:lang(hi) {
+      font-family: "Noto Serif Devanagari", "Noto Serif", serif;
+    }
+
+    &:lang(th) {
+      font-family: "Noto Serif Thai", "Noto Serif", serif;
+    }
+
+    &:lang(lo) {
+      font-family: "Noto Serif Lao", "Noto Serif", serif;
+    }
+
+    &:lang(he) {
+      font-family: "Noto Serif Hebrew", "Noto Serif", serif;
+    }
+
+    &:lang(ar) {
+      font-family: "Noto Naskh Arabic", "Noto Serif", serif;
     }
   }
 }

@@ -3,7 +3,7 @@ type: Feature
 title: Game Loop
 description: Core game lifecycle — theme setup, generation, choices, persistence, and navigation in Narrative Sprout v2.
 tags: [game-loop, gameplay, zustand]
-timestamp: 2026-09-02T00:00:00Z
+timestamp: 2026-09-04T00:00:00Z
 source: src/features/gameplay/turnService.ts, src/store/gameStore.ts, src/app/routes.ts, src/app/App.tsx
 ---
 
@@ -14,7 +14,7 @@ The core loop is: theme input → opening generation → 3 choices → next-turn
 # Turn Flow
 
 - **ThemeSetup** (`ThemeSetupScreen.tsx`): free-text theme, `{a|b}` random placeholders, attachment files, scene length, memory strategy, and Generate Idea (see [Theme Generation](theme-generation.md)). Starting calls `startNewGame(theme, attachmentFiles)`.
-- **Starting** (`StartingScreen.tsx`): shows a `LoadingSpinner` + static label only (no streaming text); elapsed time appears only with `settings.showElapsedTime` (default off). On success navigates to `/play`. Failures surface in the global `ErrorDialog` (see [Error Handling](/services/error-service.md)).
+- **Starting** (`StartingScreen.tsx`): shows a `LoadingSpinner` + a label that follows the pipeline (`generationStage`: `loadingWeavingScene` during text, `loadingPaintingScene` on the image stage; the label re-fades on change); a word-count pseudo progress bar and the fixed Stop-generating button appear while the stream store is active (see [Streaming](streaming.md)); elapsed time appears only with `settings.showElapsedTime` (default off). On success navigates to `/play`. Failures surface in the global `ErrorDialog` (see [Error Handling](/services/error-service.md)).
 - **startNewGame → startGame** (`turnService.ts`): `gameStore.startNewGame` first resolves attachment texts/theme via `processAttachmentFiles`; `startGame` receives ready `attachmentTexts`, builds the opening prompt, runs the narration call (single or split), optionally compacts memory, generates the scene image, then persists `GameRecord` + root `StoryNodeRecord` (+ optional asset) in one Dexie transaction. The save snapshots `sceneTextLength` at creation.
 - **Playing** (`GameScreen.tsx`): choice buttons or free-text input → `choose(choiceText)` → `choosePath` (context: per-save scene length, up to 5 past turns — collected newest-first, replayed oldest-first — memory prefix, attachment texts) → scene → image → appended node + game update in one transaction. `currentNodeId` (playhead) and `viewingNodeId` (display position) diverge when rewinding; Forward returns toward the playhead.
 - **GameOver**: `isStoryOver: true` renders `storyClosingText`; autoplay stops with a retrospective comment dialog.
@@ -25,4 +25,4 @@ The story is a tree (`StoryNodeRecord.parentNodeId`, root has `null`). See [Hist
 
 # Generation Stages
 
-`turnService` reports `onTextGenerationStart` / `onImageGenerationStart` / `onImageGenerationProgress` to the store's `generationStage` (`choice` → `scene` → `image`), so `LoadingOverlay` follows the pipeline instead of showing a static label. Image progress (0..1) is wired for A1111/ComfyUI; see [Image Generation](image-generation.md).
+`turnService` reports `onTextGenerationStart` / `onImageGenerationStart` / `onImageGenerationProgress` to the store's `generationStage` (`choice` → `scene` → `image`), so `LoadingOverlay` follows the pipeline instead of showing a static label. Image progress (0..1) is wired for A1111/ComfyUI; see [Image Generation](image-generation.md). When `generation.phase` settles `running → idle`, a completion chime plays (see [Sound Effects](sound-effects.md)).

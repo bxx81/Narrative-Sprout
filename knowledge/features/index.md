@@ -10,6 +10,7 @@
 * [Scene Correction (Refine)](scene-correction.md) — AI-driven scene refinement, redo, manual editing.
 * [Conditional Text (Flag-Gated Disclosure)](conditional-text.md) — Flag-based disclosure of theme and attachment content.
 * [Theme Generation](theme-generation.md) — AI-generated theme ideas (Generate Idea).
+* [Sound Effects](sound-effects.md) — UI chimes for generation completion, toasts, and the error dialog.
 * [Settings System](settings-system.md) — All user-configurable settings and developer options.
 * [Story Export (ns-save)](story-export.md) — Single-save ZIP export and re-import.
 * [Backup & Restore (ns-backup)](backup-restore.md) — Encrypted backup envelope and restore.

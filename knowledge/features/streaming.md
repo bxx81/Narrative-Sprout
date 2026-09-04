@@ -3,8 +3,8 @@ type: Feature
 title: Streaming Generation Display
 description: SSE streaming delivery of narration with a dedicated display store, per-model opt-out, and bulk fallback in v2.
 tags: [streaming, sse, llm]
-timestamp: 2026-09-02T00:00:00Z
-source: src/lib/openAiClient.ts, src/store/streamStore.ts, src/lib/modelOptions.ts, src/features/narrative/generateScene.ts
+timestamp: 2026-09-04T00:00:00Z
+source: src/lib/openAiClient.ts, src/store/streamStore.ts, src/lib/modelOptions.ts, src/features/narrative/generateScene.ts, src/screens/GameScreen.tsx, src/screens/StartingScreen.tsx
 ---
 
 # Overview
@@ -41,4 +41,6 @@ The store computes this per generation flow (start/choose/refine/redo/rootRedo) 
 - `end()` / `cancel()` return to idle; `getSignal()` supplies the `AbortSignal` so Stop cancels generation.
 - Final data always renders through the regular success path, never from the stream store.
 
-`GameScreen` suppresses `LoadingOverlay` while streaming incomplete text (rendering it in `MainText` with a cursor + pulsing choice skeletons) and restores the spinner once `sceneTextComplete` flips (remaining JSON keys still generating) or when the image stage starts (`generationStage === "image"`). `StartingScreen` does not subscribe to the stream store — it shows only a `LoadingSpinner` + static label. Reasoning output is never shown live.
+`GameScreen` suppresses `LoadingOverlay` while streaming incomplete text (rendering it in `MainText` with a cursor + pulsing choice skeletons) and restores the spinner once `sceneTextComplete` flips (remaining JSON keys still generating) or when the image stage starts (`generationStage === "image"`). While the stream store is active (`stream.status !== "idle"`) both `GameScreen` and `StartingScreen` show the legacy-style fixed Stop-generating button (`intent="navigator"` circle at bottom-right, `cancelGeneration` → `streamStore.cancel()`). Reasoning output is never shown live.
+
+`StartingScreen` also renders a word-count pseudo progress bar while `stream.status === "streaming"`: `min(0.9, wordCount / minWordsTarget(sceneTextLength))` (no numeric label). Tail behavior — with a progress-reporting image generator (A1111/ComfyUI) the bar continues as `0.9 + 0.1 × imageGenerationProgress` (monotonic; the word-based cap is 90%); with no image generator configured it jumps to 100% at `sceneTextComplete`; generators without progress reporting hold at 90%. The label message follows `generationStage` (`loadingWeavingScene` → `loadingPaintingScene`).

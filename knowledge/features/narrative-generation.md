@@ -75,6 +75,8 @@ Custom `--BaseURL` removes these headers.
 
 The target is injected into the user message (`Target scene length: …`), not the system prompt. Each save snapshots `sceneTextLength` at creation; later turns use the snapshot (`activeGame.sceneTextLength ?? settings.sceneTextLength`), with old saves falling back to the global setting.
 
+The numeric lower bounds per setting are exported as `minWordsTarget` (`promptBuilder.ts` `MIN_WORDS`: short/default 50, medium/detailed 100, verbose 200, long 200, novel 400, novel2 800; unknown values fall back to medium) and drive the starting screen's pseudo progress bar (words received ÷ lower bound, capped at 90%).
+
 # Memory Strategy
 
 `memoryStrategy` (`auto` / `single` / `split`) controls how long-term memory (`notes` + `sceneSummary`) is updated each turn. Resolved by `resolveMemoryStrategy`: `split` stays `split`, `auto` picks `split` for `novel`/`novel2` and `single` otherwise.

@@ -47,7 +47,7 @@ const ComfyUIImageSettingsComponent: React.FC<ComfyUIImageSettingsProps> = ({
           value={localEndpoint}
           onChange={(e) => setLocalEndpoint(e.target.value)}
           placeholder={t("comfyuiEndpointLabel")}
-          className="form-style"
+          className="form-style font-mono"
           disabled={loading}
         />
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">

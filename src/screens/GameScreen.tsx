@@ -206,7 +206,7 @@ const GameScreen: React.FC = () => {
   // During streaming the final data does not exist yet: show the submitted
   // choice and a faked turn number to avoid mismatching the previous scene.
   const streamingChoice =
-    loading && stream.status !== "idle" && generation.payload.kind === "choice"
+    isStreamingLive && generation.payload.kind === "choice"
       ? (generation.payload.choiceText ?? null)
       : null;
   const displayChoiceText = streamingChoice ?? choiceText;
@@ -229,18 +229,17 @@ const GameScreen: React.FC = () => {
   // records saved with the old (paragraph-counting) counter display correctly.
   const sceneWordCount = countWords(scene.sceneText);
 
-  const currentDividerText =
-    loading && stream.status === "streaming"
-      ? displayTurnNumberText(displayTurnNumber, stream.wordCount, t)
-      : [
-          turnNumber && (currentCost || sceneWordCount) ? t("dividerThisPrefix") : "",
-          turnNumber ? t("dividerTurn", { ordinal: ordinal(turnNumber) }) : "",
-          currentCost ? t("dividerCost", { cost: currentCost }) : "",
-          currentCost && sceneWordCount ? t("dividerAnd") : "",
-          sceneWordCount ? t("dividerWordsLong", { words: sceneWordCount }) : "",
-        ]
-          .join(" ")
-          .trim();
+  const currentDividerText = isStreamingLive
+    ? displayTurnNumberText(displayTurnNumber, stream.wordCount, t)
+    : [
+        turnNumber && (currentCost || sceneWordCount) ? t("dividerThisPrefix", { lng: "en" }) : "",
+        turnNumber ? t("dividerTurn", { ordinal: ordinal(turnNumber), lng: "en" }) : "",
+        currentCost ? t("dividerCost", { cost: currentCost, lng: "en" }) : "",
+        currentCost && sceneWordCount ? t("dividerAnd", { lng: "en" }) : "",
+        sceneWordCount ? t("dividerWordsLong", { words: sceneWordCount, lng: "en" }) : "",
+      ]
+        .join(" ")
+        .trim();
 
   const mainText = (
     <article className="animate-fade-in w-full max-w-2xl md:min-w-[20rem]">
@@ -344,7 +343,7 @@ const GameScreen: React.FC = () => {
 
       {loading && stream.status !== "idle" ? (
         <div className="flex flex-col gap-3" aria-hidden="true">
-          {[0, 1, 2].map((index) => (
+          {[0, 1, 2, 3].map((index) => (
             <div key={index} className="choice-style animate-pulse select-none">
               &nbsp;
             </div>
@@ -362,17 +361,10 @@ const GameScreen: React.FC = () => {
         />
       )}
 
-      {(loading || isAutoplayDeciding) && stream.status !== "idle" && (
-        <div className="mt-4 flex justify-center">
-          <Button intent="secondary" size="medium" onClick={handleCancelGeneration}>
-            {t("cancelGenerationButton")}
-          </Button>
-        </div>
-      )}
-
       {modelName ? (
         <div className="dividers-style my-16">
-          {t("generatedBy")} <ModelNameDisplay key={viewingNodeId} modelName={modelName} />
+          {t("generatedBy", { lng: "en" })}{" "}
+          <ModelNameDisplay key={viewingNodeId} modelName={modelName} />
         </div>
       ) : (
         <Divider className="my-16" />
@@ -406,6 +398,19 @@ const GameScreen: React.FC = () => {
         showElapsedTime={settings.showElapsedTime}
         generationStartedAt={generationStartedAt}
       />
+
+      {(loading || isAutoplayDeciding) && stream.status !== "idle" && (
+        <Button
+          intent="navigator"
+          size="medium-circle"
+          className="fixed right-21 bottom-6 z-120"
+          onClick={handleCancelGeneration}
+          title={t("cancelGenerationButton")}
+          aria-label={t("cancelGenerationButton")}
+        >
+          <Icon iconName="stop_circle" />
+        </Button>
+      )}
 
       <RefineDialog
         isOpen={refineOpen}
@@ -484,12 +489,16 @@ function displayTurnNumberText(
   t: (key: string, options?: Record<string, unknown>) => string,
 ): string {
   if (!displayTurnNumber) {
-    return wordCount > 0 ? t("dividerWordsSoFarOnly", { words: wordCount }) : "";
+    return wordCount > 0 ? t("dividerWordsSoFarOnly", { words: wordCount, lng: "en" }) : "";
   }
   if (wordCount <= 0) {
-    return t("dividerTurn", { ordinal: ordinal(displayTurnNumber) });
+    return t("dividerTurn", { ordinal: ordinal(displayTurnNumber), lng: "en" });
   }
-  return t("dividerWordsSoFar", { ordinal: ordinal(displayTurnNumber), words: wordCount });
+  return t("dividerWordsSoFar", {
+    ordinal: ordinal(displayTurnNumber),
+    words: wordCount,
+    lng: "en",
+  });
 }
 
 export default GameScreen;
