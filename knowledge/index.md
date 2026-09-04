@@ -2,7 +2,7 @@
 okf_version: "0.1"
 title: Narrative Sprout Knowledge Bundle (v2)
 description: A complete OKF knowledge bundle describing the Narrative Sprout v2 clean rebuild — architecture, features, services, data models, integrations, configuration, operations, and references.
-timestamp: 2026-09-02T00:00:00Z
+timestamp: 2026-09-04T00:00:00Z
 ---
 
 # Overview
@@ -22,6 +22,7 @@ timestamp: 2026-09-02T00:00:00Z
 * [Scene Correction (Refine)](features/scene-correction.md) — AI-driven scene refinement, redo, manual editing.
 * [Conditional Text (Flag-Gated Disclosure)](features/conditional-text.md) — Flag-based disclosure of theme and attachment content.
 * [Theme Generation](features/theme-generation.md) — AI-generated theme ideas (Generate Idea).
+* [Sound Effects](features/sound-effects.md) — UI chimes for generation completion, toasts, and the error dialog.
 * [Settings System](features/settings-system.md) — All user-configurable settings and developer options.
 * [Story Export (ns-save)](features/story-export.md) — Single-save ZIP export and re-import.
 * [Backup & Restore (ns-backup)](features/backup-restore.md) — Encrypted backup envelope and restore.

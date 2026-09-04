@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useGameStore } from "../store/gameStore";
 import { classifyError } from "../lib/errorClassification";
+import { playSound } from "../features/sound/api";
 import { ROUTES } from "../app/routes";
 import Button from "./ui/Button";
 
@@ -36,6 +37,16 @@ const ErrorDialog: React.FC = () => {
       : null;
 
   const isOpen = classified !== null;
+
+  // Error chime: fires when the dialog opens and again only when a fresh
+  // failure replaces the shown payload (each failure creates a new payload).
+  const announcedPayloadRef = useRef<typeof failedPayload>(null);
+  useEffect(() => {
+    if (failedPayload && announcedPayloadRef.current !== failedPayload) {
+      playSound("error");
+    }
+    announcedPayloadRef.current = failedPayload;
+  }, [failedPayload]);
   const isAutoRetry =
     classified !== null &&
     classified.isRetryable &&

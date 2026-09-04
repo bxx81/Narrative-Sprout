@@ -26,7 +26,7 @@ Generation failures (start/choose/refine/redo/image-regen) land in `AsyncOperati
 
 # Dialog & Retry
 
-`ErrorDialog` (legacy ErrorDisplay modal port) mounts globally in `AppLayout` and shows for `generation` / `imageRegeneration` failures. Retryable titles use `errorStumbleTitle`, otherwise `errorOccurredTitle`; >7-line messages collapse behind `errorShowMore/Less`. Non-informational failures always offer a "Start Over" button alongside Retry/Dismiss. `retryGeneration()` re-runs the retained payload (`start` → `startNewGame`, `choice` → `choose`, `refine` → `refine`, `redo`/`rootRedo` → `redoScene`, image payload → `regenerateImage`). `dismissError()` returns to idle; dismissing a failed start additionally routes to `/setup`. The Starting screen and game screen carry no inline failure UI of their own.
+`ErrorDialog` (legacy ErrorDisplay modal port) mounts globally in `AppLayout` and shows for `generation` / `imageRegeneration` failures. Retryable titles use `errorStumbleTitle`, otherwise `errorOccurredTitle`; >7-line messages collapse behind `errorShowMore/Less`. Non-informational failures always offer a "Start Over" button alongside Retry/Dismiss. `retryGeneration()` re-runs the retained payload (`start` → `startNewGame`, `choice` → `choose`, `refine` → `refine`, `redo`/`rootRedo` → `redoScene`, image payload → `regenerateImage`). `dismissError()` returns to idle; dismissing a failed start additionally routes to `/setup`. The Starting screen and game screen carry no inline failure UI of their own. Opening the dialog with a fresh failure also plays the error chime (see [Sound Effects](/features/sound-effects.md)).
 
 # 429 Auto-Retry
 
@@ -34,4 +34,4 @@ Generation failures (start/choose/refine/redo/image-regen) land in `AsyncOperati
 
 # Toasts
 
-`react-hot-toast` 2.6.0 (`<Toaster position="top-center">` in `App.tsx`, legacy-style card). Used for backup/Drive/PKCE/import/export/AI-translation/theme-generation results. Promise-based confirms use `ConfirmationProvider` + `useConfirm()` (native `<dialog>`, incl. 3-way `neutralLabel` for redo).
+`react-hot-toast` 2.6.0 (`<Toaster position="top-center">` in `App.tsx`, legacy-style card). Used for backup/Drive/PKCE/import/export/AI-translation/theme-generation results. A new toast also plays the notification chime (see [Sound Effects](/features/sound-effects.md)). Promise-based confirms use `ConfirmationProvider` + `useConfirm()` (native `<dialog>`, incl. 3-way `neutralLabel` for redo).

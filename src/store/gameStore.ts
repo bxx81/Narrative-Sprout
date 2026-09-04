@@ -44,6 +44,7 @@ import {
   webpQualityForCompression,
 } from "../features/image/api";
 import { processAttachmentFiles } from "../features/attachments/api";
+import { playSound } from "../features/sound/api";
 
 /**
  * Payload retained through the failed phase so the error dialog can retry
@@ -1144,4 +1145,14 @@ export const useGameStore = create<GameState>()(
     })),
     { name: "game" },
   ),
+);
+
+// Scene-generation chime: a running generation settling back to idle means
+// the scene (text + image) finished successfully. failed -> idle transitions
+// (error dialog dismiss/retry bookkeeping) never chime.
+useGameStore.subscribe(
+  (s) => s.generation.phase,
+  (phase, previousPhase) => {
+    if (previousPhase === "running" && phase === "idle") playSound("done");
+  },
 );

@@ -50,8 +50,10 @@ export default defineConfig({
       registerType: "autoUpdate",
       // 再設計書 §7: 軽量な JS/CSS/HTML/json は precache、重い webp 背景やフォントは
       // runtimeCaching に回す（globPatterns に webp を入れると初回インストールが激重になる）
+      // UI 効果音 (public/sounds/*.ogg, 計約 70KB) は完了/通知/エラーの即時再生に
+      // 必要なため precache に含める。
       workbox: {
-        globPatterns: ["**/*.{js,css,html,json,svg,ico}"],
+        globPatterns: ["**/*.{js,css,html,json,svg,ico,ogg}"],
         runtimeCaching: [
           {
             urlPattern: /\/(images|s)\/.*\.(webp|woff2?|ttf|otf)$/,

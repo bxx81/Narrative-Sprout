@@ -25,4 +25,4 @@ The story is a tree (`StoryNodeRecord.parentNodeId`, root has `null`). See [Hist
 
 # Generation Stages
 
-`turnService` reports `onTextGenerationStart` / `onImageGenerationStart` / `onImageGenerationProgress` to the store's `generationStage` (`choice` → `scene` → `image`), so `LoadingOverlay` follows the pipeline instead of showing a static label. Image progress (0..1) is wired for A1111/ComfyUI; see [Image Generation](image-generation.md).
+`turnService` reports `onTextGenerationStart` / `onImageGenerationStart` / `onImageGenerationProgress` to the store's `generationStage` (`choice` → `scene` → `image`), so `LoadingOverlay` follows the pipeline instead of showing a static label. Image progress (0..1) is wired for A1111/ComfyUI; see [Image Generation](image-generation.md). When `generation.phase` settles `running → idle`, a completion chime plays (see [Sound Effects](sound-effects.md)).
