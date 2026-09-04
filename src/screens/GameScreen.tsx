@@ -346,7 +346,7 @@ const GameScreen: React.FC = () => {
 
       {loading && stream.status !== "idle" ? (
         <div className="flex flex-col gap-3" aria-hidden="true">
-          {[0, 1, 2].map((index) => (
+          {[0, 1, 2, 3].map((index) => (
             <div key={index} className="choice-style animate-pulse select-none">
               &nbsp;
             </div>
@@ -362,14 +362,6 @@ const GameScreen: React.FC = () => {
           viewingNodeId={viewingNodeId}
           choicePreset={choicePresetSignal}
         />
-      )}
-
-      {(loading || isAutoplayDeciding) && stream.status !== "idle" && (
-        <div className="mt-4 flex justify-center">
-          <Button intent="secondary" size="medium" onClick={handleCancelGeneration}>
-            {t("cancelGenerationButton")}
-          </Button>
-        </div>
       )}
 
       {modelName ? (
@@ -409,6 +401,19 @@ const GameScreen: React.FC = () => {
         showElapsedTime={settings.showElapsedTime}
         generationStartedAt={generationStartedAt}
       />
+
+      {(loading || isAutoplayDeciding) && stream.status !== "idle" && (
+        <Button
+          intent="navigator"
+          size="medium-circle"
+          className="fixed right-21 bottom-6 z-120"
+          onClick={handleCancelGeneration}
+          title={t("cancelGenerationButton")}
+          aria-label={t("cancelGenerationButton")}
+        >
+          <Icon iconName="stop_circle" />
+        </Button>
+      )}
 
       <RefineDialog
         isOpen={refineOpen}
