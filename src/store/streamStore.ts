@@ -1,4 +1,5 @@
 import { countWords } from "../features/narrative/api";
+import { acquireWakeLock, releaseWakeLock } from "../features/wakelock/api";
 
 /**
  * Display store for the in-flight streaming generation (ported from the
@@ -150,6 +151,7 @@ export const streamStore = {
       wordCount: 0,
       sceneTextComplete: false,
     };
+    acquireWakeLock("generation");
     notify();
   },
 
@@ -170,6 +172,7 @@ export const streamStore = {
     }
     controller = null;
     latestRaw = "";
+    releaseWakeLock("generation");
     if (state.status !== "idle") {
       state = IDLE_STATE;
       notify();

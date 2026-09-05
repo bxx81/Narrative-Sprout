@@ -23,6 +23,7 @@ timestamp: 2026-09-04T00:00:00Z
 * [Conditional Text (Flag-Gated Disclosure)](features/conditional-text.md) — Flag-based disclosure of theme and attachment content.
 * [Theme Generation](features/theme-generation.md) — AI-generated theme ideas (Generate Idea).
 * [Sound Effects](features/sound-effects.md) — UI chimes for generation completion, toasts, and the error dialog.
+* [Wake Lock](features/wake-lock.md) — Screen wake lock during generation, autoplay, translation, image regeneration, and backup/Drive transfers.
 * [Settings System](features/settings-system.md) — All user-configurable settings and developer options.
 * [Story Export (ns-save)](features/story-export.md) — Single-save ZIP export and re-import.
 * [Backup & Restore (ns-backup)](features/backup-restore.md) — Encrypted backup envelope and restore.
