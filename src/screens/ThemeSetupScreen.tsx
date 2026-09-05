@@ -76,6 +76,9 @@ const ThemeSetupScreen: React.FC = () => {
           setTheme(parsed.theme);
           break;
         }
+        if (parsed.warning) {
+          toast.error(parsed.warning);
+        }
       } catch {
         // unreadable file — treat it as a plain attachment
       }
