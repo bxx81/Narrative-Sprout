@@ -15,6 +15,7 @@ import { generateThemes } from "../features/theme/api";
 import { englishUiTexts } from "../features/i18n/api";
 import { translateUIText } from "../features/i18n/translateService";
 import { streamStore } from "./streamStore";
+import { releaseWakeLock, acquireWakeLock } from "../features/wakelock/api";
 import { isStreamingEnabledForSettings } from "../lib/modelOptions";
 import { downloadBlob, exportGameAsZip } from "../features/export/api";
 import {
@@ -282,6 +283,7 @@ export const useGameStore = create<GameState>()(
 
       goToTitle: async () => {
         const games = await gameRepository.listGames();
+        releaseWakeLock("autoplay");
         set({
           games,
           activeGame: null,
@@ -369,6 +371,7 @@ export const useGameStore = create<GameState>()(
         if (!game) return;
         const assets = await loadAssetsForNodes(nodes.map((n) => n.id));
         const playhead = game.latestNodeId ?? nodes[0]?.id ?? null;
+        releaseWakeLock("autoplay");
         set({
           activeGame: game,
           nodes,
@@ -722,6 +725,7 @@ export const useGameStore = create<GameState>()(
           imageRegeneration: { phase: "running", payload, startedAt: new Date().toISOString() },
           imageGenerationProgress: null,
         });
+        acquireWakeLock("image");
         try {
           const imageGenConfig = await buildImageConfigForSettings(settings);
           const dataUrl = await generateSceneImage({
@@ -762,6 +766,8 @@ export const useGameStore = create<GameState>()(
             imageRegeneration: { phase: "failed", payload, error: error as Error },
             imageGenerationProgress: null,
           });
+        } finally {
+          releaseWakeLock("image");
         }
       },
 
@@ -772,6 +778,7 @@ export const useGameStore = create<GameState>()(
         if (!updatedGame) {
           // Entire game deleted
           const games = await gameRepository.listGames();
+          releaseWakeLock("autoplay");
           set({
             games,
             activeGame: null,
@@ -789,6 +796,7 @@ export const useGameStore = create<GameState>()(
         const freshAssets = await loadAssetsForNodes(freshNodes.map((n) => n.id));
         const games = await gameRepository.listGames();
         const playhead = updatedGame.latestNodeId ?? freshNodes[0]?.id ?? null;
+        releaseWakeLock("autoplay");
         set({
           games,
           activeGame: updatedGame,
@@ -836,6 +844,7 @@ export const useGameStore = create<GameState>()(
             startedAt: new Date().toISOString(),
           },
         });
+        acquireWakeLock("theme");
         try {
           const themes = await generateThemes({
             apiKey: openrouterApiKey,
@@ -851,6 +860,8 @@ export const useGameStore = create<GameState>()(
         } catch (error) {
           set({ themeGeneration: { phase: "failed", payload, error: error as Error } });
           throw error;
+        } finally {
+          releaseWakeLock("theme");
         }
       },
 
@@ -861,6 +872,7 @@ export const useGameStore = create<GameState>()(
         const knownIds = new Set<string>(nodes.map((n) => n.id));
         if (!knownIds.has(nodeId) || !knownIds.has(branchEndNodeId)) return;
         // Rewinding stops the autoplay chain (legacy REWIND behavior).
+        releaseWakeLock("autoplay");
         set({ viewingNodeId: nodeId, currentNodeId: branchEndNodeId, autoplay: false });
       },
 
@@ -868,7 +880,10 @@ export const useGameStore = create<GameState>()(
 
       toggleAutoplay: () => {
         if (!get().activeGame) return;
-        set({ autoplay: !get().autoplay });
+        const autoplay = !get().autoplay;
+        if (autoplay) acquireWakeLock("autoplay");
+        else releaseWakeLock("autoplay");
+        set({ autoplay });
       },
 
       runAutoplayTurn: async () => {
@@ -893,6 +908,7 @@ export const useGameStore = create<GameState>()(
           });
           if (decision.storyOver) {
             // Ending reached: hold the comment for the UI dialog and stop.
+            releaseWakeLock("autoplay");
             set({
               autoplayTurn: { phase: "idle" },
               autoplay: false,
@@ -911,6 +927,7 @@ export const useGameStore = create<GameState>()(
             autoplayCost: decision.generationCost ?? 0,
           });
         } catch (error) {
+          releaseWakeLock("autoplay");
           set({
             autoplayTurn: { phase: "failed", payload, error: error as Error },
             autoplay: false,
@@ -978,6 +995,7 @@ export const useGameStore = create<GameState>()(
           uiTranslation: { phase: "running", payload, startedAt: new Date().toISOString() },
           uiTranslationProgress: null,
         });
+        acquireWakeLock("translation");
         try {
           const { translation, languageCode } = await translateUIText({
             apiKey: openrouterApiKey,
@@ -1003,6 +1021,8 @@ export const useGameStore = create<GameState>()(
           // Rethrow so the caller can surface the failure exactly once (a
           // phase-watching effect would re-fire on every screen remount).
           throw error;
+        } finally {
+          releaseWakeLock("translation");
         }
       },
 
@@ -1023,8 +1043,13 @@ export const useGameStore = create<GameState>()(
       },
 
       exportSave: async (gameId) => {
-        const { fileName, blob } = await exportGameAsZip(gameId);
-        downloadBlob(blob, fileName);
+        acquireWakeLock("backup");
+        try {
+          const { fileName, blob } = await exportGameAsZip(gameId);
+          downloadBlob(blob, fileName);
+        } finally {
+          releaseWakeLock("backup");
+        }
       },
 
       wipeAllData: async () => {
@@ -1040,30 +1065,46 @@ export const useGameStore = create<GameState>()(
       },
 
       downloadEncryptedBackup: async (passphrase) => {
-        const { fileName, blob } = await createBackupFile(passphrase);
-        downloadBlob(blob, fileName);
+        acquireWakeLock("backup");
+        try {
+          const { fileName, blob } = await createBackupFile(passphrase);
+          downloadBlob(blob, fileName);
+        } finally {
+          releaseWakeLock("backup");
+        }
       },
 
       restoreBackupFromFile: async (file, passphrase) => {
-        const summary = await restoreBackupFromEnvelopeText(await file.text(), passphrase);
-        const [games, settings] = await Promise.all([
-          gameRepository.listGames(),
-          settingsRepository.get(),
-        ]);
-        set({ games, settings });
-        return summary;
+        acquireWakeLock("backup");
+        try {
+          const summary = await restoreBackupFromEnvelopeText(await file.text(), passphrase);
+          const [games, settings] = await Promise.all([
+            gameRepository.listGames(),
+            settingsRepository.get(),
+          ]);
+          set({ games, settings });
+          return summary;
+        } finally {
+          releaseWakeLock("backup");
+        }
       },
 
       importSaveFromFile: async (file) => {
-        const result = await importSaveFromZipBytes(new Uint8Array(await file.arrayBuffer()));
-        set({ games: await gameRepository.listGames() });
-        return result;
+        acquireWakeLock("backup");
+        try {
+          const result = await importSaveFromZipBytes(new Uint8Array(await file.arrayBuffer()));
+          set({ games: await gameRepository.listGames() });
+          return result;
+        } finally {
+          releaseWakeLock("backup");
+        }
       },
 
       connectGoogleDrive: async () => {
-        const accessToken = await requestDriveAccessToken();
-        set({ driveConnected: true, driveBackups: [] });
+        acquireWakeLock("backup");
         try {
+          const accessToken = await requestDriveAccessToken();
+          set({ driveConnected: true, driveBackups: [] });
           // Metadata only (names/sizes/dates) — one cheap API call, no
           // backup contents are downloaded until the user restores one.
           set({ driveBackups: await listDriveBackups(accessToken) });
@@ -1073,18 +1114,26 @@ export const useGameStore = create<GameState>()(
             set({ driveConnected: false });
           }
           throw error;
+        } finally {
+          releaseWakeLock("backup");
         }
       },
 
       disconnectGoogleDrive: async () => {
-        await revokeDriveAccessToken();
-        set({ driveConnected: false, driveBackups: [] });
+        acquireWakeLock("backup");
+        try {
+          await revokeDriveAccessToken();
+          set({ driveConnected: false, driveBackups: [] });
+        } finally {
+          releaseWakeLock("backup");
+        }
       },
 
       uploadBackupToGoogleDrive: async (passphrase) => {
-        // Token first: GIS needs the user gesture, and key derivation is slow.
-        const accessToken = await requestDriveAccessToken();
+        acquireWakeLock("backup");
         try {
+          // Token first: GIS needs the user gesture, and key derivation is slow.
+          const accessToken = await requestDriveAccessToken();
           const { fileName } = await uploadBackupToDrive(accessToken, passphrase);
           set({ driveConnected: true, driveBackups: await listDriveBackups(accessToken) });
           return { fileName };
@@ -1094,12 +1143,15 @@ export const useGameStore = create<GameState>()(
             set({ driveConnected: false });
           }
           throw error;
+        } finally {
+          releaseWakeLock("backup");
         }
       },
 
       refreshGoogleDriveBackups: async () => {
-        const accessToken = await requestDriveAccessToken();
+        acquireWakeLock("backup");
         try {
+          const accessToken = await requestDriveAccessToken();
           set({ driveConnected: true, driveBackups: await listDriveBackups(accessToken) });
         } catch (error) {
           if (error instanceof DriveUnauthorizedError) {
@@ -1107,12 +1159,15 @@ export const useGameStore = create<GameState>()(
             set({ driveConnected: false });
           }
           throw error;
+        } finally {
+          releaseWakeLock("backup");
         }
       },
 
       restoreGoogleDriveBackup: async (fileId, passphrase) => {
-        const accessToken = await requestDriveAccessToken();
+        acquireWakeLock("backup");
         try {
+          const accessToken = await requestDriveAccessToken();
           const summary = await restoreBackupFromDrive(accessToken, fileId, passphrase);
           const [games, settings] = await Promise.all([
             gameRepository.listGames(),
@@ -1126,12 +1181,15 @@ export const useGameStore = create<GameState>()(
             set({ driveConnected: false });
           }
           throw error;
+        } finally {
+          releaseWakeLock("backup");
         }
       },
 
       deleteGoogleDriveBackup: async (fileId) => {
-        const accessToken = await requestDriveAccessToken();
+        acquireWakeLock("backup");
         try {
+          const accessToken = await requestDriveAccessToken();
           await deleteDriveBackup(accessToken, fileId);
           set({ driveBackups: get().driveBackups.filter((backup) => backup.fileId !== fileId) });
         } catch (error) {
@@ -1140,6 +1198,8 @@ export const useGameStore = create<GameState>()(
             set({ driveConnected: false });
           }
           throw error;
+        } finally {
+          releaseWakeLock("backup");
         }
       },
     })),
