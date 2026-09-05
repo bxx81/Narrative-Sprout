@@ -179,6 +179,89 @@ export class OpenAiCompatibleClient {
   }
 }
 
+/**
+ * Per-chunk idle timeout for SSE consumption. The timer arms only after
+ * content streaming starts (one-shot models have a long silent gap between
+ * reasoning and body) and is re-armed before every `read()` past that point.
+ * Disposal clears a pending timer so no `clearTimeout` in `finally` is needed.
+ *
+ * The fired timer both rejects `timeoutPromise` and cancels the reader. The
+ * cancellation can resolve a pending `read()` with `{ done: true }` before
+ * the rejection propagates, so callers must also check `timeoutError` after
+ * the race — otherwise the timeout is silently swallowed as a clean finish.
+ */
+export class SseIdleTimer implements Disposable {
+  private timer: ReturnType<typeof setTimeout> | null = null;
+  private idleReject: ((error: Error) => void) | null = null;
+  private timeoutFailure: DOMException | null = null;
+  /** Rejects when the armed timer fires; never rejects after disposal. */
+  readonly timeoutPromise: Promise<never>;
+
+  constructor(
+    private readonly reader: ReadableStreamDefaultReader<Uint8Array>,
+    private readonly idleTimeoutMs: number,
+  ) {
+    this.timeoutPromise = new Promise<never>((_resolve, reject) => {
+      this.idleReject = reject;
+    });
+    // Avoid unhandled rejection when nothing races against the promise.
+    this.timeoutPromise.catch(() => {});
+  }
+
+  /** The timeout error if the armed timer fired, else null. */
+  get timeoutError(): DOMException | null {
+    return this.timeoutFailure;
+  }
+
+  arm(): void {
+    this.clear();
+    this.timeoutFailure = null;
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      this.timeoutFailure = new DOMException(
+        `No SSE chunk for ${this.idleTimeoutMs}ms`,
+        "TimeoutError",
+      );
+      void this.reader.cancel().catch(() => {});
+      this.idleReject?.(this.timeoutFailure);
+    }, this.idleTimeoutMs);
+  }
+
+  clear(): void {
+    if (this.timer != null) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+  }
+
+  [Symbol.dispose](): void {
+    this.clear();
+  }
+}
+
+/**
+ * Guarantees the SSE reader is cancelled and its lock released when
+ * consumption ends — on `[DONE]`, on completion, or on error. Previously only
+ * the idle-timeout path cancelled the reader; early returns left the
+ * underlying stream to GC.
+ */
+export class SseReaderGuard implements Disposable {
+  constructor(private readonly reader: ReadableStreamDefaultReader<Uint8Array>) {}
+
+  [Symbol.dispose](): void {
+    void this.reader
+      .cancel()
+      .catch(() => {})
+      .finally(() => {
+        try {
+          this.reader.releaseLock();
+        } catch {
+          // Already released or closed — nothing to do.
+        }
+      });
+  }
+}
+
 interface SSEChatCompletionChunk {
   model?: string;
   choices?: {
@@ -204,6 +287,8 @@ async function consumeSSEResponse(
   const readerOrNull = response.body?.getReader();
   if (!readerOrNull) throw new Error("Streaming response has no body.");
   const reader: ReadableStreamDefaultReader<Uint8Array> = readerOrNull;
+  using _readerGuard = new SseReaderGuard(reader);
+  using idleTimer = new SseIdleTimer(reader, idleTimeoutMs);
 
   const decoder = new TextDecoder();
   let buffer = "";
@@ -218,29 +303,6 @@ async function consumeSSEResponse(
   };
   const reportedStreamError = () => streamError;
   let contentStreamingStarted = false;
-
-  let idleTimer: ReturnType<typeof setTimeout> | null = null;
-  let idleReject: ((error: Error) => void) | null = null;
-  const idlePromise = new Promise<never>((_resolve, reject) => {
-    idleReject = reject;
-  });
-  idlePromise.catch(() => {}); // avoid unhandled rejection when nobody races
-
-  function clearIdleTimer(): void {
-    if (idleTimer != null) {
-      clearTimeout(idleTimer);
-      idleTimer = null;
-    }
-  }
-
-  function armIdleTimer(): void {
-    clearIdleTimer();
-    idleTimer = setTimeout(() => {
-      idleTimer = null;
-      void reader.cancel().catch(() => {});
-      idleReject?.(new DOMException(`No SSE chunk for ${idleTimeoutMs}ms`, "TimeoutError"));
-    }, idleTimeoutMs);
-  }
 
   type ChunkReadResult = Awaited<ReturnType<ReadableStreamDefaultReader<Uint8Array>["read"]>>;
 
@@ -283,30 +345,31 @@ async function consumeSSEResponse(
     };
   }
 
-  try {
-    for (;;) {
-      let readResult: ChunkReadResult;
-      if (contentStreamingStarted) {
-        armIdleTimer();
-        readResult = await Promise.race([reader.read(), idlePromise]);
-        clearIdleTimer();
-      } else {
-        readResult = await reader.read();
-      }
-      if (readResult.done) break;
-      buffer += decoder.decode(readResult.value, { stream: true });
-      buffer = buffer.replace(/\r\n/g, "\n");
-      let boundaryIndex = buffer.indexOf("\n\n");
-      while (boundaryIndex !== -1) {
-        const eventBlock = buffer.slice(0, boundaryIndex);
-        buffer = buffer.slice(boundaryIndex + 2);
-        const { done } = handleEventBlock(eventBlock);
-        if (done) return assembleResponse();
-        boundaryIndex = buffer.indexOf("\n\n");
-      }
+  for (;;) {
+    let readResult: ChunkReadResult;
+    if (contentStreamingStarted) {
+      idleTimer.arm();
+      readResult = await Promise.race([reader.read(), idleTimer.timeoutPromise]);
+      idleTimer.clear();
+      // The fired timer cancels the reader, which can resolve the raced
+      // read() with `{ done: true }` before the rejection lands. The flag
+      // check makes the timeout deterministic either way.
+      const timeoutError = idleTimer.timeoutError;
+      if (timeoutError) throw timeoutError;
+    } else {
+      readResult = await reader.read();
     }
-  } finally {
-    clearIdleTimer();
+    if (readResult.done) break;
+    buffer += decoder.decode(readResult.value, { stream: true });
+    buffer = buffer.replace(/\r\n/g, "\n");
+    let boundaryIndex = buffer.indexOf("\n\n");
+    while (boundaryIndex !== -1) {
+      const eventBlock = buffer.slice(0, boundaryIndex);
+      buffer = buffer.slice(boundaryIndex + 2);
+      const { done } = handleEventBlock(eventBlock);
+      if (done) return assembleResponse();
+      boundaryIndex = buffer.indexOf("\n\n");
+    }
   }
 
   const reportedError = reportedStreamError();
