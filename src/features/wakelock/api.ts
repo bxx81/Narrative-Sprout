@@ -83,3 +83,13 @@ export function releaseWakeLock(owner: WakeLockOwner): void {
   if (!wantedOwners.delete(owner)) return;
   updateLock();
 }
+
+export class WakeLockGuard implements Disposable {
+  constructor(private readonly owner: WakeLockOwner) {
+    acquireWakeLock(this.owner);
+  }
+
+  [Symbol.dispose]() {
+    releaseWakeLock(this.owner);
+  }
+}
