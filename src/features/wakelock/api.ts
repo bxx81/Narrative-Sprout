@@ -15,12 +15,7 @@
  */
 
 export type WakeLockOwner =
-  | "generation"
-  | "autoplay"
-  | "translation"
-  | "image"
-  | "theme"
-  | "backup";
+  "generation" | "autoplay" | "translation" | "image" | "theme" | "backup";
 
 const wantedOwners = new Set<WakeLockOwner>();
 let sentinel: WakeLockSentinel | null = null;
