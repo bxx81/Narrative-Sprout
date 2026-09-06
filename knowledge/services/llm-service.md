@@ -15,6 +15,7 @@ All LLM traffic (narration, memory-keeper, archivist, autoplay decisions, AI tra
 
 - **Bulk**: POST chat completions, `ApiError(status, displayMessage)` on HTTP errors (`error.message` extracted when present). Retryable statuses: 429/502/503/504.
 - **Streaming**: `stream: true` + `stream_options: { include_usage: true }`, hand-written SSE parser, 60 s idle watchdog after content starts, mid-stream `error` captured and thrown as `ApiError(500, …)` after the stream ends, final reassembly into a normal response. `onDelta` gets accumulated text; abort via `AbortSignal` (`AbortError` → user-abort classification).
+- **Reasoning**: `extractReasoningText` reads both `reasoning` and `reasoning_content` (DeepSeek-style via OpenRouter) from bulk messages and SSE deltas; `ChatMessage` resends stored reasoning as history context via the `reasoning` field only. Streamed reasoning is accumulated separately, never forwarded to `onDelta`, and the assembled response exposes the merged text as `reasoning`.
 - **App headers**: `OPENROUTER_APP_HEADERS` (`HTTP-Referer`, `X-OpenRouter-Title`, `X-OpenRouter-Categories`) sent only for the default base URL, never for custom `--BaseURL`.
 
 # Model Options

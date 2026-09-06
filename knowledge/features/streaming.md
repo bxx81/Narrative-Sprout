@@ -13,7 +13,7 @@ Narration calls can stream Server-Sent Events so the scene text appears live whi
 
 # Transport
 
-`OpenAiCompatibleClient.createStreamingChatCompletion` sends `stream: true` with `stream_options: { include_usage: true }` and parses SSE by hand (CRLF normalization, `data:` extraction, `[DONE]`, mid-stream `error`, reasoning separation). Behavior:
+`OpenAiCompatibleClient.createStreamingChatCompletion` sends `stream: true` with `stream_options: { include_usage: true }` and parses SSE by hand (CRLF normalization, `data:` extraction, `[DONE]`, mid-stream `error`, reasoning separation of both `delta.reasoning` and `delta.reasoning_content`). Behavior:
 
 - **Idle watchdog**: 60 s max silence between chunks once content started flowing (separate from the `--timeout` request timeout, default 600 s).
 - **Stream rejection fallback**: `ApiError(400/404/415/422)` means the endpoint rejects streaming itself → exactly one retry in bulk mode. 429/5xx are never treated as stream rejection.
