@@ -6,6 +6,14 @@
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
+  /**
+   * Reasoning scratchpad replayed as history context (legacy promptService:
+   * past assistant turns resend their reasoning alongside content).
+   * Omitted when empty. Both keys carry the same text for provider
+   * compatibility (`reasoning` vs `reasoning_content`).
+   */
+  reasoning?: string | null;
+  reasoning_content?: string | null;
 }
 
 export interface ChatCompletionRequest {

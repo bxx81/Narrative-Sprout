@@ -4,7 +4,7 @@ import {
   ApiError,
   extractReasoningText,
 } from "../../lib/openAiClient";
-import type { ChatCompletionRequest } from "../../lib/openAiClient";
+import type { ChatCompletionRequest, ChatMessage } from "../../lib/openAiClient";
 import { buildSamplingParams, parseTextModelOptions } from "../../lib/modelOptions";
 import { debug } from "../../lib/debugLog";
 import type { MemoryDelta, SceneContent } from "../../types";
@@ -68,7 +68,7 @@ async function callChatCompletion(params: {
   apiKey: string;
   model: string;
   system: string;
-  messages: { role: "system" | "user" | "assistant"; content: string }[];
+  messages: ChatMessage[];
   /** Zod schema the response must satisfy (also drives response_format). */
   responseSchema: z.ZodType;
   responseSchemaName: string;
@@ -173,7 +173,7 @@ export async function generateNarration(params: {
   apiKey: string;
   model: string;
   system: string;
-  messages: { role: "system" | "user" | "assistant"; content: string }[];
+  messages: ChatMessage[];
   signal?: AbortSignal;
   onDelta?: (accumulatedText: string) => void;
 }): Promise<GeneratedTurn> {
@@ -222,7 +222,7 @@ export async function generateSceneOnly(params: {
   apiKey: string;
   model: string;
   system: string;
-  messages: { role: "system" | "user" | "assistant"; content: string }[];
+  messages: ChatMessage[];
   signal?: AbortSignal;
   onDelta?: (accumulatedText: string) => void;
 }): Promise<GeneratedSceneOnly> {
@@ -266,7 +266,7 @@ export async function generateMemoryUpdate(params: {
   apiKey: string;
   model: string;
   system: string;
-  messages: { role: "system" | "user" | "assistant"; content: string }[];
+  messages: ChatMessage[];
   signal?: AbortSignal;
 }): Promise<GeneratedMemoryUpdate> {
   const { parsedJson, response } = await callChatCompletion({
@@ -297,7 +297,7 @@ export async function generateStoryLogCompaction(params: {
   apiKey: string;
   model: string;
   system: string;
-  messages: { role: "system" | "user" | "assistant"; content: string }[];
+  messages: ChatMessage[];
   signal?: AbortSignal;
 }): Promise<GeneratedCompaction> {
   const { parsedJson, response } = await callChatCompletion({
