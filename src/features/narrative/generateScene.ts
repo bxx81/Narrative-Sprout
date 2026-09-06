@@ -1,9 +1,5 @@
 import { z } from "zod";
-import {
-  OpenAiCompatibleClient,
-  ApiError,
-  extractReasoningText,
-} from "../../lib/openAiClient";
+import { OpenAiCompatibleClient, ApiError, extractReasoningText } from "../../lib/openAiClient";
 import type { ChatCompletionRequest, ChatMessage } from "../../lib/openAiClient";
 import { buildSamplingParams, parseTextModelOptions } from "../../lib/modelOptions";
 import { debug } from "../../lib/debugLog";
