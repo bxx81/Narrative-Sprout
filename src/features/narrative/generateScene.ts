@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { OpenAiCompatibleClient, ApiError } from "../../lib/openAiClient";
+import {
+  OpenAiCompatibleClient,
+  ApiError,
+  extractReasoningText,
+} from "../../lib/openAiClient";
 import type { ChatCompletionRequest } from "../../lib/openAiClient";
 import { buildSamplingParams, parseTextModelOptions } from "../../lib/modelOptions";
 import { debug } from "../../lib/debugLog";
@@ -145,6 +149,7 @@ async function callChatCompletion(params: {
     cost: response.usage?.cost,
     finishReason: response.choices?.[0]?.finish_reason,
     contentLength: response.choices?.[0]?.message?.content?.length ?? 0,
+    reasoningLength: extractReasoningText(response.choices?.[0]?.message).length,
   });
   const raw = response.choices?.[0]?.message?.content;
   if (typeof raw !== "string" || raw.length === 0) {
@@ -192,7 +197,7 @@ export async function generateNarration(params: {
   const out = parsed.data;
 
   const scene: SceneContent = {
-    reasoning: "",
+    reasoning: extractReasoningText(response.choices?.[0]?.message),
     sceneText: out.sceneText,
     sceneWordCount: countWords(out.sceneText),
     imagePrompt: out.imagePrompt,
@@ -239,7 +244,7 @@ export async function generateSceneOnly(params: {
   }
   const out = parsed.data;
   const scene: SceneContent = {
-    reasoning: "",
+    reasoning: extractReasoningText(response.choices?.[0]?.message),
     sceneText: out.sceneText,
     sceneWordCount: countWords(out.sceneText),
     imagePrompt: out.imagePrompt,
