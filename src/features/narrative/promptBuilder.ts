@@ -19,8 +19,28 @@ const LENGTH_INSTRUCTIONS: Record<string, string> = {
   long: "between 200 and 400 words",
 };
 
-function lengthInstruction(sceneTextLength: string): string {
+export function lengthInstruction(sceneTextLength: string): string {
   return LENGTH_INSTRUCTIONS[sceneTextLength] ?? LENGTH_INSTRUCTIONS["medium"]!;
+}
+
+/**
+ * Closing reminder appended to the final user message of scene calls
+ * (legacy parity: previous output word count + target length + notes rule).
+ * The previous-count sentence is omitted when no count is available
+ * (opening turn, discarded history).
+ */
+export function buildLengthClosing(sceneTextLength: string, previousWordCount?: number): string {
+  const previous =
+    typeof previousWordCount === "number" &&
+    Number.isFinite(previousWordCount) &&
+    previousWordCount >= 0
+      ? `Previous scene was ${Math.trunc(previousWordCount)} words. `
+      : "";
+  return (
+    `${previous}` +
+    `Target scene length: ${lengthInstruction(sceneTextLength)}. ` +
+    "Output ONLY the keys that changed in notes."
+  );
 }
 
 /** Lower word bound per sceneTextLength setting (matches legacy length orders).
@@ -97,6 +117,10 @@ export function buildOpeningPrompt(params: {
  * system + attachments + latest memory + up to 5 past turns (user promptSent / assistant
  * scene JSON pairs, oldest first) + the current choice.
  */
+export function buildTurnLabel(turnNumber: number): string {
+  return `This is turn ${Math.trunc(turnNumber)} of the story. `;
+}
+
 export function buildTurnPrompt(params: {
   theme: string;
   language: string;
@@ -105,6 +129,16 @@ export function buildTurnPrompt(params: {
   ancestorNodes: StoryNodeRecord[];
   memory: MemoryState;
   choiceText: string;
+  /** 1-based number of the scene being requested (anchors "turns 1-4 are prequel" style rules). */
+  turnNumber: number;
+  /**
+   * Word count of the previous output (legacy parity). Defaults to the
+   * newest ancestor's stored `sceneWordCount` so callers don't need to
+   * pass it; an explicit value keeps the reminder when history is
+   * discarded (empty ancestors) or when refining the same turn
+   * (the target node's count, not its parent's).
+   */
+  previousSceneWordCount?: number;
   attachmentTexts?: string[];
   /**
    * Split-strategy scene call: past turns must not show notes/sceneSummary —
@@ -165,8 +199,11 @@ export function buildTurnPrompt(params: {
       role: "user",
       content:
         `${params.choiceText}\n` +
-        `Target scene length: ${lengthInstruction(params.sceneTextLength)}. ` +
-        "Output ONLY the keys that changed in notes.",
+        buildTurnLabel(params.turnNumber) +
+        buildLengthClosing(
+          params.sceneTextLength,
+          params.previousSceneWordCount ?? params.ancestorNodes[0]?.scene.sceneWordCount,
+        ),
     },
   ];
   return { system, messages };
