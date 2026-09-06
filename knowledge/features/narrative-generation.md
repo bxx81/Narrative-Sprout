@@ -73,7 +73,7 @@ Custom `--BaseURL` removes these headers.
 | `novel` | 400–1200 words | Novel-length passages. |
 | `novel2` | 800–1600 words | Longer novel passages. |
 
-The target is injected into the user message (`Target scene length: …`), not the system prompt. Each save snapshots `sceneTextLength` at creation; later turns use the snapshot (`activeGame.sceneTextLength ?? settings.sceneTextLength`), with old saves falling back to the global setting.
+The target is injected into the user message as the closing reminder (`buildLengthClosing`: `Previous scene was N words. Target scene length: … Output ONLY the keys that changed in notes.`), not the system prompt. The previous-count sentence uses the stored `sceneWordCount` of the preceding output (explicit `previousSceneWordCount`, defaulting to the newest ancestor; omitted when unavailable) and survives history discard. `buildTurnPrompt` also prefixes the closing with a turn anchor (`buildTurnLabel`: `This is turn N of the story.`, with `turnNumber = parentNode.turnNumber + 1`; root refine uses turn 1) so theme rules like "turns 1–4 are prequel" can reference it. History replay (`promptSent`) never carries these reminders. Each save snapshots `sceneTextLength` at creation; later turns use the snapshot (`activeGame.sceneTextLength ?? settings.sceneTextLength`), with old saves falling back to the global setting.
 
 The numeric lower bounds per setting are exported as `minWordsTarget` (`promptBuilder.ts` `MIN_WORDS`: short/default 50, medium/detailed 100, verbose 200, long 200, novel 400, novel2 800; unknown values fall back to medium) and drive the starting screen's pseudo progress bar (words received ÷ lower bound, capped at 90%).
 
@@ -126,12 +126,16 @@ Attachment context (user → assistant ack, text parts only, flags resolved)
   ↓
 Internal Monologue summary (latest notes + storyLog + storyLogSummary)
   ↓
-Past turns (promptSent → scene JSON, up to 5 turns, oldest first)
+Past turns (user promptSent → assistant scene JSON + stored reasoning, up to 5 turns, oldest first)
   ↓
-Current user choice + word count reminder
+Current user choice + turn anchor + length closing (previous word count + target + notes rule)
 ```
 
-`buildOpeningPrompt` covers turn 1; `buildTurnPrompt` covers later turns. History MUST be replayed in wire format (`sceneToWireResponse`: `choice1..3`, no `choices` array) — see [Scene Structure](/data-model/scene.md).
+`buildOpeningPrompt` covers turn 1; `buildTurnPrompt` covers later turns. History MUST be replayed in wire format (`sceneToWireResponse`: `choice1..3`, no `choices` array) — see [Scene Structure](/data-model/scene.md). Each replayed assistant turn also resends its stored `SceneContent.reasoning` as the message-level `reasoning` field (legacy `promptService` parity; omitted when empty) so reasoning models keep their chain-of-thought context.
+
+# Reasoning capture
+
+`generateScene.ts` stores the provider thinking text into `SceneContent.reasoning` via `extractReasoningText` (`src/lib/openAiClient.ts`), which accepts both `reasoning` and `reasoning_content` (e.g. DeepSeek via OpenRouter) in bulk and streaming responses. Streaming deltas accumulate both fields; the assembled response exposes the merged text as `reasoning`. Outgoing history resends it as `reasoning` only.
 
 # Output Schema (Zod)
 

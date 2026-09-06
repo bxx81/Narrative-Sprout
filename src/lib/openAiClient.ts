@@ -9,11 +9,9 @@ export interface ChatMessage {
   /**
    * Reasoning scratchpad replayed as history context (legacy promptService:
    * past assistant turns resend their reasoning alongside content).
-   * Omitted when empty. Both keys carry the same text for provider
-   * compatibility (`reasoning` vs `reasoning_content`).
+   * Omitted when empty. Sent as `reasoning` only.
    */
   reasoning?: string | null;
-  reasoning_content?: string | null;
 }
 
 export interface ChatCompletionRequest {
@@ -384,7 +382,7 @@ async function consumeSSEResponse(
       model,
       choices: [
         {
-          message: { content, reasoning, reasoning_content: reasoning },
+          message: { content, reasoning },
           finish_reason: finishReason ?? undefined,
         },
       ],

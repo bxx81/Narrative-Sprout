@@ -13,7 +13,7 @@ source: src/types/scene.ts, src/features/narrative/sceneSchema.ts, memoryMerge.t
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `reasoning` | string | Model scratchpad/thinking before the scene. |
+| `reasoning` | string | Model scratchpad/thinking before the scene. Populated from the chat response via `extractReasoningText` (`reasoning` or `reasoning_content`, e.g. DeepSeek via OpenRouter); empty when the provider returns none. |
 | `sceneText` | string | Literary prose of the scene. |
 | `sceneWordCount` | int ≥ 0 | Word count of `sceneText` (renamed from legacy `wordsSceneText`; CJK-aware counting). |
 | `imagePrompt` | string | English visual prompt for this scene's illustration. |
@@ -32,3 +32,5 @@ source: src/types/scene.ts, src/features/narrative/sceneSchema.ts, memoryMerge.t
 # Wire Format (What the Model Sees)
 
 The narrator is asked for `choice1..3` (split fields — arrays proved unreliable across models), nullable `locationContext` / `negativeImagePrompt` / `finalEndingPassage`, top-level `sceneSummary`, and `notes`. Past turns MUST be replayed in this exact shape via `sceneToWireResponse(scene, memoryDelta, { omitMemoryFields? })`: replaying stored shape (`choices` array, `sceneWordCount`, …) teaches non-strict providers to imitate it and breaks the next validation (legacy `stored2work` lesson). Split scene calls pass `omitMemoryFields` so history shows no `notes`/`sceneSummary`. Split/memory/archivist variants: `narratorSceneOnlyResponseSchema` (scene + throwaway `notesDraft`), `memoryUpdateResponseSchema`, `storyLogCompactionResponseSchema`.
+
+History assistant messages also carry the turn's stored `reasoning` back as the message-level `reasoning` field (legacy `promptService` parity; omitted when empty). `reasoning` itself is never part of the wire JSON body.
