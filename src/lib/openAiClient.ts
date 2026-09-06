@@ -6,6 +6,14 @@
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
+  /**
+   * Reasoning scratchpad replayed as history context (legacy promptService:
+   * past assistant turns resend their reasoning alongside content).
+   * Omitted when empty. Both keys carry the same text for provider
+   * compatibility (`reasoning` vs `reasoning_content`).
+   */
+  reasoning?: string | null;
+  reasoning_content?: string | null;
 }
 
 export interface ChatCompletionRequest {
@@ -23,7 +31,11 @@ export interface ChatCompletionRequest {
 export interface ChatCompletionResponse {
   model?: string;
   choices?: {
-    message?: { content?: string | null; reasoning?: string | null };
+    message?: {
+      content?: string | null;
+      reasoning?: string | null;
+      reasoning_content?: string | null;
+    };
     finish_reason?: string;
   }[];
   usage?: { total_tokens?: number; cost?: number };
@@ -265,7 +277,12 @@ export class SseReaderGuard implements Disposable {
 interface SSEChatCompletionChunk {
   model?: string;
   choices?: {
-    delta?: { content?: string | null; reasoning?: string | null; finish_reason?: string | null };
+    delta?: {
+      content?: string | null;
+      reasoning?: string | null;
+      reasoning_content?: string | null;
+      finish_reason?: string | null;
+    };
     finish_reason?: string | null;
   }[];
   usage?: { total_tokens?: number; cost?: number };
@@ -273,8 +290,32 @@ interface SSEChatCompletionChunk {
 }
 
 /**
+ * Extracts provider reasoning text from a chat message or delta.
+ * Legacy providers return `reasoning`, others (e.g. DeepSeek via OpenRouter)
+ * return `reasoning_content` — both are treated as reasoning.
+ */
+export function extractReasoningText(
+  message: { reasoning?: string | null; reasoning_content?: string | null } | null | undefined,
+): string {
+  if (!message) return "";
+  const parts: string[] = [];
+  if (typeof message.reasoning === "string" && message.reasoning.length > 0) {
+    parts.push(message.reasoning);
+  }
+  if (
+    typeof message.reasoning_content === "string" &&
+    message.reasoning_content.length > 0 &&
+    message.reasoning_content !== message.reasoning
+  ) {
+    parts.push(message.reasoning_content);
+  }
+  return parts.join("");
+}
+
+/**
  * Reads an SSE chat-completions response: accumulates `delta.content` (and
- * `delta.reasoning` separately), captures model/usage/finish_reason, and
+ * reasoning separately — both `delta.reasoning` and `delta.reasoning_content`),
+ * captures model/usage/finish_reason, and
  * assembles a normal completion response (legacy consumeSSEResponse). The
  * idle timeout arms per chunk only AFTER content streaming starts — one-shot
  * models have a long silent gap between reasoning and body.
@@ -325,8 +366,9 @@ async function consumeSSEResponse(
       const finish = choice?.delta?.finish_reason ?? choice?.finish_reason ?? null;
       if (finish != null) finishReason = finish;
       const delta = choice?.delta;
-      if (typeof delta?.reasoning === "string" && delta.reasoning.length > 0) {
-        reasoning += delta.reasoning;
+      const deltaReasoning = extractReasoningText(delta);
+      if (deltaReasoning.length > 0) {
+        reasoning += deltaReasoning;
       }
       if (typeof delta?.content === "string" && delta.content.length > 0) {
         content += delta.content;
@@ -340,7 +382,12 @@ async function consumeSSEResponse(
   function assembleResponse(): ChatCompletionResponse {
     return {
       model,
-      choices: [{ message: { content, reasoning }, finish_reason: finishReason ?? undefined }],
+      choices: [
+        {
+          message: { content, reasoning, reasoning_content: reasoning },
+          finish_reason: finishReason ?? undefined,
+        },
+      ],
       usage,
     };
   }

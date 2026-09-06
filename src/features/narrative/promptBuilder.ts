@@ -117,17 +117,24 @@ export function buildTurnPrompt(params: {
   const historyPairs = params.ancestorNodes
     .slice(0, MAX_HISTORY_TURNS)
     .reverse()
-    .flatMap((node): ChatMessage[] => [
-      { role: "user", content: node.promptSent },
-      {
-        role: "assistant",
-        content: JSON.stringify(
-          sceneToWireResponse(node.scene, node.memoryDelta, {
-            omitMemoryFields: params.omitMemoryFields,
-          }),
-        ),
-      },
-    ]);
+    .flatMap((node): ChatMessage[] => {
+      // Legacy promptService resent each past turn's reasoning alongside its
+      // content as history context. Stored as SceneContent.reasoning (which
+      // already merges `reasoning` / `reasoning_content` from the provider).
+      const reasoning = node.scene.reasoning?.trim() ? node.scene.reasoning : undefined;
+      return [
+        { role: "user", content: node.promptSent },
+        {
+          role: "assistant",
+          ...(reasoning ? { reasoning } : {}),
+          content: JSON.stringify(
+            sceneToWireResponse(node.scene, node.memoryDelta, {
+              omitMemoryFields: params.omitMemoryFields,
+            }),
+          ),
+        },
+      ];
+    });
 
   const attachmentMessages = buildAttachmentMessages(
     params.attachmentTexts ?? [],
