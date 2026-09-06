@@ -5,8 +5,10 @@ import {
   applyMemoryDelta,
   sceneToWireResponse,
   buildCompactionPrompt,
+  buildLengthClosing,
   buildMemoryUpdatePrompt,
   buildOpeningPrompt,
+  buildTurnLabel,
   buildTurnPrompt,
 } from "../narrative/api";
 import {
@@ -304,6 +306,9 @@ export async function choosePath(
     ancestorNodes: params.ancestors,
     memory: baseMemory,
     choiceText: params.choiceText,
+    turnNumber: params.parentNode.turnNumber + 1,
+    // Explicit so the reminder survives history discard (empty ancestors).
+    previousSceneWordCount: params.parentNode.scene.sceneWordCount,
     attachmentTexts,
     omitMemoryFields: strategy === "split",
   });
@@ -483,12 +488,13 @@ export async function refineScene(
       omitMemoryFields: strategy === "split",
     }),
   );
-  const refineInstruction =
-    (isRoot
-      ? `[Refine request for the first scene] Please regenerate the ENTIRE response based on instructions:\nOriginal scene:\n${originalSceneJson}\n\nUser instructions: ${params.refinePrompt}`
-      : `[Refine request] The player chose: "${choiceText}". The following scene data was generated but needs correction. Please regenerate the ENTIRE response based on instructions:\nOriginal scene:\n${originalSceneJson}\n\nUser instructions: ${params.refinePrompt}`) +
-    `\nTarget scene length: ${params.sceneTextLength}. Output ONLY the keys that changed in notes.`;
+  // Length closing is appended by buildTurnPrompt (non-root) or explicitly
+  // (root). Keep the core free of it to avoid a duplicated reminder.
+  const refineCore = isRoot
+    ? `[Refine request for the first scene] Please regenerate the ENTIRE response based on instructions:\nOriginal scene:\n${originalSceneJson}\n\nUser instructions: ${params.refinePrompt}`
+    : `[Refine request] The player chose: "${choiceText}". The following scene data was generated but needs correction. Please regenerate the ENTIRE response based on instructions:\nOriginal scene:\n${originalSceneJson}\n\nUser instructions: ${params.refinePrompt}`;
 
+  let refineInstruction: string;
   let system: string;
   let messages: import("../../lib/openAiClient").ChatMessage[];
 
@@ -499,9 +505,14 @@ export async function refineScene(
       sceneTextLength: params.sceneTextLength,
       attachmentTexts,
     });
+    refineInstruction =
+      `${refineCore}\n` +
+      buildTurnLabel(1) +
+      buildLengthClosing(params.sceneTextLength, params.targetNode.scene.sceneWordCount);
     system = opening.system;
     messages = [...opening.messages.slice(0, -1), { role: "user", content: refineInstruction }];
   } else {
+    refineInstruction = refineCore;
     const turn = buildTurnPrompt({
       theme: params.game.title,
       language: params.language,
@@ -509,6 +520,9 @@ export async function refineScene(
       ancestorNodes: params.ancestors,
       memory: baseMemory,
       choiceText: refineInstruction,
+      turnNumber: params.targetNode.turnNumber,
+      // The output being corrected is the target node itself, not its parent.
+      previousSceneWordCount: params.targetNode.scene.sceneWordCount,
       attachmentTexts,
       omitMemoryFields: strategy === "split",
     });

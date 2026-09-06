@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   buildCompactionPrompt,
+  buildLengthClosing,
   buildMemoryUpdatePrompt,
   buildOpeningPrompt,
   buildTurnPrompt,
@@ -92,6 +93,7 @@ describe("buildTurnPrompt", () => {
       ancestorNodes: [a, root],
       memory: { notes: { "flag:x": "1" }, storyLog: ["old"] },
       choiceText: "new choice",
+      turnNumber: 3,
       attachmentTexts: ["note <flag:x>shown</flag:x>"],
     });
     expect(system).toContain("world");
@@ -120,6 +122,7 @@ describe("buildTurnPrompt", () => {
       ancestorNodes: nodes.reverse(), // newest first
       memory: { notes: {}, storyLog: [] },
       choiceText: "next",
+      turnNumber: 11,
     });
     // history pairs: 5 turns *2 =10 + attachment? none + memory 2 + final 1 =13
     // So total should be 13 (2 memory +10 history +1 final)
@@ -135,12 +138,86 @@ describe("buildTurnPrompt", () => {
       ancestorNodes: [root],
       memory: { notes: {}, storyLog: [] },
       choiceText: "next",
+      turnNumber: 2,
     });
     const assistantMessages = messages.filter((m) => m.role === "assistant");
     const historyJson = assistantMessages[assistantMessages.length - 1].content;
     expect(historyJson).toContain('"choice1"');
     expect(historyJson).not.toContain('"choices"');
     expect(historyJson).not.toContain("sceneWordCount");
+  });
+
+  test("appends the newest ancestor's word count to the length reminder", () => {
+    const root = makeNode("root", null, 1, "root prompt");
+    root.scene.sceneWordCount = 42;
+    const { messages } = buildTurnPrompt({
+      theme: "t",
+      language: "Japanese",
+      sceneTextLength: "medium",
+      ancestorNodes: [root],
+      memory: { notes: {}, storyLog: [] },
+      choiceText: "next",
+      turnNumber: 2,
+    });
+    const last = messages[messages.length - 1].content;
+    expect(last).toContain("Previous scene was 42 words.");
+    expect(last).toContain("Target scene length: between 100 and 200 words.");
+  });
+
+  test("explicit previousSceneWordCount wins and survives empty history", () => {
+    const { messages } = buildTurnPrompt({
+      theme: "t",
+      language: "Japanese",
+      sceneTextLength: "novel2",
+      ancestorNodes: [],
+      memory: { notes: {}, storyLog: [] },
+      choiceText: "next",
+      turnNumber: 6,
+      previousSceneWordCount: 817,
+    });
+    const last = messages[messages.length - 1].content;
+    expect(last).toContain("Previous scene was 817 words.");
+    expect(last).toContain("between 800 and 1600 words");
+  });
+
+  test("omits the previous-count sentence when history is empty", () => {
+    const { messages } = buildTurnPrompt({
+      theme: "t",
+      language: "Japanese",
+      sceneTextLength: "medium",
+      ancestorNodes: [],
+      memory: { notes: {}, storyLog: [] },
+      choiceText: "next",
+      turnNumber: 2,
+    });
+    const last = messages[messages.length - 1].content;
+    expect(last).not.toContain("Previous scene was");
+    expect(last).toContain("Target scene length:");
+  });
+
+  test("buildLengthClosing maps raw length keys to instructions", () => {
+    // Regression: refine used to embed the raw key ("novel2").
+    expect(buildLengthClosing("novel2", 10)).toContain("between 800 and 1600 words");
+    expect(buildLengthClosing("novel2", 10)).not.toContain("Target scene length: novel2");
+    expect(buildLengthClosing("medium")).not.toContain("Previous scene was");
+  });
+
+  test("announces the requested turn number once in the final message", () => {
+    const root = makeNode("root", null, 1, "root prompt");
+    const { messages } = buildTurnPrompt({
+      theme: "t",
+      language: "Japanese",
+      sceneTextLength: "medium",
+      ancestorNodes: [root],
+      memory: { notes: {}, storyLog: [] },
+      choiceText: "next",
+      turnNumber: 5,
+    });
+    const last = messages[messages.length - 1].content;
+    expect(last).toContain("This is turn 5 of the story.");
+    // History replay must not carry the label (promptSent verbatim).
+    const historyUser = messages.find((m) => m.role === "user" && m.content === "root prompt");
+    expect(historyUser).toBeDefined();
   });
 
   test("omitMemoryFields hides notes/sceneSummary from history (split scene call)", () => {
@@ -153,6 +230,7 @@ describe("buildTurnPrompt", () => {
       ancestorNodes: [node],
       memory: { notes: {}, storyLog: [] },
       choiceText: "next",
+      turnNumber: 2,
       omitMemoryFields: true,
     });
     const assistantMessages = messages.filter((m) => m.role === "assistant");
