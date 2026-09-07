@@ -234,10 +234,6 @@ export async function startGame(
     // Snapshot the scene length the save is created with: later generations
     // of this save keep using it (legacy per-save behavior).
     sceneTextLength: params.sceneTextLength,
-    // Snapshot the display language at game start as this save's narrative
-    // language: later turns keep generating in it even if the UI language
-    // changed afterwards.
-    language: params.language,
   };
 
   let asset: import("../../types/asset").AssetRecord | null = null;

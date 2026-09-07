@@ -4,12 +4,12 @@ title: Localization (v2)
 description: Built-in UI languages, AI dynamic translation, and per-language fonts in Narrative Sprout v2.
 tags: [i18n, translation, fonts]
 timestamp: 2026-09-02T00:00:00Z
-source: src/features/i18n/config.ts, index.ts, translateService.ts, englishUiTexts.ts, locales/, src/types/game.ts, src/store/gameStore.ts
+source: src/features/i18n/config.ts, index.ts, translateService.ts, englishUiTexts.ts, locales/
 ---
 
 # Overview
 
-UI language (`settings.uiLanguage`, stored as the **native display name**) is independent from the UI of other saves, but it determines each story's prose language once: at game start the current display language is snapshotted as that save's narrative language (`GameRecord.language`), and all later turns of the save keep generating in it even if the display language changes afterwards.
+UI language (`settings.uiLanguage`, stored as the **native display name**) drives the narrative language: every display-language change mirrors into `settings.language` (same native name), which is injected into story prompts. Switching the display to English therefore switches generated prose to English as well.
 
 # Built-in Languages
 
@@ -27,7 +27,7 @@ Five languages bundled at build time (`src/features/i18n/locales/*.json`, 327 ke
 
 # AI Dynamic Translation
 
-`translateService.ts`: any user-typed language (e.g. Español) is translated from the English texts in 30-key sequential chunks (500 ms politeness delay, 0..1 progress). `getTranslateLanguageCode` resolves the IETF tag (built-in check → 30-language table → LLM call with validation, falling back to the raw name). Results persist in `settings.aiTranslations` (name → bundle) / `aiLanguageMappings` (name → tag), element-wise validated. The selector groups built-ins separately from `(AI)` languages; deleting the active AI language falls back to English. Translation failure toasts (`aiTranslationError`). RTL languages are supported at document level; narrative prose follows the save's snapshotted language (`GameRecord.language`, fixed from the display language at game start), not the current UI language — so an English-started save keeps English prompts after switching the display to Japanese, and vice versa.
+`translateService.ts`: any user-typed language (e.g. Español) is translated from the English texts in 30-key sequential chunks (500 ms politeness delay, 0..1 progress). `getTranslateLanguageCode` resolves the IETF tag (built-in check → 30-language table → LLM call with validation, falling back to the raw name). Results persist in `settings.aiTranslations` (name → bundle) / `aiLanguageMappings` (name → tag), element-wise validated. The selector groups built-ins separately from `(AI)` languages; deleting the active AI language falls back to English. Translation failure toasts (`aiTranslationError`). RTL languages are supported at document level; narrative prose follows `settings.language`, which always mirrors the current display language (see [Settings System](/features/settings-system.md)).
 
 # Fonts
 

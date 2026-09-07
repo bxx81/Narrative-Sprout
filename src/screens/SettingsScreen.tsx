@@ -216,6 +216,7 @@ const SettingsScreen: React.FC = () => {
   const saveApiKey = useGameStore((s) => s.saveApiKey);
   const saveCredential = useGameStore((s) => s.saveCredential);
   const updateSettings = useGameStore((s) => s.updateSettings);
+  const setUiLanguage = useGameStore((s) => s.setUiLanguage);
   const goToTitle = useGameStore((s) => s.goToTitle);
   const wipeAllData = useGameStore((s) => s.wipeAllData);
   const translateUi = useGameStore((s) => s.translateUi);
@@ -455,7 +456,9 @@ const SettingsScreen: React.FC = () => {
           <select
             id="ui-language-select"
             value={uiLanguage}
-            onChange={(e) => void updateSettings({ uiLanguage: e.target.value })}
+            // setUiLanguage also mirrors the choice into settings.language
+            // so story prompts follow the display language.
+            onChange={(e) => void setUiLanguage(e.target.value)}
             className="form-style"
           >
             {displayBuiltInLanguages.map((language) => (

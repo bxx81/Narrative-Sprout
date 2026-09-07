@@ -24,9 +24,8 @@ One playthrough's header (`src/types/game.ts`):
 | `latestNodeId` | `StoryNodeId \| null` | Reference-only pointer for list previews (no duplicated scene data). |
 | `attachmentTexts` | `string[]?` | Per-game world texts (front matter resolved, `{a\|b}` applied). Element-wise validated. |
 | `sceneTextLength` | `string?` | Length order snapshotted at creation; later turns prefer it over global settings (old saves omit → global fallback). |
-| `language` | `string?` | Narrative language snapshotted at creation (the display language at game start, e.g. `"English"` / `"日本語"`); later turns prefer it over the current display language (old saves omit → display-language fallback). |
 
-Holds NO secrets and no other settings (those stay global), by design — `sceneTextLength` and `language` are the only per-save snapshots.
+Holds NO secrets and no other settings (those stay global), by design.
 
 # StoryNodeRecord (One Turn)
 

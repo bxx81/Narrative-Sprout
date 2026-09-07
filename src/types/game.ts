@@ -7,11 +7,9 @@ import { memoryDeltaSchema, memoryStateSchema, sceneContentSchema } from "./scen
  *
  * - `GameRecord`      : one playthrough (save slot header). Holds NO secrets
  *                       and no other settings — those are global (§5.4) —
- *                       except `sceneTextLength` and `language`, snapshotted
- *                       per save so later generations keep the length and
- *                       narrative language the save was created with
- *                       (legacy per-save behavior for length; language is
- *                       fixed from the display language at game start).
+ *                       except `sceneTextLength`, snapshotted per save so
+ *                       later generations keep the length the save was
+ *                       created with (legacy per-save behavior).
  * - `StoryNodeRecord` : one turn of the story tree. Its image asset lives in
  *                       the `assets` store keyed by the same node id (§5.3);
  *                       there is intentionally no asset reference field here.
@@ -54,13 +52,6 @@ export const gameRecordSchema = z.object({
    * back to the global setting at the call site.
    */
   sceneTextLength: z.string().optional(),
-  /**
-   * Narrative language snapshotted when the save was created (the display
-   * language at game start): later generations for this save keep using it
-   * even if the global display language changed. Optional so old saves
-   * parse — they fall back to the current display language at the call site.
-   */
-  language: z.string().optional(),
 });
 export type GameRecord = z.infer<typeof gameRecordSchema>;
 

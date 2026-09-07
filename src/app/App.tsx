@@ -110,7 +110,6 @@ const AppLayout: React.FC = () => {
   const uiLanguage = settings?.uiLanguage;
   const aiLanguageMappings = settings?.aiLanguageMappings;
   const aiTranslationTexts = settings ? settings.aiTranslations[settings.uiLanguage] : undefined;
-  const activeGameLanguage = useGameStore((s) => s.activeGame?.language);
   useEffect(() => {
     if (!settings) return;
     const languageCode = getLanguageCode(settings.uiLanguage, settings.aiLanguageMappings);
@@ -119,13 +118,10 @@ const AppLayout: React.FC = () => {
     }
     void i18n.changeLanguage(languageCode);
     applyLanguageDocumentEffects(settings.uiLanguage, settings.aiLanguageMappings);
-    // The word counter follows the narrative language: the active save's
-    // snapshot when playing, otherwise the current display language (old
-    // saves without a snapshot follow the display language as well).
-    setWordCountLanguage(
-      getLanguageCode(activeGameLanguage ?? settings.uiLanguage, settings.aiLanguageMappings),
-    );
-  }, [settings, uiLanguage, aiLanguageMappings, aiTranslationTexts, activeGameLanguage]);
+    // The word counter follows the narrative language (legacy langCode
+    // passed to the Intl.Segmenter word count).
+    setWordCountLanguage(getLanguageCode(settings.language, settings.aiLanguageMappings));
+  }, [settings, uiLanguage, aiLanguageMappings, aiTranslationTexts]);
 
   // Full data wipe reloads the app with this flag set; show the completion
   // screen instead of the routed screen.
