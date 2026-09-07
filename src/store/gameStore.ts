@@ -978,7 +978,9 @@ export const useGameStore = create<GameState>()(
       },
 
       setUiLanguage: async (languageName) => {
-        await get().updateSettings({ uiLanguage: languageName });
+        // Display-language changes always mirror into the narrative language
+        // so story prompts follow the UI language (identity: native names).
+        await get().updateSettings({ uiLanguage: languageName, language: languageName });
       },
 
       translateUi: async (languageName) => {
@@ -1007,6 +1009,8 @@ export const useGameStore = create<GameState>()(
               [languageName]: languageCode,
             },
             uiLanguage: languageName,
+            // A newly translated UI becomes the narrative language as well.
+            language: languageName,
           });
           set({ uiTranslation: { phase: "idle" }, uiTranslationProgress: null });
         } catch (error) {
@@ -1028,7 +1032,13 @@ export const useGameStore = create<GameState>()(
         delete aiTranslations[languageName];
         delete aiLanguageMappings[languageName];
         const uiLanguage = settings.uiLanguage === languageName ? "English" : settings.uiLanguage;
-        await get().updateSettings({ aiTranslations, aiLanguageMappings, uiLanguage });
+        // Keep the narrative language mirroring the resulting UI language.
+        await get().updateSettings({
+          aiTranslations,
+          aiLanguageMappings,
+          uiLanguage,
+          language: uiLanguage,
+        });
       },
 
       deleteSave: async (gameId) => {

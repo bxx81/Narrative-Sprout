@@ -11,11 +11,15 @@ source: src/types/settings.ts, src/screens/SettingsScreen.tsx, src/store/gameSto
 
 Settings are a global singleton (`settings` table, `key: "app"`); the store's `updateSettings(partial)` is the only write path. Generation settings are global-only — saves hold none of them — except the `sceneTextLength` snapshot (see [Narrative Generation](narrative-generation.md)). Secrets live in `credentials`, never in settings (see [LLM Service](/services/llm-service.md)).
 
+# Narrative Language Sync
+
+`language` (injected into story prompts) always mirrors the display language (`uiLanguage`, native name — identity, no mapping table). Every display-language write path carries both values: the Settings selector (via `setUiLanguage`), `translateUi` (new AI language becomes the narrative language too), and `deleteAiTranslation` (falling back to English when the active AI language is deleted). On first run (no stored settings row), `settingsRepository.get()` seeds `language` from the detected display language (`getInitialUiLanguage`) instead of the `"Japanese"` default.
+
 # Settings Reference
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `language` | `"Japanese"` | Narrative language injected into prompts. |
+| `language` | `"Japanese"` (fresh installs: detected display language) | Narrative language injected into prompts. Always mirrors `uiLanguage` (see above). |
 | `uiLanguage` | browser-detected | UI display language (native name, e.g. `"English"`). See [Localization](/configuration/localization.md). |
 | `sceneTextLength` | `"medium"` | Target prose length for **new** saves (`short/medium/detailed/long/verbose/novel/novel2`). |
 | `textModel` | `"openai/gpt-4o-mini"` | Narrator model id + `--options`. See [Narrative Generation](narrative-generation.md). |

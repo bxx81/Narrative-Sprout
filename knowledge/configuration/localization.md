@@ -9,7 +9,7 @@ source: src/features/i18n/config.ts, index.ts, translateService.ts, englishUiTex
 
 # Overview
 
-UI language (`settings.uiLanguage`, stored as the **native display name**) is independent from narrative language (`settings.language`, injected into story prompts).
+UI language (`settings.uiLanguage`, stored as the **native display name**) drives the narrative language: every display-language change mirrors into `settings.language` (same native name), which is injected into story prompts. Switching the display to English therefore switches generated prose to English as well.
 
 # Built-in Languages
 
@@ -27,7 +27,7 @@ Five languages bundled at build time (`src/features/i18n/locales/*.json`, 327 ke
 
 # AI Dynamic Translation
 
-`translateService.ts`: any user-typed language (e.g. Español) is translated from the English texts in 30-key sequential chunks (500 ms politeness delay, 0..1 progress). `getTranslateLanguageCode` resolves the IETF tag (built-in check → 30-language table → LLM call with validation, falling back to the raw name). Results persist in `settings.aiTranslations` (name → bundle) / `aiLanguageMappings` (name → tag), element-wise validated. The selector groups built-ins separately from `(AI)` languages; deleting the active AI language falls back to English. Translation failure toasts (`aiTranslationError`). RTL languages are supported at document level; narrative prose follows the game language, not the UI language.
+`translateService.ts`: any user-typed language (e.g. Español) is translated from the English texts in 30-key sequential chunks (500 ms politeness delay, 0..1 progress). `getTranslateLanguageCode` resolves the IETF tag (built-in check → 30-language table → LLM call with validation, falling back to the raw name). Results persist in `settings.aiTranslations` (name → bundle) / `aiLanguageMappings` (name → tag), element-wise validated. The selector groups built-ins separately from `(AI)` languages; deleting the active AI language falls back to English. Translation failure toasts (`aiTranslationError`). RTL languages are supported at document level; narrative prose follows `settings.language`, which always mirrors the current display language (see [Settings System](/features/settings-system.md)).
 
 # Fonts
 
