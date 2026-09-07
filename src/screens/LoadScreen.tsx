@@ -12,6 +12,7 @@ import { ROUTES } from "../app/routes";
 import Button from "../components/ui/Button";
 import { LOAD_SCREEN_FALLBACK_URL } from "../components/game/imageFallbacks";
 import { useConfirm } from "../hooks/useConfirm";
+import { DIALOG_EMBEDDED_TITLE_MAX_LENGTH, truncateText } from "../lib/truncateText";
 
 /**
  * A card component for displaying a saved game.
@@ -45,11 +46,14 @@ const GameLogCard: React.FC<{ game: GameRecord }> = ({ game }) => {
   };
 
   const handleDelete = async () => {
+    // game.title holds the full theme text (up to tens of KB). Embedding it
+    // raw would blow up the dialog, so shorten it for the message.
+    const shortTitle = truncateText(game.title, DIALOG_EMBEDDED_TITLE_MAX_LENGTH);
     const result = await confirm({
       title: t("deleteConfirmTitle"),
       message: t("deleteSaveConfirmMessage", {
-        title: game.title,
-        defaultValue: `Delete "${game.title}" and all of its scenes and images? This cannot be undone.`,
+        title: shortTitle,
+        defaultValue: `Delete "${shortTitle}" and all of its scenes and images? This cannot be undone.`,
       }),
       confirmLabel: t("deleteButton"),
       cancelLabel: t("cancelButton"),

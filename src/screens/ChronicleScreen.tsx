@@ -10,6 +10,7 @@ import { useLazyNodeImage } from "../hooks/useLazyNodeImage";
 import BackButton from "../components/ui/BackButton";
 import { collectAncestors } from "../features/storytree/api";
 import type { StoryNodeRecord } from "../types";
+import { IMAGE_ALT_MAX_LENGTH, INLINE_QUOTE_MAX_LENGTH, truncateText } from "../lib/truncateText";
 
 /**
  * A single node card in the branch chronicle view.
@@ -44,7 +45,7 @@ const ChronicleNode: React.FC<{
         ) : (
           <img
             src={imageUrl || undefined}
-            alt={node.scene.imagePrompt}
+            alt={truncateText(node.scene.imagePrompt, IMAGE_ALT_MAX_LENGTH)}
             className="h-full w-full cursor-pointer object-cover"
             onClick={handleRewind}
           />
@@ -63,7 +64,7 @@ const ChronicleNode: React.FC<{
         {choiceText && (
           <div className="border-text-border mt-6 border-t border-dashed pt-4 text-center">
             <p className="support-text-color text-sm">{t("historyChoicePrefix")}</p>
-            <p className="font-semibold">{`"${choiceText}"`}</p>
+            <p className="font-semibold break-words [overflow-wrap:anywhere]">{`"${truncateText(choiceText, INLINE_QUOTE_MAX_LENGTH)}"`}</p>
           </div>
         )}
       </figcaption>

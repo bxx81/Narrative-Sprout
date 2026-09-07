@@ -12,6 +12,7 @@ import Button from "../components/ui/Button";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 import { LOAD_SCREEN_FALLBACK_URL } from "../components/game/imageFallbacks";
 import { useConfirm } from "../hooks/useConfirm";
+import { CARD_TITLE_MAX_LENGTH, truncateText } from "../lib/truncateText";
 
 /**
  * A card component for displaying an end (leaf) node.
@@ -86,7 +87,9 @@ const EndNodeCard: React.FC<{ node: StoryNodeRecord }> = ({ node }) => {
         menuText={t("deleteButton")}
         mainText={
           node.choiceText
-            ? t("historyChoicePrefixText", { choice: node.choiceText })
+            ? t("historyChoicePrefixText", {
+                choice: truncateText(node.choiceText, CARD_TITLE_MAX_LENGTH),
+              })
             : t("historyInitialEntry")
         }
         subText={scenePreviewText}

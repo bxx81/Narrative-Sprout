@@ -6,6 +6,7 @@ import { useGameStore } from "../store/gameStore";
 import type { DriveFileMetadata } from "../features/backup/api";
 import Button from "./ui/Button";
 import { Icon } from "./ui/Icon";
+import { DIALOG_EMBEDDED_TITLE_MAX_LENGTH, truncateText } from "../lib/truncateText";
 
 /**
  * Backup & restore section (REDESIGN §3.3, §8):
@@ -53,9 +54,10 @@ export function BackupSection() {
   }
 
   async function handleDeleteBackup(backup: DriveFileMetadata): Promise<void> {
+    const shortBackupName = truncateText(backup.name, DIALOG_EMBEDDED_TITLE_MAX_LENGTH);
     const result = await confirm({
       title: t("deleteButton"),
-      message: t("deleteDriveBackupConfirm", { name: backup.name }),
+      message: t("deleteDriveBackupConfirm", { name: shortBackupName }),
       confirmLabel: t("deleteButton"),
       cancelLabel: t("cancelButton"),
       isDestructive: true,
@@ -64,7 +66,7 @@ export function BackupSection() {
     if (result !== true) return;
     await runOperation(async () => {
       await deleteGoogleDriveBackup(backup.fileId);
-      return t("deletedFromDrive", { name: backup.name });
+      return t("deletedFromDrive", { name: shortBackupName });
     });
   }
 
@@ -90,7 +92,7 @@ export function BackupSection() {
                 const result = await importSaveFromFile(file);
                 setImportFile(null);
                 return t("importedNsSaveSummary", {
-                  title: result.gameTitle,
+                  title: truncateText(result.gameTitle, DIALOG_EMBEDDED_TITLE_MAX_LENGTH),
                   count: result.restoredNodeCount,
                 });
               });

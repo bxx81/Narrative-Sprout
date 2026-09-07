@@ -19,6 +19,7 @@ import RefineDialog from "../components/game/RefineDialog";
 import { Divider } from "../components/ui/Divider";
 import Button from "../components/ui/Button";
 import { countWords } from "../features/narrative/api";
+import { IMAGE_ALT_MAX_LENGTH, truncateText } from "../lib/truncateText";
 
 const ordinal = (n: number): string => {
   const suffixes = ["th", "st", "nd", "rd"];
@@ -374,7 +375,7 @@ const GameScreen: React.FC = () => {
 
   const sceneImageProps = {
     imageBlob: asset?.blob ?? null,
-    alt: scene.imagePrompt,
+    alt: truncateText(scene.imagePrompt, IMAGE_ALT_MAX_LENGTH),
   };
 
   return (
@@ -424,7 +425,7 @@ const GameScreen: React.FC = () => {
           isClosing={isClosing}
           onClose={closeZoom}
           imageBlob={asset?.blob ?? null}
-          alt={scene.imagePrompt}
+          alt={truncateText(scene.imagePrompt, IMAGE_ALT_MAX_LENGTH)}
         />
       )}
 
