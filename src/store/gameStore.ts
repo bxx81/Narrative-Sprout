@@ -209,10 +209,7 @@ async function buildImageConfigForSettings(settings: SettingsRecord) {
  * by the UI (always the "Japanese" default), so it is not consulted here —
  * old saves without a snapshot simply follow the current display language.
  */
-function resolveNarrativeLanguage(
-  game: GameRecord | null,
-  settings: SettingsRecord,
-): string {
+function resolveNarrativeLanguage(game: GameRecord | null, settings: SettingsRecord): string {
   return game?.language ?? settings.uiLanguage;
 }
 

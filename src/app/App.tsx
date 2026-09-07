@@ -123,10 +123,7 @@ const AppLayout: React.FC = () => {
     // snapshot when playing, otherwise the current display language (old
     // saves without a snapshot follow the display language as well).
     setWordCountLanguage(
-      getLanguageCode(
-        activeGameLanguage ?? settings.uiLanguage,
-        settings.aiLanguageMappings,
-      ),
+      getLanguageCode(activeGameLanguage ?? settings.uiLanguage, settings.aiLanguageMappings),
     );
   }, [settings, uiLanguage, aiLanguageMappings, aiTranslationTexts, activeGameLanguage]);
 
