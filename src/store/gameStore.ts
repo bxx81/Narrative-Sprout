@@ -1033,7 +1033,12 @@ export const useGameStore = create<GameState>()(
         delete aiLanguageMappings[languageName];
         const uiLanguage = settings.uiLanguage === languageName ? "English" : settings.uiLanguage;
         // Keep the narrative language mirroring the resulting UI language.
-        await get().updateSettings({ aiTranslations, aiLanguageMappings, uiLanguage, language: uiLanguage });
+        await get().updateSettings({
+          aiTranslations,
+          aiLanguageMappings,
+          uiLanguage,
+          language: uiLanguage,
+        });
       },
 
       deleteSave: async (gameId) => {
