@@ -75,6 +75,10 @@ Custom `--BaseURL` removes these headers.
 
 The target is injected into the user message as the closing reminder (`buildLengthClosing`: `Previous scene was N words. Target scene length: … Output ONLY the keys that changed in notes.`), not the system prompt. The previous-count sentence uses the stored `sceneWordCount` of the preceding output (explicit `previousSceneWordCount`, defaulting to the newest ancestor; omitted when unavailable) and survives history discard. `buildTurnPrompt` also prefixes the closing with a turn anchor (`buildTurnLabel`: `This is turn N of the story.`, with `turnNumber = parentNode.turnNumber + 1`; root refine uses turn 1) so theme rules like "turns 1–4 are prequel" can reference it. History replay (`promptSent`) never carries these reminders. Each save snapshots `sceneTextLength` at creation; later turns use the snapshot (`activeGame.sceneTextLength ?? settings.sceneTextLength`), with old saves falling back to the global setting.
 
+# Narrative Language (Per-Save Snapshot)
+
+The prose language (`… MUST be written in ${language}` in `buildNarratorSystemPrompt`, plus the keeper/archivist/autoplay prompts) comes from `resolveNarrativeLanguage(game, settings)` = `game?.language ?? settings.uiLanguage`. `turnService.startGame` persists the start-time display language onto `GameRecord.language`, so each save keeps its initial language regardless of later display-language changes; root redo carries the source save's language into the new save, and pre-snapshot saves fall back to the current display language.
+
 The numeric lower bounds per setting are exported as `minWordsTarget` (`promptBuilder.ts` `MIN_WORDS`: short/default 50, medium/detailed 100, verbose 200, long 200, novel 400, novel2 800; unknown values fall back to medium) and drive the starting screen's pseudo progress bar (words received ÷ lower bound, capped at 90%).
 
 # Memory Strategy

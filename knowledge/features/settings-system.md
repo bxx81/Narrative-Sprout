@@ -9,13 +9,22 @@ source: src/types/settings.ts, src/screens/SettingsScreen.tsx, src/store/gameSto
 
 # Overview
 
-Settings are a global singleton (`settings` table, `key: "app"`); the store's `updateSettings(partial)` is the only write path. Generation settings are global-only — saves hold none of them — except the `sceneTextLength` snapshot (see [Narrative Generation](narrative-generation.md)). Secrets live in `credentials`, never in settings (see [LLM Service](/services/llm-service.md)).
+Settings are a global singleton (`settings` table, `key: "app"`); the store's `updateSettings(partial)` is the only write path. Generation settings are global-only — saves hold none of them — except the `sceneTextLength` and `language` snapshots (see [Narrative Generation](narrative-generation.md)). Secrets live in `credentials`, never in settings (see [LLM Service](/services/llm-service.md)).
+
+# Narrative Language (Per-Save Snapshot)
+
+There is no story-language selector: at game start (`startNewGame`) the current display language (`settings.uiLanguage`) is snapshotted as that save's narrative language (`GameRecord.language`, persisted by `turnService.startGame`). `resolveNarrativeLanguage(game, settings)` (`src/store/gameStore.ts`) returns `game?.language ?? settings.uiLanguage` and feeds every generation call (`choose` / `refine` / `redoScene` / autoplay / theme ideas). Consequences:
+
+- Later turns of a save keep the start-time language even if the display language changes (verified: English-started and Japanese-started saves each keep their prompts).
+- Root redo (new save from the same story) carries over the source save's language.
+- Saves created before the snapshot field existed (no `language`) fall back to the current display language.
+- The legacy global `settings.language` (default `"Japanese"`) is kept for record compatibility but is never written by the UI and is not consulted for generation.
 
 # Settings Reference
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `language` | `"Japanese"` | Narrative language injected into prompts. |
+| `language` | `"Japanese"` | Legacy global narrative language. Kept for record compatibility; generation ignores it and uses the per-save snapshot instead (see above). |
 | `uiLanguage` | browser-detected | UI display language (native name, e.g. `"English"`). See [Localization](/configuration/localization.md). |
 | `sceneTextLength` | `"medium"` | Target prose length for **new** saves (`short/medium/detailed/long/verbose/novel/novel2`). |
 | `textModel` | `"openai/gpt-4o-mini"` | Narrator model id + `--options`. See [Narrative Generation](narrative-generation.md). |

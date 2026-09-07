@@ -27,7 +27,7 @@ Full reference: see [Narrative Generation](/features/narrative-generation.md#mod
 - `--strict=true` (default): `response_format: { type: "json_schema", json_schema: { name, schema, strict: true } }`.
 - `--strict=false`: `response_format: { type: "json_object" }` + schema text (`buildSchemaPromptText`) appended to the system prompt.
 - `cleanJsonSchemaForStructuredOutputs` recursively strips `propertyNames` (zod v4 emits it for `z.record`, e.g. `notes`) and top-level `$schema`, which strict-unaware providers reject with 400. Applied to both the response format and the prompt-embedded schema.
-- Empty content / invalid JSON / Zod failure → `NarrationError` (retryable). `countWords` (in `wordCount.ts`) counts `isWordLike` segments via `Intl.Segmenter` built from the narrative language (`settings.language` → IETF tag via `getLanguageCode`, refreshed from the App settings effect through `setWordCountLanguage`); whitespace-word fallback when unset/invalid.
+- Empty content / invalid JSON / Zod failure → `NarrationError` (retryable). `countWords` (in `wordCount.ts`) counts `isWordLike` segments via `Intl.Segmenter` built from the narrative language (active save's `GameRecord.language` snapshot, else the current display language → IETF tag via `getLanguageCode`, refreshed from the App settings effect through `setWordCountLanguage`); whitespace-word fallback when unset/invalid.
 
 # PKCE Auth (OpenRouter API key without copy-paste)
 

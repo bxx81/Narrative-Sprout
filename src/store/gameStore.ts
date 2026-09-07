@@ -202,6 +202,20 @@ async function buildImageConfigForSettings(settings: SettingsRecord) {
   return buildImageGenConfig(settings, { huggingFaceToken: hfToken, nimToken });
 }
 
+/**
+ * Narrative language for generation: the save's snapshot when one is loaded
+ * (fixed at game start from the display language), otherwise the current
+ * display language. The legacy global `settings.language` is never edited
+ * by the UI (always the "Japanese" default), so it is not consulted here —
+ * old saves without a snapshot simply follow the current display language.
+ */
+function resolveNarrativeLanguage(
+  game: GameRecord | null,
+  settings: SettingsRecord,
+): string {
+  return game?.language ?? settings.uiLanguage;
+}
+
 export const useGameStore = create<GameState>()(
   devtools(
     subscribeWithSelector((set, get) => ({
@@ -325,7 +339,9 @@ export const useGameStore = create<GameState>()(
               apiKey: openrouterApiKey,
               model: settings.textModel,
               theme: resolvedTheme,
-              language: settings.language,
+              // Snapshot the display language at game start as this save's
+              // narrative language (turnService persists it on the game).
+              language: resolveNarrativeLanguage(null, settings),
               sceneTextLength: settings.sceneTextLength,
               attachmentTexts,
               imageGenConfig,
@@ -426,7 +442,9 @@ export const useGameStore = create<GameState>()(
               parentNode,
               ancestors,
               choiceText,
-              language: settings.language,
+              // Per-save narrative language snapshot; old saves without one
+              // follow the current display language.
+              language: resolveNarrativeLanguage(activeGame, settings),
               // Per-save snapshot (legacy behavior); old saves fall back to
               // the current global setting.
               sceneTextLength: activeGame.sceneTextLength ?? settings.sceneTextLength,
@@ -509,7 +527,7 @@ export const useGameStore = create<GameState>()(
               parentNode,
               ancestors,
               refinePrompt,
-              language: settings.language,
+              language: resolveNarrativeLanguage(activeGame, settings),
               // Per-save snapshot (legacy behavior); old saves fall back to
               // the current global setting.
               sceneTextLength: activeGame.sceneTextLength ?? settings.sceneTextLength,
@@ -588,7 +606,9 @@ export const useGameStore = create<GameState>()(
                 apiKey: openrouterApiKey,
                 model: settings.textModel,
                 theme: sourceGame.title,
-                language: settings.language,
+                // Root redo creates a new save from the same story: carry
+                // over the source save's narrative language.
+                language: resolveNarrativeLanguage(sourceGame, settings),
                 // Root redo keeps the save's own length order (legacy
                 // performRootRegenerate), falling back to the global setting.
                 sceneTextLength: sourceGame.sceneTextLength ?? settings.sceneTextLength,
@@ -664,7 +684,7 @@ export const useGameStore = create<GameState>()(
               parentNode,
               ancestors,
               choiceText: targetNode.choiceText,
-              language: settings.language,
+              language: resolveNarrativeLanguage(activeGame, settings),
               // Per-save snapshot (legacy behavior); old saves fall back to
               // the current global setting.
               sceneTextLength: activeGame.sceneTextLength ?? settings.sceneTextLength,
@@ -847,7 +867,8 @@ export const useGameStore = create<GameState>()(
           const themes = await generateThemes({
             apiKey: openrouterApiKey,
             textModel: settings.textModel,
-            language: settings.language,
+            // Theme ideas are pre-game: follow the current display language.
+            language: settings.uiLanguage,
           });
           const [first, ...rest] = themes;
           set({
@@ -900,7 +921,7 @@ export const useGameStore = create<GameState>()(
             game: activeGame,
             nodes,
             viewingNodeId,
-            narrativeLanguage: settings.language,
+            narrativeLanguage: resolveNarrativeLanguage(activeGame, settings),
           });
           if (decision.storyOver) {
             // Ending reached: hold the comment for the UI dialog and stop.
