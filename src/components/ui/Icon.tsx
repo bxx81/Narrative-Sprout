@@ -53,5 +53,9 @@ interface IconProps {
 }
 
 export const Icon = ({ className, iconName }: IconProps) => {
-  return <span className={`material-symbols-rounded ${className}`}>{iconName}</span>;
+  return (
+    <span className={`material-symbols-rounded ${className}`} translate="no">
+      {iconName}
+    </span>
+  );
 };
