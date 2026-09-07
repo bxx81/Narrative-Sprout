@@ -3,7 +3,7 @@ type: Architecture
 title: State Management (v2)
 description: Zustand store discipline, AsyncOperation pattern, streaming display store, and turn orchestration in v2.
 tags: [zustand, state, async-operation]
-timestamp: 2026-09-02T00:00:00Z
+timestamp: 2026-09-07T00:00:00Z
 source: src/store/gameStore.ts, asyncOperation.ts, streamStore.ts, src/features/gameplay/turnService.ts
 ---
 
@@ -32,7 +32,7 @@ Replaces legacy `_PENDING/_SUCCESS` + `lastActionForRetry`. The `failed` payload
 
 # Turn Orchestration
 
-Actions set `generation: running`, compute streaming enablement, `streamStore.begin(...)`, resolve attachments/settings, then delegate to `turnService` (`startGame` / `choosePath` / `refineScene` + `TurnServiceOptions` stage callbacks), persist transactionally, and update `nodes` / `assets` / `activeGame`. `cancelGeneration` aborts via `streamStore.cancel()` (the request signal is the one from `streamStore.getSignal()`); failures record `failed` for the dialog; `retryGeneration` re-dispatches by payload kind. Refine/redo/rootRedo reuse the same wiring (streaming/cancel/retry/stage).
+Actions set `generation: running`, compute streaming enablement, `streamStore.begin(...)`, resolve attachments/settings, then delegate to `turnService` (`startGame` / `choosePath` / `refineScene` + `TurnServiceOptions` stage callbacks), persist transactionally, and update `nodes` / `assets` / `activeGame`. `cancelGeneration` aborts narrative/image generation via `streamStore.cancel()` (the request signal is the one from `streamStore.getSignal()`) and, when autoplay is on, also aborts the player-AI decision via a store-module `autoplayAbortController` (signal passed to `decideAutoplayTurn`), clears `autoplay` (+ Wake Lock), and returns a running `autoplayTurn` to `idle` for instant feedback; decision-phase `AbortError` settles silently to `idle` (no dialog watches `autoplayTurn`), other decision errors to `failed`. `toggleAutoplay` off aborts the same way; toggling on clears stale `autoplayTurn: failed`. Generation failures record `failed` for the dialog; `retryGeneration` re-dispatches by payload kind. Refine/redo/rootRedo reuse the same wiring (streaming/cancel/retry/stage).
 
 # Streaming Display Store
 
