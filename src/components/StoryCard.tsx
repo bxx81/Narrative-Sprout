@@ -1,8 +1,14 @@
 import Button from "./ui/Button";
 import { Icon } from "./ui/Icon";
 import LoadingSpinner from "./ui/LoadingSpinner";
-import React from "react";
+import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  CARD_PREVIEW_MAX_LENGTH,
+  CARD_TITLE_MAX_LENGTH,
+  IMAGE_ALT_MAX_LENGTH,
+  truncateText,
+} from "../lib/truncateText";
 
 // LoadScreenとHistoryScreenの共通パーツ
 
@@ -35,6 +41,18 @@ const StoryCard: React.FC<StoryCardProps> = ({
 }) => {
   const { t } = useTranslation();
   const resolvedMenuText = menuText ?? t("deleteButton");
+  // Defense in depth: callers pass previews, but a tens-of-KB title/theme
+  // text must never reach the DOM in full (line-clamp only hides it
+  // visually). Truncate here so every card stays bounded.
+  const displayMainText = useMemo(
+    () => (mainText ? truncateText(mainText, CARD_TITLE_MAX_LENGTH) : mainText),
+    [mainText],
+  );
+  const displaySubText = useMemo(
+    () => (subText ? truncateText(subText, CARD_PREVIEW_MAX_LENGTH) : subText),
+    [subText],
+  );
+  const displayImageAlt = useMemo(() => truncateText(imageAlt, IMAGE_ALT_MAX_LENGTH), [imageAlt]);
   return (
     <div className="text-bg-color flex h-full flex-col overflow-hidden rounded-lg shadow-lg transition-all duration-300 hover:shadow-xl">
       <div className="bg-text-bg relative">
@@ -45,7 +63,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
         ) : (
           <img
             src={imageUrl || undefined}
-            alt={imageAlt}
+            alt={displayImageAlt}
             className={`aspect-video h-full w-full object-cover ${!onImageClick ? "" : "cursor-pointer"}`}
             onError={onImageError}
             onClick={onImageClick}
@@ -64,8 +82,12 @@ const StoryCard: React.FC<StoryCardProps> = ({
       </div>
       <div className="m-4 flex-1 space-y-2">
         {timeText && <div>{timeText}</div>}
-        <div className="line-clamp-2 min-h-12 font-semibold">{mainText}</div>
-        <div className="support-text-color line-clamp-3 min-h-15 text-sm">{subText}</div>
+        <div className="line-clamp-2 min-h-12 font-semibold break-words [overflow-wrap:anywhere]">
+          {displayMainText}
+        </div>
+        <div className="support-text-color line-clamp-3 min-h-15 text-sm break-words [overflow-wrap:anywhere]">
+          {displaySubText}
+        </div>
         {actions && <div>{actions}</div>}
       </div>
     </div>

@@ -79,16 +79,19 @@ const ConfirmationDialog: React.FC<{
         e.preventDefault();
         onDismiss();
       }}
+      className="max-h-[85vh] max-w-lg overflow-hidden"
     >
       {options.icon && <Icon iconName={options.icon} className="mb-4 w-full text-center" />}
       {options.title && (
         <h2
-          className={`h2-style m-0 border-0 p-0 pb-4 ${options.icon ? "w-full text-center" : ""}`}
+          className={`h2-style m-0 border-0 p-0 pb-4 break-words [overflow-wrap:anywhere] ${options.icon ? "w-full text-center" : ""}`}
         >
           {options.title}
         </h2>
       )}
-      <p className="support-text-color whitespace-pre-wrap">{options.message}</p>
+      <p className="support-text-color max-h-[40vh] overflow-y-auto break-words whitespace-pre-wrap [overflow-wrap:anywhere]">
+        {options.message}
+      </p>
       <div className="mt-6 flex flex-row justify-end gap-2">
         <Button intent="tertiary" size="small" onClick={onCancel}>
           {options.cancelLabel || t("cancelButton")}
