@@ -246,7 +246,7 @@ const GameNavButtons: React.FC<{ onOpenRefine: () => void; onOpenEdit: () => voi
           <div className="animate-fade-in absolute top-full right-0 z-50 mt-2 grid grid-cols-[repeat(4,max-content)] gap-3 rounded-3xl border border-zinc-200 bg-white/95 p-2 shadow-xl backdrop-blur-md md:top-auto md:bottom-full md:mb-2 dark:border-zinc-800 dark:bg-zinc-900/95">
             <Button
               onClick={() => closeMenuAnd(toggleAutoplay)}
-              disabled={busy}
+              disabled={!activeGame}
               intent="circle"
               className={
                 autoplay
