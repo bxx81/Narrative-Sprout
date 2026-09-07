@@ -202,6 +202,13 @@ async function buildImageConfigForSettings(settings: SettingsRecord) {
   return buildImageGenConfig(settings, { huggingFaceToken: hfToken, nimToken });
 }
 
+/**
+ * AbortController for the in-flight autoplay decision (`decideAutoplayTurn`).
+ * Kept outside the store because it is not serializable state; the narrative
+ * generation uses `streamStore`'s controller instead.
+ */
+let autoplayAbortController: AbortController | null = null;
+
 export const useGameStore = create<GameState>()(
   devtools(
     subscribeWithSelector((set, get) => ({
@@ -877,8 +884,21 @@ export const useGameStore = create<GameState>()(
       toggleAutoplay: () => {
         if (!get().activeGame) return;
         const autoplay = !get().autoplay;
-        if (autoplay) acquireWakeLock("autoplay");
-        else releaseWakeLock("autoplay");
+        if (autoplay) {
+          acquireWakeLock("autoplay");
+          // A previous decision failure must not block a fresh run.
+          if (get().autoplayTurn.phase === "failed") {
+            set({ autoplayTurn: { phase: "idle" } });
+          }
+        } else {
+          autoplayAbortController?.abort();
+          releaseWakeLock("autoplay");
+          // Immediate feedback: the in-flight decision (if any) settles to
+          // idle via its abort path; its result is dropped by the guard.
+          if (get().autoplayTurn.phase === "running") {
+            set({ autoplayTurn: { phase: "idle" } });
+          }
+        }
         set({ autoplay });
       },
 
@@ -890,6 +910,9 @@ export const useGameStore = create<GameState>()(
         if (state.autoplayTurn.phase !== "idle") return;
 
         const payload: AutoplayDecisionPayload = { kind: "decision" };
+        autoplayAbortController?.abort();
+        const abortController = new AbortController();
+        autoplayAbortController = abortController;
         set({
           autoplayTurn: { phase: "running", payload, startedAt: new Date().toISOString() },
         });
@@ -901,6 +924,7 @@ export const useGameStore = create<GameState>()(
             nodes,
             viewingNodeId,
             narrativeLanguage: settings.language,
+            signal: abortController.signal,
           });
           if (decision.storyOver) {
             // Ending reached: hold the comment for the UI dialog and stop.
@@ -924,16 +948,43 @@ export const useGameStore = create<GameState>()(
           });
         } catch (error) {
           releaseWakeLock("autoplay");
-          set({
-            autoplayTurn: { phase: "failed", payload, error: error as Error },
-            autoplay: false,
-          });
+          if ((error as Error).name === "AbortError") {
+            // User cancel (stop button / toggle off): silent stop so autoplay
+            // can be restarted immediately; no error dialog watches this op.
+            set({
+              autoplayTurn: { phase: "idle" },
+              autoplay: false,
+            });
+          } else {
+            set({
+              autoplayTurn: { phase: "failed", payload, error: error as Error },
+              autoplay: false,
+            });
+          }
+        } finally {
+          if (autoplayAbortController === abortController) {
+            autoplayAbortController = null;
+          }
         }
       },
 
       dismissAutoplayEndingComment: () => set({ autoplayEndingComment: null }),
 
-      cancelGeneration: () => streamStore.cancel(),
+      cancelGeneration: () => {
+        // Stopping generation during autoplay also stops the autoplay chain;
+        // otherwise the driver loop would resume on the next idle tick.
+        // This also covers the autoplay decision phase, which has no stream
+        // output (its request aborts via its own controller).
+        if (get().autoplay) {
+          autoplayAbortController?.abort();
+          releaseWakeLock("autoplay");
+          set({ autoplay: false });
+          if (get().autoplayTurn.phase === "running") {
+            set({ autoplayTurn: { phase: "idle" } });
+          }
+        }
+        streamStore.cancel();
+      },
 
       retryGeneration: async () => {
         const state = get();

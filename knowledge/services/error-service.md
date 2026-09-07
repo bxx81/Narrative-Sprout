@@ -3,7 +3,7 @@ type: Service
 title: Error Handling (Classification, Dialog, Retry)
 description: Error classification, global dialog, generation retry, 429 auto-retry, and toast notifications in v2.
 tags: [error, retry, dialog, toast]
-timestamp: 2026-09-02T00:00:00Z
+timestamp: 2026-09-07T00:00:00Z
 source: src/lib/errorClassification.ts, src/components/ErrorDialog.tsx, src/store/gameStore.ts, src/app/App.tsx
 ---
 
@@ -26,7 +26,7 @@ Generation failures (start/choose/refine/redo/image-regen) land in `AsyncOperati
 
 # Dialog & Retry
 
-`ErrorDialog` (legacy ErrorDisplay modal port) mounts globally in `AppLayout` and shows for `generation` / `imageRegeneration` failures. Retryable titles use `errorStumbleTitle`, otherwise `errorOccurredTitle`; >7-line messages collapse behind `errorShowMore/Less`. Non-informational failures always offer a "Start Over" button alongside Retry/Dismiss. `retryGeneration()` re-runs the retained payload (`start` → `startNewGame`, `choice` → `choose`, `refine` → `refine`, `redo`/`rootRedo` → `redoScene`, image payload → `regenerateImage`). `dismissError()` returns to idle; dismissing a failed start additionally routes to `/setup`. The Starting screen and game screen carry no inline failure UI of their own. Opening the dialog with a fresh failure also plays the error chime (see [Sound Effects](/features/sound-effects.md)).
+`ErrorDialog` (legacy ErrorDisplay modal port) mounts globally in `AppLayout` and shows for `generation` / `imageRegeneration` failures only — `autoplayTurn` failures (including user-cancel `AbortError`, which settles silently to `idle`) never open the dialog. Retryable titles use `errorStumbleTitle`, otherwise `errorOccurredTitle`; >7-line messages collapse behind `errorShowMore/Less`. Non-informational failures always offer a "Start Over" button alongside Retry/Dismiss. `retryGeneration()` re-runs the retained payload (`start` → `startNewGame`, `choice` → `choose`, `refine` → `refine`, `redo`/`rootRedo` → `redoScene`, image payload → `regenerateImage`). `dismissError()` returns to idle; dismissing a failed start additionally routes to `/setup`. The Starting screen and game screen carry no inline failure UI of their own. Opening the dialog with a fresh failure also plays the error chime (see [Sound Effects](/features/sound-effects.md)).
 
 # 429 Auto-Retry
 

@@ -400,7 +400,7 @@ const GameScreen: React.FC = () => {
         generationStartedAt={generationStartedAt}
       />
 
-      {(loading || isAutoplayDeciding) && stream.status !== "idle" && (
+      {((loading && stream.status !== "idle") || isAutoplayDeciding) && (
         <Button
           intent="navigator"
           size="medium-circle"

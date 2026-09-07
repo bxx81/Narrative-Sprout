@@ -3,8 +3,8 @@ type: Feature
 title: Autoplay (Player AI)
 description: A player-AI that takes game turns on its own, with its reasoning chain persisted per node in v2.
 tags: [autoplay, ai-player]
-timestamp: 2026-09-02T00:00:00Z
-source: src/features/autoplay/autoplayService.ts, src/store/gameStore.ts
+timestamp: 2026-09-07T00:00:00Z
+source: src/features/autoplay/autoplayService.ts, src/store/gameStore.ts, src/screens/GameScreen.tsx
 ---
 
 # Overview
@@ -29,3 +29,16 @@ The decision's `reasoning` is stored on the produced node as `metadata.autoplayR
 - Terminal detection (`isStoryOver`) shows the retrospective comment in a dialog and stops.
 - Failures clear autoplay. `resume`/`deleteBranch`/`openGame`/`goToTitle` also clear it.
 - Autoplay state (`autoplay`, `autoplayTurn: AsyncOperation`) lives in `gameStore`; the ending comment is `autoplayEndingComment` with `dismissAutoplayEndingComment`.
+
+# Stopping (3 Phases)
+
+Autoplay runs in three observable phases, and the Stop-generating button (`cancelGenerationButton`) covers all of them:
+
+1. **Decision** (`autoplayTurn: running`, spinner `Autoplay`) — the player AI picks the next choice.
+2. **Text generation** (`generation: running`, stage `choice`/`scene`) — the story model writes the next scene.
+3. **Image generation** (`generation: running`, stage `image`) — the scene image renders.
+
+- `GameScreen` shows the fixed Stop button while `(loading && stream.status !== "idle") || isAutoplayDeciding`, so the decision phase (which produces no stream output) is also stoppable.
+- The decision request aborts via a store-module `autoplayAbortController` passed as `decideAutoplayTurn`'s `signal` (narrative/image generation aborts via `streamStore.cancel()` instead). `cancelGeneration` aborts both, clears `autoplay` (+ `autoplay` Wake Lock), and returns a running `autoplayTurn` to `idle` immediately for instant spinner feedback; the in-flight decision result is dropped by the `if (!get().autoplay)` guard.
+- A decision-phase `AbortError` settles to `autoplayTurn: idle` + `autoplay: false` silently (no dialog watches `autoplayTurn`, unlike `generation` aborts which show the informational `errorAborted` dialog). Genuine decision errors still land in `autoplayTurn: failed` + `autoplay: false`.
+- `toggleAutoplay` off aborts the same way; toggling on clears a stale `autoplayTurn: failed` so a fresh run is never blocked.
