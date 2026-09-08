@@ -131,7 +131,7 @@ const AppLayout: React.FC = () => {
 
   if (!settingsLoaded) {
     return (
-      <div className="bg-body-bg flex h-screen items-center justify-center">
+      <div className="flex h-screen items-center justify-center bg-body-bg">
         <p className="support-text-color">{t("toastLoading")}</p>
       </div>
     );

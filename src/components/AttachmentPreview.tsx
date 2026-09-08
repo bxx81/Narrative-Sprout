@@ -30,7 +30,7 @@ const AttachmentPreview: React.FC<{ file: File; onRemove: () => void }> = ({ fil
   }, [file]);
 
   return (
-    <div className="group animate-fade-in bg-text-bg text-body-text relative flex w-full items-center justify-between rounded-lg p-2 text-left">
+    <div className="group animate-fade-in relative flex w-full items-center justify-between rounded-lg bg-text-bg p-2 text-left text-body-text">
       <div className="flex items-center gap-3 overflow-hidden">
         {previewUrl ? (
           // codeql[js/xss-through-dom] False positive: React escapes attribute
@@ -44,7 +44,7 @@ const AttachmentPreview: React.FC<{ file: File; onRemove: () => void }> = ({ fil
             className="size-10 shrink-0 rounded-md object-cover"
           />
         ) : (
-          <div className="bg-body-bg flex size-10 shrink-0 items-center justify-center rounded-md">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-body-bg">
             <Icon iconName="text_snippet" />
           </div>
         )}

@@ -89,7 +89,9 @@ const GameChoices: React.FC<GameChoicesProps> = ({
                 onTouchEnd={cancelLongPress}
                 onTouchMove={cancelLongPress}
                 disabled={loading}
-                className={`choice-style ${choice != "" ? "cursor-pointer disabled:cursor-default" : "text-text-disable"}`}
+                className={`choice-style ${
+                  choice != "" ? `cursor-pointer disabled:cursor-default` : "text-text-disable"
+                }`}
               >
                 {`> ${choice}`}
               </button>

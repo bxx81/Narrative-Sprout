@@ -84,12 +84,12 @@ const ConfirmationDialog: React.FC<{
       {options.icon && <Icon iconName={options.icon} className="mb-4 w-full text-center" />}
       {options.title && (
         <h2
-          className={`h2-style m-0 border-0 p-0 pb-4 break-words [overflow-wrap:anywhere] ${options.icon ? "w-full text-center" : ""}`}
+          className={`h2-style m-0 border-0 p-0 pb-4 wrap-anywhere ${options.icon ? "w-full text-center" : ""}`}
         >
           {options.title}
         </h2>
       )}
-      <p className="support-text-color max-h-[40vh] overflow-y-auto break-words whitespace-pre-wrap [overflow-wrap:anywhere]">
+      <p className="support-text-color max-h-[40vh] overflow-y-auto wrap-anywhere whitespace-pre-wrap">
         {options.message}
       </p>
       <div className="mt-6 flex flex-row justify-end gap-2">

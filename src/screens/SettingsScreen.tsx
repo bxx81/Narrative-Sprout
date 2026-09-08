@@ -147,7 +147,7 @@ const TextModelInput = React.memo(
 
           {isLoading && (
             <div className="flex items-center justify-center gap-2 py-2 text-zinc-500 dark:text-zinc-400">
-              <LoadingSpinner strokeWidth={6} className="h-5 w-5 text-indigo-500" />
+              <LoadingSpinner strokeWidth={6} className="size-5 text-indigo-500" />
               <span className="animate-pulse">{t("loadingModelsText")}</span>
             </div>
           )}
@@ -510,7 +510,7 @@ const SettingsScreen: React.FC = () => {
               intent="danger"
               size="medium"
               onClick={() => void deleteAiTranslation(uiLanguage)}
-              className="w-full mt-3"
+              className="mt-3 w-full"
             >
               {t("aiTranslationDeleteButton")}
             </Button>

@@ -39,7 +39,7 @@ export const ElapsedCounter: React.FC<{ generationStartedAt: number }> = ({
   }, [generationStartedAt]);
 
   return (
-    <div className="text-text-text text-xs tracking-widest opacity-60">
+    <div className="text-xs tracking-widest text-text-text opacity-60">
       {t("elapsedTime", { seconds: elapsedSeconds })}
     </div>
   );
@@ -76,21 +76,21 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
 
   return (
     <div className="animate-fade-in pointer-events-none fixed inset-0 z-110 flex items-center justify-center will-change-auto">
-      <div className="border-text-border/80 bg-text-bg/80 flex flex-col items-center gap-6 rounded-3xl border p-10 shadow-2xl">
+      <div className="flex flex-col items-center gap-6 rounded-3xl border border-text-border/80 bg-text-bg/80 p-10 shadow-2xl">
         <div className="relative flex items-center justify-center will-change-transform">
           <LoadingSpinner
             className="size-20 text-lime-600 dark:text-lime-400"
             progress={nowProgress ? imageGenerationProgress : null}
           />
           {nowProgress && (
-            <div className={`text-text-text absolute text-lg ${styles["font-overlay"]}`}>
+            <div className={`absolute text-lg text-text-text ${styles["font-overlay"]}`}>
               {Math.round(Math.max(0, Math.min(100, imageGenerationProgress * 100)))}%
             </div>
           )}
         </div>
         <div className="flex flex-col items-center gap-1.5">
           <div
-            className={`text-text-text animate-pulse ${styles["font-overlay"]} text-xs tracking-[0.2em]`}
+            className={`animate-pulse text-text-text ${styles["font-overlay"]} text-xs tracking-[0.2em]`}
           >
             {spinnerLabel}
           </div>

@@ -72,7 +72,7 @@ const StartingScreen: React.FC = () => {
       )}
       {isStreamActive && (
         <div
-          className="border-text-border mt-6 h-1 w-64 overflow-hidden rounded-full border"
+          className="mt-6 h-1 w-64 overflow-hidden rounded-full border border-text-border"
           role="progressbar"
           aria-label={t("generationProgressLabel")}
         >

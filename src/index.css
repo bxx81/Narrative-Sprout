@@ -173,11 +173,11 @@
   }
 
   .dividers-style {
-    @apply text-divider my-4 text-center text-[8pt];
+    @apply my-4 text-center text-[8pt] text-divider;
   }
 
   .h2-style {
-    @apply border-text-border mb-4 border-b pb-2 text-lg font-semibold;
+    @apply mb-4 border-b border-text-border pb-2 text-lg font-semibold;
   }
 
   .explanation-text-style {
@@ -195,7 +195,7 @@
 
 @layer components {
   .form-style {
-    @apply bg-text-bg text-body-text placeholder-text-support border-text-border w-full rounded-lg border-2 p-3 transition duration-300;
+    @apply w-full rounded-lg border-2 border-text-border bg-text-bg p-3 text-body-text placeholder-text-support transition duration-300;
     outline-style: solid;
     outline-offset: -1px;
     outline-width: thin;
@@ -220,18 +220,18 @@
   }
 
   .choice-style {
-    @apply border-border disabled:text-text-disable focus:outline-border disabled:border-border/0 w-full rounded-lg border border-solid p-3 text-left text-base font-semibold -outline-offset-2 transition-all duration-300 focus:outline-1 focus:outline-offset-[-5px];
+    @apply w-full rounded-lg border border-solid border-border p-3 text-left text-base font-semibold -outline-offset-2 transition-all duration-300 focus:outline-1 focus:outline-offset-[-5px] focus:outline-border disabled:border-border/0 disabled:text-text-disable;
   }
 
   .choice-form-style {
-    @apply border-border focus-within:outline-border flex overflow-hidden rounded-lg border border-solid -outline-offset-2 transition-all duration-300 focus-within:outline-1 focus-within:outline-offset-[-5px];
+    @apply flex overflow-hidden rounded-lg border border-solid border-border -outline-offset-2 transition-all duration-300 focus-within:outline-1 focus-within:outline-offset-[-5px] focus-within:outline-border;
 
     & .choice-input {
-      @apply disabled:text-text-disable w-full grow rounded-l-lg p-3 outline-none;
+      @apply w-full grow rounded-l-lg p-3 outline-none disabled:text-text-disable;
     }
 
     & .choice-button {
-      @apply bg-primary text-primary-text disabled:bg-disable disabled:text-disable-text cursor-pointer p-3 transition-all duration-300 disabled:cursor-default;
+      @apply cursor-pointer bg-primary p-3 text-primary-text transition-all duration-300 disabled:cursor-default disabled:bg-disable disabled:text-disable-text;
       background-color: oklch(from var(--color-primary) l c h);
     }
 
@@ -249,7 +249,7 @@
   }
 
   dialog {
-    @apply shadow-dialog rounded-dialog p-dialog mx-auto my-auto min-w-80 border-0 bg-white text-zinc-800 md:max-w-120 dark:bg-black dark:text-zinc-200;
+    @apply mx-auto my-auto min-w-80 rounded-dialog border-0 bg-white p-dialog text-zinc-800 shadow-dialog md:max-w-120 dark:bg-black dark:text-zinc-200;
 
     animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     & h2 {
@@ -286,10 +286,10 @@
 
   /**/
   .document-link {
-    @apply text-title-text-support text-xs underline drop-shadow-sm;
+    @apply text-xs text-title-text-support underline drop-shadow-sm;
   }
   .version-link {
-    @apply text-title-text-support mt-2 text-xs drop-shadow-sm;
+    @apply mt-2 text-xs text-title-text-support drop-shadow-sm;
   }
 }
 

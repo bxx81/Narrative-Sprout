@@ -51,7 +51,7 @@ const RefineDialog: React.FC<RefineDialogProps> = ({ isOpen, onClose, onSubmit, 
       <p className="explanation-text-style">{t("refineScenePromptLabel")}</p>
       <textarea
         ref={inputRef}
-        className="border-text-border m-0 w-full resize-y border-2 text-sm"
+        className="m-0 w-full resize-y border-2 border-text-border text-sm"
         rows={4}
         placeholder={t("refineScenePlaceholder")}
         disabled={isBusy}

@@ -131,7 +131,7 @@ const HistoryScreen: React.FC = () => {
 
   if (!activeGame) {
     return (
-      <div className="bg-body-bg flex h-screen items-center justify-center">
+      <div className="flex h-screen items-center justify-center bg-body-bg">
         <LoadingSpinner />
       </div>
     );

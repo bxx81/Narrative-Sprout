@@ -39,7 +39,7 @@
   }
   /* Button Intent */
   &.circle {
-    @apply hover:text-primary-light focus:text-primary text-body-text rounded-full p-2 drop-shadow-[0_0_0_var(--color-primary-light)];
+    @apply rounded-full p-2 text-body-text drop-shadow-[0_0_0_var(--color-primary-light)] hover:text-primary-light focus:text-primary;
     --value-outline-style: none;
   }
 
@@ -111,7 +111,7 @@
 
   /* Button Disabled */
   &.disabled {
-    @apply disabled:bg-disable disabled:text-disable-text disabled:transform-none disabled:cursor-default;
+    @apply disabled:transform-none disabled:cursor-default disabled:bg-disable disabled:text-disable-text;
   }
 
   &.circle-disabled {

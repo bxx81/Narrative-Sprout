@@ -99,10 +99,10 @@ const TitleScreen: React.FC = () => {
         }}
       />
       <div className="flex grow flex-col items-center justify-center">
-        <h1 className="font-serif-display text-title-text mb-4 text-[clamp(1.5rem,7.5vw,3rem)] leading-none font-bold drop-shadow-lg md:text-[clamp(3rem,6vw,5rem)]">
+        <h1 className="font-serif-display mb-4 text-[clamp(1.5rem,7.5vw,3rem)] leading-none font-bold text-title-text drop-shadow-lg md:text-[clamp(3rem,6vw,5rem)]">
           {t("title")}
         </h1>
-        <p className="text-title-text mx-auto mb-12 max-w-2xl text-lg drop-shadow-md [line-break:strict] md:text-xl">
+        <p className="mx-auto mb-12 max-w-2xl text-lg text-title-text drop-shadow-md [line-break:strict] md:text-xl">
           {t("description")}
         </p>
         <nav className="flex flex-col gap-4 sm:flex-row">
@@ -131,7 +131,7 @@ const TitleScreen: React.FC = () => {
         </nav>
       </div>
       <footer className="w-full py-4 text-center">
-        <div className="sm:flex flex-col sm:justify-center sm:flex-row gap-x-4">
+        <div className="flex-col gap-x-4 sm:flex sm:flex-row sm:justify-center">
           <div>
             <a
               href={guideUrl}
