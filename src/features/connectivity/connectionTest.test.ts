@@ -89,12 +89,34 @@ describe("testEndpointConnectivity", () => {
       return new Response("{}", { status: 200 });
     };
     const result = await testEndpointConnectivity({
-      endpointUrl: "http://127.0.0.1:11434/v1",
+      endpointUrl: "http://192.168.1.10:7860",
       fetchImpl,
       pageProtocol: "https:",
     });
     expect(result.kind).toBe("mixed-content");
     expect(calls).toBe(0);
+  });
+
+  test("loopback http is exempt from the mixed-content short-circuit", async () => {
+    for (const endpointUrl of [
+      "http://localhost:7860",
+      "http://127.0.0.1:7860",
+      "http://127.0.0.2:8188",
+    ]) {
+      let calls = 0;
+      const fetchImpl: FetchLike = async () => {
+        calls += 1;
+        return new Response("{}", { status: 200 });
+      };
+      const result = await testEndpointConnectivity({
+        endpointUrl,
+        probePath: "/",
+        fetchImpl,
+        pageProtocol: "https:",
+      });
+      expect(result.kind).toBe("ok");
+      expect(calls).toBe(1);
+    }
   });
 
   test("invalid-url rejects non-http schemes without fetching", async () => {

@@ -63,6 +63,28 @@ function isHttpUrl(value: string): boolean {
   }
 }
 
+/**
+ * Loopback hosts are "potentially trustworthy" (Secure Contexts) and exempt
+ * from mixed-content blocking: https pages may fetch http://localhost,
+ * 127.0.0.0/8, and ::1 in Chrome/Edge/Firefox with no special setting.
+ * LAN hosts (e.g. 192.168.x.x) have no such exemption and stay blocked.
+ */
+function isLoopbackUrl(value: string): boolean {
+  let hostname: string;
+  try {
+    hostname = new URL(value).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+  if (hostname === "localhost" || hostname.endsWith(".localhost")) return true;
+  if (hostname === "::1" || hostname === "[::1]") return true;
+  const quartet = hostname.split(".");
+  if (quartet.length === 4 && quartet[0] === "127") {
+    return quartet.every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255);
+  }
+  return false;
+}
+
 function resolvePageProtocol(explicit?: string): string | null {
   if (explicit !== undefined) return explicit;
   if (typeof window !== "undefined" && typeof window.location?.protocol === "string") {
@@ -127,9 +149,10 @@ export async function testEndpointConnectivity(
   }
 
   const pageProtocol = resolvePageProtocol(params.pageProtocol);
-  if (pageProtocol === "https:" && endpointUrl.startsWith("http:")) {
-    // https pages fetching http:// endpoints are blocked as mixed content
-    // before CORS even applies — fail fast with actionable guidance.
+  if (pageProtocol === "https:" && endpointUrl.startsWith("http:") && !isLoopbackUrl(endpointUrl)) {
+    // https pages fetching non-loopback http:// endpoints are blocked as
+    // mixed content before CORS even applies — fail fast with guidance.
+    // Loopback is exempt per Secure Contexts, so it is probed for real.
     return { kind: "mixed-content", endpointUrl };
   }
 
