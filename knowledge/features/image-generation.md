@@ -3,7 +3,7 @@ type: Feature
 title: Image Generation
 description: Scene image generation with pluggable backends, WebP storage, and per-node regeneration in v2.
 tags: [image, webp, generators]
-timestamp: 2026-09-02T00:00:00Z
+timestamp: 2026-09-08T00:00:00Z
 source: src/features/image/generateImage.ts, buildImageGenConfig.ts, assetHelpers.ts, imageGeneratorFactory.ts, generators/
 ---
 
@@ -24,6 +24,10 @@ Selected by `settings.imageGenerator`; config comes from `buildImageGenConfig(se
 | NVIDIA NIM | `nvidia_nim` | Cloud endpoint (Flux default) + config JSON. Token from `credentials`. |
 
 Per-generator timeouts abort with descriptive errors; any failure falls back to a "Image Generation Failed" SVG (regenerable) instead of failing the turn. The image prompt follows a 4-step recipe (decisive instant, cinematic framing, in-frame only, atmosphere) consistent with `char:*` + `status:*` memory.
+
+# Connectivity Test
+
+The A1111 (`GET /` — the Gradio root always exists), ComfyUI (`GET /system_stats` — lightweight read-only JSON), and NIM (bare generation URL, probed with the Bearer token since `nimEndpoint` is POSTed to as-is) settings panels embed `EndpointConnectionTest` next to the endpoint input, testing the currently typed values. Hugging Face needs none (fixed Space URL). Result classes and the CORS-likelihood heuristic are shared with the LLM probe (see [Settings System](/features/settings-system.md#connectivity-test)).
 
 # Storage
 

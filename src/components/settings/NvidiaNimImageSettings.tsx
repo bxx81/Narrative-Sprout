@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useDebouncedExternalState } from "../../hooks/useDebouncedExternalState";
 import HelpTooltip from "../ui/HelpTooltip";
+import EndpointConnectionTest from "./EndpointConnectionTest";
 
 interface NvidiaNimImageSettingsProps {
   endpoint: string;
@@ -79,6 +80,15 @@ const NvidiaNimImageSettingsComponent: React.FC<NvidiaNimImageSettingsProps> = (
           <HelpTooltip content={t("helpNimToken")} />
         </div>
       </div>
+      {/*
+        nimEndpoint is a full generation URL (POSTed to as-is), so the probe
+        targets it bare. A 4xx/401 answer still proves reachability + CORS.
+      */}
+      <EndpointConnectionTest
+        endpointUrl={localEndpoint}
+        apiKey={localToken || null}
+        probePath=""
+      />
       <div>
         <label htmlFor="nim-config" className="sr-only">
           {t("nimConfigLabel")}

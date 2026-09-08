@@ -3,8 +3,8 @@ type: Service
 title: LLM Service (OpenAI-Compatible Client)
 description: Minimal fetch-based chat client, model-string options, JSON schema handling, streaming transport, and OpenRouter PKCE auth in v2.
 tags: [llm, openrouter, client, pkce]
-timestamp: 2026-09-02T00:00:00Z
-source: src/lib/openAiClient.ts, modelOptions.ts, src/features/narrative/generateScene.ts, src/features/openrouter/pkceAuth.ts
+timestamp: 2026-09-08T00:00:00Z
+source: src/lib/openAiClient.ts, modelOptions.ts, src/features/narrative/generateScene.ts, src/features/openrouter/pkceAuth.ts, src/features/connectivity/connectionTest.ts
 ---
 
 # Overview
@@ -17,6 +17,7 @@ All LLM traffic (narration, memory-keeper, archivist, autoplay decisions, AI tra
 - **Streaming**: `stream: true` + `stream_options: { include_usage: true }`, hand-written SSE parser, 60 s idle watchdog after content starts, mid-stream `error` captured and thrown as `ApiError(500, …)` after the stream ends, final reassembly into a normal response. `onDelta` gets accumulated text; abort via `AbortSignal` (`AbortError` → user-abort classification).
 - **Reasoning**: `extractReasoningText` reads both `reasoning` and `reasoning_content` (DeepSeek-style via OpenRouter) from bulk messages and SSE deltas; `ChatMessage` resends stored reasoning as history context via the `reasoning` field only. Streamed reasoning is accumulated separately, never forwarded to `onDelta`, and the assembled response exposes the merged text as `reasoning`.
 - **App headers**: `OPENROUTER_APP_HEADERS` (`HTTP-Referer`, `X-OpenRouter-Title`, `X-OpenRouter-Categories`) sent only for the default base URL, never for custom `--BaseURL`.
+- **Connectivity probe**: the Settings connection test (`EndpointConnectionTest` + `testEndpointConnectivity`) issues `GET {baseUrl}/models` with the Bearer key (15 s timeout) so preflight behavior matches real calls; any HTTP status proves reachability + CORS. See [Settings System](/features/settings-system.md#connectivity-test).
 
 # Model Options
 

@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useDebouncedExternalState } from "../../hooks/useDebouncedExternalState";
 import HelpTooltip from "../ui/HelpTooltip";
+import EndpointConnectionTest from "./EndpointConnectionTest";
 
 interface ComfyUIImageSettingsProps {
   endpoint: string;
@@ -54,6 +55,8 @@ const ComfyUIImageSettingsComponent: React.FC<ComfyUIImageSettingsProps> = ({
           {t("comfyuiEndpointHelp")}
           <HelpTooltip content={t("helpComfyUIEndpoint")} />
         </div>
+        {/* /system_stats is a lightweight read-only JSON endpoint. */}
+        <EndpointConnectionTest endpointUrl={localEndpoint} probePath="/system_stats" />
       </div>
       <div>
         <label htmlFor="comfyui-workflow" className="sr-only">

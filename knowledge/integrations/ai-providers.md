@@ -3,7 +3,7 @@ type: Integration
 title: AI Providers (v2)
 description: LLM provider configuration, OpenRouter defaults, and custom endpoints in v2.
 tags: [llm, openrouter, providers]
-timestamp: 2026-09-02T00:00:00Z
+timestamp: 2026-09-08T00:00:00Z
 source: src/lib/modelOptions.ts, openAiClient.ts, src/store/gameStore.ts
 ---
 
@@ -25,5 +25,6 @@ The default provider is OpenRouter (`https://openrouter.ai/api/v1`) with 200+ mo
 # Reliability
 
 - 429/502/503/504 are retryable (`classifyError`); 429 can auto-retry on a countdown (`autoRetrySeconds`).
+- The Text model section in Settings probes the resolved `--BaseURL` before any generation is spent (see [Settings System](/features/settings-system.md#connectivity-test)).
 - Stream-rejecting endpoints (400/404/415/422 on `stream: true`) fall back to one bulk attempt.
 - `cleanJsonSchemaForStructuredOutputs` avoids 400s from strict-unaware providers (strips `propertyNames`/`$schema`); `--strict=false` uses `json_object` + prompt-embedded schema for maximal compatibility.
