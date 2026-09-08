@@ -3,7 +3,7 @@ type: Feature
 title: History & Saves
 description: Save/load, branching, rewind, redo, chronicle, and IndexedDB persistence of playthroughs in v2.
 tags: [saves, history, branching, indexeddb]
-timestamp: 2026-09-02T00:00:00Z
+timestamp: 2026-09-08T00:00:00Z
 source: src/db/gameRepository.ts, src/features/storytree/treeTraversal.ts, branchDeletion.ts, src/screens/LoadScreen.tsx, HistoryScreen.tsx, ChronicleScreen.tsx
 ---
 
@@ -13,7 +13,7 @@ One playthrough = one `GameRecord` (header) + many `StoryNodeRecord`s (tree via 
 
 # Save Management
 
-- **List** (`gameRepository.listGames`): ordered by `lastPlayedAt` desc. `LoadScreen` cards show title, latest scene preview, timestamp, completion state; actions: open, delete. The Load screen also **imports** `ns-save` ZIPs via drag & drop / file picker (export lives on the History screen; see [Story Export](story-export.md)).
+- **List** (`gameRepository.listGames`): ordered by `lastPlayedAt` desc. `LoadScreen` cards show title, latest scene preview, timestamp, completion state; actions: open, delete. The in-memory `games` array in the store is the list source: gameplay writes (`startNewGame` / `choose` / `refine` / non-root `redoScene`) upsert it via `upsertGameSummary`, root `redoScene` re-reads via `listGames`, so back-navigation to `LoadScreen` shows the new order/thumbnail without a refetch. The Load screen also **imports** `ns-save` ZIPs via drag & drop / file picker (export lives on the History screen; see [Story Export](story-export.md)).
 - **Open** (`openGame`): loads game + all nodes + assets into the store, sets playhead and viewing position to the latest node.
 - **Delete save** (`deleteGame`): removes the game, all its nodes, and all its assets in one transaction.
 - **Wipe all** (`wipeRepository.wipeAllUserData`): `db.delete()` drops the whole database including settings and credentials (factory state), then clears storage and reloads; the completion screen renders via the `nsDataDeletionComplete` sessionStorage flag on the `/deletion_complete` route.

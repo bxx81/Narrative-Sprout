@@ -194,6 +194,17 @@ async function loadAssetsForNodes(nodeIds: string[]): Promise<Record<string, Ass
   return map;
 }
 
+/**
+ * Keeps the in-memory save list (`games`) in sync when a game record is
+ * created or advanced. DB writes alone leave `games` stale, so LoadScreen
+ * (which sorts/fetches thumbnails from `games`) would show the old order
+ * and old `latestNodeId` after browser-back navigation. `goToTitle` masks
+ * this via `listGames()`, but direct history navigation does not.
+ */
+function upsertGameSummary(games: GameRecord[], updated: GameRecord): GameRecord[] {
+  return [updated, ...games.filter((game) => game.id !== updated.id)];
+}
+
 async function buildImageConfigForSettings(settings: SettingsRecord) {
   const [hfToken, nimToken] = await Promise.all([
     credentialsRepository.get("huggingFaceToken"),
@@ -352,6 +363,7 @@ export const useGameStore = create<GameState>()(
           );
           const assets = await loadAssetsForNodes([rootNode.id]);
           set({
+            games: upsertGameSummary(get().games, game),
             activeGame: game,
             nodes: [rootNode],
             assets,
@@ -465,6 +477,7 @@ export const useGameStore = create<GameState>()(
           set({
             nodes: updatedNodes,
             assets: { ...get().assets, ...newAssets },
+            games: upsertGameSummary(get().games, updatedGame),
             activeGame: updatedGame,
             viewingNodeId: node.id,
             currentNodeId: node.id,
@@ -546,6 +559,7 @@ export const useGameStore = create<GameState>()(
           set({
             nodes: updatedNodes,
             assets: { ...get().assets, ...newAssets },
+            games: upsertGameSummary(get().games, updatedGame),
             activeGame: updatedGame,
             viewingNodeId: node.id,
             currentNodeId: node.id,
@@ -701,6 +715,7 @@ export const useGameStore = create<GameState>()(
           set({
             nodes: [...get().nodes, node],
             assets: { ...get().assets, ...newAssets },
+            games: upsertGameSummary(get().games, updatedGame),
             activeGame: updatedGame,
             viewingNodeId: node.id,
             currentNodeId: node.id,
