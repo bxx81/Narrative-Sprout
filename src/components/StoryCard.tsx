@@ -55,16 +55,16 @@ const StoryCard: React.FC<StoryCardProps> = ({
   const displayImageAlt = useMemo(() => truncateText(imageAlt, IMAGE_ALT_MAX_LENGTH), [imageAlt]);
   return (
     <div className="text-bg-color flex h-full flex-col overflow-hidden rounded-lg shadow-lg transition-all duration-300 hover:shadow-xl">
-      <div className="bg-text-bg relative">
+      <div className="relative bg-text-bg">
         {isLoadingImage ? (
-          <div className="flex aspect-video h-full w-full items-center justify-center">
+          <div className="flex aspect-video size-full items-center justify-center">
             <LoadingSpinner />
           </div>
         ) : (
           <img
             src={imageUrl || undefined}
             alt={displayImageAlt}
-            className={`aspect-video h-full w-full object-cover ${!onImageClick ? "" : "cursor-pointer"}`}
+            className={`aspect-video size-full object-cover ${!onImageClick ? "" : "cursor-pointer"}`}
             onError={onImageError}
             onClick={onImageClick}
           />
@@ -82,10 +82,8 @@ const StoryCard: React.FC<StoryCardProps> = ({
       </div>
       <div className="m-4 flex-1 space-y-2">
         {timeText && <div>{timeText}</div>}
-        <div className="line-clamp-2 min-h-12 font-semibold break-words [overflow-wrap:anywhere]">
-          {displayMainText}
-        </div>
-        <div className="support-text-color line-clamp-3 min-h-15 text-sm break-words [overflow-wrap:anywhere]">
+        <div className="line-clamp-2 min-h-12 font-semibold wrap-anywhere">{displayMainText}</div>
+        <div className="support-text-color line-clamp-3 min-h-15 text-sm wrap-anywhere">
           {displaySubText}
         </div>
         {actions && <div>{actions}</div>}

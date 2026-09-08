@@ -42,7 +42,7 @@ const Expander: React.FC<ExpanderProps> = ({
             <p className={className}>{labelText}</p>
           </h3>
           <svg
-            className={`text-text-support size-5 self-center transition-transform duration-300 ${isOpen ? "rotate-180 transform" : ""}`}
+            className={`size-5 self-center text-text-support transition-transform duration-300 ${isOpen ? "rotate-180 transform" : ""}`}
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"

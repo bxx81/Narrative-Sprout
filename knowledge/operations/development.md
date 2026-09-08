@@ -3,7 +3,7 @@ type: Playbook
 title: Development Setup (v2)
 description: Dev environment, repository layout, and daily workflow for Narrative Sprout v2.
 tags: [dev, setup, workflow]
-timestamp: 2026-09-03T00:00:00Z
+timestamp: 2026-09-08T00:00:00Z
 source: package.json, README, CONTRIBUTING.md, AGENTS.md, SESSION_HANDOFF.md, scripts/
 ---
 
@@ -47,6 +47,7 @@ Feature modules expose only `api.ts`; `gameplay/` is the exception (orchestrator
 - `main` stays deployable. Work on `feature/*` branches → PR → squash merge. PRs get Cloudflare preview URLs.
 - **Git operations (commit/push/PR/merge) always need the user's explicit approval each time.**
 - New `VITE_` env vars need PR review (public build embedding).
+- Tailwind class order/sorting is enforced by tooling — run `bunx eslint . --fix` and `bunx prettier --write .` before pushing if you touched classes. New custom (non-Tailwind) classes must be registered in `eslint.config.js` (`no-unknown-classes` ignore) or CI lint fails (see [Linting](/configuration/linting.md)).
 - Follow `AGENTS.md` hard rules: no secrets, no `dist/`, no plaintext credentials in export/backup, element-wise Zod, no direct Zustand `set`, glossary naming, 1:1 nodeId assets, no v1 format importers.
 - Design rationale: `REDESIGN.md`. Session state: `SESSION_HANDOFF.md` (read both before starting work, after `git pull`).
 

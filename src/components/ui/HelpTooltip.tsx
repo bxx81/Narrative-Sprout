@@ -29,16 +29,16 @@ const HelpTooltipComponent: React.FC<HelpTooltipProps> = ({ content, learnMoreUr
       <div
         popover=""
         id={popId}
-        className={`${styles["popover"]} animate-fade-in border-text-border bg-text-bg rounded-lg border p-3 text-left shadow-lg`}
+        className={`${styles["popover"]} animate-fade-in rounded-lg border border-text-border bg-text-bg p-3 text-left shadow-lg`}
         style={{ "--anchor-name": `--anchor-${popId}` } as React.CSSProperties}
       >
-        <div className="text-text-support text-sm">{content}</div>
+        <div className="text-sm text-text-support">{content}</div>
         {learnMoreUrl && (
           <a
             href={learnMoreUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary mt-2 inline-block text-sm hover:underline"
+            className="mt-2 inline-block text-sm text-primary hover:underline"
           >
             {t("learnMoreLink")}
           </a>

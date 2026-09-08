@@ -235,7 +235,11 @@ const GameNavButtons: React.FC<{ onOpenRefine: () => void; onOpenEdit: () => voi
         <Button
           onClick={() => setMenuOpen((prev) => !prev)}
           intent="circle"
-          className={`${menuOpen ? "rotate-90 bg-lime-600/20 text-lime-600 dark:bg-lime-400/20 dark:text-lime-400" : ""}`}
+          className={`${
+            menuOpen
+              ? `rotate-90 bg-lime-600/20 text-lime-600 dark:bg-lime-400/20 dark:text-lime-400`
+              : ""
+          }`}
           aria-label={t("moreMenuButtonLabel")}
           title={t("moreMenuButtonLabel")}
         >
@@ -250,7 +254,7 @@ const GameNavButtons: React.FC<{ onOpenRefine: () => void; onOpenEdit: () => voi
               intent="circle"
               className={
                 autoplay
-                  ? "bg-lime-600/20 text-lime-600 dark:bg-lime-400/20 dark:text-lime-400"
+                  ? `bg-lime-600/20 text-lime-600 dark:bg-lime-400/20 dark:text-lime-400`
                   : ""
               }
               aria-label={autoplay ? t("stopAutoplayButtonLabel") : t("autoplayButtonLabel")}

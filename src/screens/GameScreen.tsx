@@ -195,7 +195,7 @@ const GameScreen: React.FC = () => {
 
   if (!activeGame || !viewingNodeId || !node || !settings) {
     return (
-      <div className="bg-body-bg flex h-screen items-center justify-center">
+      <div className="flex h-screen items-center justify-center bg-body-bg">
         <p className="support-text-color">{t("sceneNotFound")}</p>
       </div>
     );
@@ -251,7 +251,7 @@ const GameScreen: React.FC = () => {
       )}
       {displayChoiceText ? (
         <p
-          className="font-serif-display text-center text-sm leading-relaxed select-text [line-break:strict] selection:bg-lime-500/30"
+          className="font-serif-display text-center text-sm/relaxed select-text [line-break:strict] selection:bg-lime-500/30"
           onMouseDown={() => {
             choicePresetTimer.current = setTimeout(() => {
               setChoicePresetSignal({ choice: displayChoiceText });
@@ -305,7 +305,7 @@ const GameScreen: React.FC = () => {
               ref={sceneEditRef}
               defaultValue={scene.sceneText}
               rows={10}
-              className="border-text-border m-0 mt-2 w-full resize-y border-2 text-sm"
+              className="m-0 mt-2 w-full resize-y border-2 border-text-border text-sm"
               disabled={loading}
             ></textarea>
             <div className="mt-4 flex items-center justify-end gap-2">
@@ -379,7 +379,7 @@ const GameScreen: React.FC = () => {
   };
 
   return (
-    <div className="bg-body-bg min-h-screen transition-colors duration-500">
+    <div className="min-h-screen bg-body-bg transition-colors duration-500">
       <LoadingOverlay
         isPageLoading={isPageLoading}
         spinnerState={spinnerState}
@@ -432,7 +432,7 @@ const GameScreen: React.FC = () => {
       {!isMd && (
         <div className="flex flex-col">
           <button
-            className="bg-body-bg relative w-full cursor-zoom-in overflow-hidden"
+            className="relative w-full cursor-zoom-in overflow-hidden bg-body-bg"
             onClick={openZoom}
             aria-label={t("enlargeImageLabel")}
           >
@@ -442,17 +442,17 @@ const GameScreen: React.FC = () => {
             />
           </button>
 
-          <nav className="text-bg-color border-text-border sticky top-0 z-50 flex items-center justify-center gap-3 border-y p-3">
+          <nav className="text-bg-color sticky top-0 z-50 flex items-center justify-center gap-3 border-y border-text-border p-3">
             <GameNavButtons onOpenRefine={() => setRefineOpen(true)} onOpenEdit={handleOpenEdit} />
           </nav>
 
-          <main className="bg-text-bg flex flex-col items-center p-6 pb-12">{mainText}</main>
+          <main className="flex flex-col items-center bg-text-bg p-6 pb-12">{mainText}</main>
         </div>
       )}
 
       {isMd && (
         <div className="flex">
-          <aside className="border-text-border bg-body-bg sticky top-0 flex h-screen w-[45%] min-w-100 items-center justify-center overflow-hidden border-r p-8 backdrop-blur-md">
+          <aside className="sticky top-0 flex h-screen w-[45%] min-w-100 items-center justify-center overflow-hidden border-r border-text-border bg-body-bg p-8 backdrop-blur-md">
             <div className="animate-fade-in flex max-h-full max-w-full flex-col items-center gap-8">
               <button
                 className="group relative cursor-zoom-in overflow-hidden rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] transition-all duration-700 hover:scale-[1.01] hover:shadow-[0_30px_60px_rgba(0,0,0,0.4)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)]"
@@ -466,7 +466,7 @@ const GameScreen: React.FC = () => {
                 <div className="absolute inset-0 bg-linear-to-t from-black/20 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
               </button>
 
-              <nav className="body-bg-color border-text-border/20 z-3 flex items-center gap-3 rounded-2xl border p-3 px-5 shadow-lg">
+              <nav className="body-bg-color z-3 flex items-center gap-3 rounded-2xl border border-text-border/20 p-3 px-5 shadow-lg">
                 <GameNavButtons
                   onOpenRefine={() => setRefineOpen(true)}
                   onOpenEdit={handleOpenEdit}
@@ -475,7 +475,7 @@ const GameScreen: React.FC = () => {
             </div>
           </aside>
 
-          <main className="bg-text-bg flex flex-1 flex-col items-center p-20 md:p-24 md:pt-16">
+          <main className="flex flex-1 flex-col items-center bg-text-bg p-20 md:p-24 md:pt-16">
             {mainText}
           </main>
         </div>

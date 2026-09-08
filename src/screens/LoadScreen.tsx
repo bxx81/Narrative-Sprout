@@ -223,7 +223,7 @@ const LoadScreen: React.FC = () => {
             ))}
           </ul>
         ) : (
-          <div className="bg-body-bg rounded-lg px-6 py-20 text-center shadow-md">
+          <div className="rounded-lg bg-body-bg px-6 py-20 text-center shadow-md">
             <p className="support-text-color text-xl">{t("loadScreenNoSaves")}</p>
           </div>
         )}

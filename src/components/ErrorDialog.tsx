@@ -123,25 +123,23 @@ const ErrorDialog: React.FC = () => {
       <div
         role="dialog"
         aria-modal="true"
-        className={`bg-text-bg/95 text-body-text max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border-3 p-8 shadow-2xl ${borderColor}`}
+        className={`max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border-3 bg-text-bg/95 p-8 text-body-text shadow-2xl ${borderColor}`}
       >
         <h2 className="font-serif-display mb-4 text-xl font-bold">
           {classified.isRetryable ? t("errorStumbleTitle") : t("errorOccurredTitle")}
         </h2>
-        <p className="support-text-color text-sm leading-relaxed whitespace-pre-wrap">
-          {visibleMessage}
-        </p>
+        <p className="support-text-color text-sm/relaxed whitespace-pre-wrap">{visibleMessage}</p>
         {needsClamp && (
           <button
             type="button"
-            className="text-primary mt-2 cursor-pointer text-xs underline"
+            className="mt-2 cursor-pointer text-xs text-primary underline"
             onClick={() => setIsExpanded((prev) => !prev)}
           >
             {isExpanded ? t("errorShowLess") : t("errorShowMore")}
           </button>
         )}
         {isAutoRetry && (
-          <p className="explanation-text-style animate-pulse mt-4">
+          <p className="explanation-text-style mt-4 animate-pulse">
             {t("errorAutoRetry", { seconds: countdown })}
           </p>
         )}

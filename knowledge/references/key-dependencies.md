@@ -3,7 +3,7 @@ type: Reference
 title: Key Dependencies (v2)
 description: Major third-party libraries used by Narrative Sprout v2.
 tags: [dependencies, libraries]
-timestamp: 2026-09-05T00:00:00Z
+timestamp: 2026-09-08T00:00:00Z
 source: package.json, bun.lock
 ---
 
@@ -31,8 +31,10 @@ source: package.json, bun.lock
 | @vitejs/plugin-react | 5.x React plugin for Vite. |
 | @tailwindcss/vite / tailwindcss | v4 styling. |
 | vite-plugin-pwa | 1.x manifest + service worker. |
-| eslint / @eslint/js / typescript-eslint | Lint (+ record/array `.catch()` ban). |
+| eslint / @eslint/js / typescript-eslint | Lint (+ record/array `.catch()` ban, Tailwind rules via `eslint-plugin-better-tailwindcss`). |
+| eslint-plugin-better-tailwindcss | Tailwind v4 class lint: order, duplicates, unknown/conflicting classes (`recommended`; line-wrapping off, see [Linting](/configuration/linting.md)). |
 | prettier | Formatting (`format:check` in CI). |
+| prettier-plugin-tailwindcss | Class sorting on `--write` (`tailwindStylesheet: ./src/index.css`). |
 | fake-indexeddb | Dexie tests under `bun test`. |
 | happy-dom | DOM for hook/component tests. |
 | bun-types | Bun runtime types. |

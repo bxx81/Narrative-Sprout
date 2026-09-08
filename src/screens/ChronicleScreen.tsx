@@ -39,14 +39,14 @@ const ChronicleNode: React.FC<{
     >
       <figure className="mb-4 overflow-hidden rounded-lg">
         {isLoading ? (
-          <div className="flex h-full w-full items-center justify-center">
+          <div className="flex size-full items-center justify-center">
             <LoadingSpinner />
           </div>
         ) : (
           <img
             src={imageUrl || undefined}
             alt={truncateText(node.scene.imagePrompt, IMAGE_ALT_MAX_LENGTH)}
-            className="h-full w-full cursor-pointer object-cover"
+            className="size-full cursor-pointer object-cover"
             onClick={handleRewind}
           />
         )}
@@ -62,9 +62,9 @@ const ChronicleNode: React.FC<{
           {t("historyContinueButton")}
         </Button>
         {choiceText && (
-          <div className="border-text-border mt-6 border-t border-dashed pt-4 text-center">
+          <div className="mt-6 border-t border-dashed border-text-border pt-4 text-center">
             <p className="support-text-color text-sm">{t("historyChoicePrefix")}</p>
-            <p className="font-semibold break-words [overflow-wrap:anywhere]">{`"${truncateText(choiceText, INLINE_QUOTE_MAX_LENGTH)}"`}</p>
+            <p className="font-semibold wrap-anywhere">{`"${truncateText(choiceText, INLINE_QUOTE_MAX_LENGTH)}"`}</p>
           </div>
         )}
       </figcaption>

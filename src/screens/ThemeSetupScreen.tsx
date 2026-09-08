@@ -273,7 +273,7 @@ const ThemeSetupScreen: React.FC = () => {
               </div>
             </div>
 
-            <fieldset className="border-text-border rounded-lg border p-4">
+            <fieldset className="rounded-lg border border-text-border p-4">
               <legend className="legend-text-style flex items-center gap-2 px-2">
                 {t("imageGeneratorLabel")}
                 <HelpTooltip content={t("helpImageGenerator")} />
@@ -298,7 +298,7 @@ const ThemeSetupScreen: React.FC = () => {
               {renderSettingsComponent()}
             </fieldset>
 
-            <fieldset className="border-text-border rounded-lg border p-4">
+            <fieldset className="rounded-lg border border-text-border p-4">
               <legend className="legend-text-style flex items-center gap-2 px-2">
                 {t("sceneLengthLabel")}
                 <HelpTooltip content={t("sceneLengthHelp")} />
@@ -318,7 +318,7 @@ const ThemeSetupScreen: React.FC = () => {
               </select>
             </fieldset>
 
-            <fieldset className="border-text-border rounded-lg border p-4">
+            <fieldset className="rounded-lg border border-text-border p-4">
               <legend className="legend-text-style flex items-center gap-2 px-2">
                 {t("memoryStrategyLabel")}
                 <HelpTooltip content={t("memoryStrategyHelp")} />

@@ -72,7 +72,7 @@ export function BackupSection() {
 
   return (
     <>
-      <div className="border-text-border mt-4 border-t pt-3">
+      <div className="mt-4 border-t border-text-border pt-3">
         <h4 className="text-sm font-semibold">{t("loadSavedataButton")}</h4>
         <div className="form-layout-style flex-wrap items-center pt-2">
           <input
@@ -102,7 +102,7 @@ export function BackupSection() {
           </Button>
         </div>
       </div>
-      <section className="bg-text-bg text-body-text rounded-lg p-4 shadow-md">
+      <section className="rounded-lg bg-text-bg p-4 text-body-text shadow-md">
         <h3 className="mb-1 flex items-center gap-2 font-semibold">
           <Icon iconName="database" />
           {t("backupRestoreTitle")}
@@ -122,7 +122,7 @@ export function BackupSection() {
         </label>
 
         <div className="flex flex-col gap-3">
-          <div className="mt-4 form-layout-style flex-wrap items-center">
+          <div className="form-layout-style mt-4 flex-wrap items-center">
             <input
               type="file"
               accept=".nsbak,application/json"
@@ -167,7 +167,7 @@ export function BackupSection() {
           </Button>
         </div>
 
-        <div className="border-text-border mt-4 border-t pt-3">
+        <div className="mt-4 border-t border-text-border pt-3">
           <div className="form-layout-style flex-wrap items-center">
             <h4 className="text-sm font-semibold">{t("googleDriveTitle")}</h4>
             {driveConnected ? (
@@ -243,7 +243,7 @@ export function BackupSection() {
               {driveBackups.map((backup) => (
                 <li
                   key={backup.fileId}
-                  className="bg-body-bg flex flex-wrap items-center justify-between gap-2 rounded px-2 py-1.5 text-xs"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-sm bg-body-bg px-2 py-1.5 text-xs"
                 >
                   <span className="min-w-0 flex-1 truncate" title={backup.name}>
                     {backup.name}
