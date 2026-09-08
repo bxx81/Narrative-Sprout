@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useDebouncedExternalState } from "../../hooks/useDebouncedExternalState";
 import HelpTooltip from "../ui/HelpTooltip";
+import EndpointConnectionTest from "./EndpointConnectionTest";
 
 interface A1111ImageSettingsProps {
   endpoint: string;
@@ -53,6 +54,8 @@ const A1111ImageSettingsComponent: React.FC<A1111ImageSettingsProps> = ({
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">
           {t("a1111EndpointHelp")}
         </div>
+        {/* The Gradio UI root always exists; any HTTP answer proves reachability. */}
+        <EndpointConnectionTest endpointUrl={localEndpoint} probePath="/" />
       </div>
       <div>
         <label htmlFor="a1111-config" className="sr-only">

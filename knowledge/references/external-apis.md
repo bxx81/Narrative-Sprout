@@ -3,7 +3,7 @@ type: Reference
 title: External API Reference (v2)
 description: All external API endpoints contacted by Narrative Sprout v2.
 tags: [api, endpoints, reference]
-timestamp: 2026-09-02T00:00:00Z
+timestamp: 2026-09-08T00:00:00Z
 source: src/lib/openAiClient.ts, modelOptions.ts, src/features/backup/, src/features/image/generators/, src/features/openrouter/
 ---
 
@@ -15,7 +15,7 @@ source: src/lib/openAiClient.ts, modelOptions.ts, src/features/backup/, src/feat
 | Custom `--BaseURL` (any OpenAI-compatible) | Same calls against user endpoints (Ollama/LM Studio/NIM-compatible). |
 | `https://openrouter.ai/auth` | PKCE authorization redirect (key auto-setup). |
 | OpenRouter code-exchange endpoint | `exchangeCodeForApiKey` (15 s timeout) — callback `?code=&state=`. |
-| `https://openrouter.ai/api/v1/models` | Model list for the Settings picker. |
+| `https://openrouter.ai/api/v1/models` | Model list for the Settings picker; also the `{baseUrl}/models` connectivity-probe target (Bearer key, 15 s timeout). |
 
 Auth: Bearer API key (`credentials.openrouterApiKey`), except PKCE round-trip. Attribution headers (`HTTP-Referer` / `X-OpenRouter-Title` / `X-OpenRouter-Categories`) only on the default base URL.
 
@@ -27,6 +27,8 @@ Auth: Bearer API key (`credentials.openrouterApiKey`), except PKCE round-trip. A
 | `a1111Endpoint` (default `http://127.0.0.1:7860`) | Local A1111 generation + progress. |
 | `comfyuiEndpoint` (default `http://127.0.0.1:8188`) | Local ComfyUI workflow + polling + progress. |
 | `nimEndpoint` (Flux default) | NVIDIA NIM generation (Bearer `credentials.nvidiaNimToken`). |
+
+Connectivity probes (Settings, `src/features/connectivity/`): A1111 `GET /`, ComfyUI `GET /system_stats`, NIM bare generation URL — any HTTP answer proves reachability + CORS. HF has no probe (fixed Space URL).
 
 # Google
 

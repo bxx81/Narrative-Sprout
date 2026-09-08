@@ -14,6 +14,7 @@ import {
   startPkceAuth,
   stripPkceCallbackFromUrl,
 } from "../features/openrouter/api";
+import EndpointConnectionTest from "../components/settings/EndpointConnectionTest";
 import A1111ImageSettings from "../components/settings/A1111ImageSettings";
 import ComfyUIImageSettings from "../components/settings/ComfyUIImageSettings";
 import HuggingFaceImageSettings from "../components/settings/HuggingFaceImageSettings";
@@ -565,6 +566,10 @@ const SettingsScreen: React.FC = () => {
               ? t("streamingOpenRouterNote")
               : t("streamingPerModelDisabled")}
           </p>
+          <EndpointConnectionTest
+            endpointUrl={parseTextModelOptions(settings.textModel).baseUrl}
+            apiKey={apiKey}
+          />
         </SettingsSection>
 
         {/* Story Log Compaction Section */}

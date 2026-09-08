@@ -3,8 +3,8 @@ type: Feature
 title: Settings System
 description: All user-configurable settings and developer options in Narrative Sprout v2.
 tags: [settings, configuration]
-timestamp: 2026-09-02T00:00:00Z
-source: src/types/settings.ts, src/screens/SettingsScreen.tsx, src/store/gameStore.ts
+timestamp: 2026-09-08T00:00:00Z
+source: src/types/settings.ts, src/screens/SettingsScreen.tsx, src/store/gameStore.ts, src/components/settings/EndpointConnectionTest.tsx, src/features/connectivity/
 ---
 
 # Overview
@@ -37,6 +37,10 @@ Settings are a global singleton (`settings` table, `key: "app"`); the store's `u
 | `aiTranslations` / `aiLanguageMappings` | `{}` | AI-translated UI bundles + IETF tag table. See [Localization](/configuration/localization.md). |
 
 Settings validate with `z.infer`-derived schemas; AI-translation tables validate element-wise (corrupt languages/values skipped with warnings). A malformed settings row falls back to defaults with a warning instead of crashing startup.
+
+# Connectivity Test
+
+Every configurable endpoint carries an inline `EndpointConnectionTest` (`src/components/settings/EndpointConnectionTest.tsx`): the Text model section (probes `GET {baseUrl}/models` with the stored API key as Bearer) and the A1111 (`GET /`), ComfyUI (`GET /system_stats`), and NIM (bare generation URL + token) image panels. Hugging Face needs none (fixed Space URL). The probe (`testEndpointConnectivity` in `src/features/connectivity/`, 15 s timeout, `fetchImpl` injectable) reports `ok / http-error / cors-likely / unreachable / timeout / mixed-content / invalid-url`. Browsers hide CORS reasons from script, so CORS is a likelihood via a `no-cors` control request — `TypeError` + succeeding control ⇒ `cors-likely`, both failing ⇒ `unreachable` — never a verdict; https→http short-circuits as `mixed-content`. The key is header-only and never enters results, logs, or exports. Local `AsyncOperation` state only — no store slice, no `persist`.
 
 # Developer Options
 
