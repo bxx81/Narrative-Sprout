@@ -4,7 +4,7 @@ title: Settings System
 description: All user-configurable settings and developer options in Narrative Sprout v2.
 tags: [settings, configuration]
 timestamp: 2026-09-09T00:00:00Z
-source: src/types/settings.ts, src/screens/SettingsScreen.tsx, src/screens/GameScreen.tsx, src/components/game/GameChoices.tsx, src/store/gameStore.ts, src/components/settings/EndpointConnectionTest.tsx, src/features/connectivity/
+source: src/types/settings.ts, src/screens/SettingsScreen.tsx, src/screens/GameScreen.tsx, src/components/game/GameChoices.tsx, src/store/gameStore.ts, src/components/settings/EndpointConnectionTest.tsx, src/features/connectivity/, src/features/theme/colorScheme.ts, src/app/App.tsx
 ---
 
 # Overview
@@ -35,6 +35,7 @@ Settings are a global singleton (`settings` table, `key: "app"`); the store's `u
 | `autoRetrySeconds` | `0` | 429 auto-retry countdown seconds (`0` = manual only). See [Error Handling](/services/error-service.md). |
 | `showElapsedTime` | `false` | Elapsed-seconds display in the loading overlay. |
 | `gameTextSize` | `"medium"` | Game screen body text size (`small/medium/large/xlarge`). See [Game Text Size](#game-text-size) below. |
+| `colorScheme` | `"system"` | UI color scheme override (`system/light/dark`). See [Color Scheme](#color-scheme) below. |
 | `aiTranslations` / `aiLanguageMappings` | `{}` | AI-translated UI bundles + IETF tag table. See [Localization](/configuration/localization.md). |
 
 Settings validate with `z.infer`-derived schemas; AI-translation tables validate element-wise (corrupt languages/values skipped with warnings). A malformed settings row falls back to defaults with a warning instead of crashing startup.
@@ -51,6 +52,16 @@ Settings validate with `z.infer`-derived schemas; AI-translation tables validate
 | `xlarge` | 22px | `text-xl` (20px) | `text-lg` (18px) |
 
 The scene size is passed as `MainText`'s `className` (per-`<p>`, overriding the `.main-text` 18px base); the choices size flows into `GameChoices` via a `choicesTextClass` prop (Tailwind utilities layer beats the `.choice-style` components-layer `text-base`). The selector lives in `Settings > Display` (above the fullscreen button); writes go through `updateSettings` like every other setting, so old records pick up the `"medium"` default with no migration.
+
+# Color Scheme
+
+`colorScheme` (`system` / `light` / `dark`, default `"system"`) overrides the OS-following dark mode. `system` preserves the legacy behavior (`matchMedia("(prefers-color-scheme: dark)")` + `change` listener); `light`/`dark` force the choice regardless of the OS preference.
+
+Resolution is split for testability in `src/features/theme/colorScheme.ts` (re-exported via `features/theme/api.ts`): `resolveIsDark(colorScheme, systemPrefersDark)` is a pure function, and `applyColorScheme(isDark)` writes the result to the document — the `.dark` class (consumed by the Tailwind `@custom-variant` in `index.css`), `documentElement.style.colorScheme` (native controls), and the `theme-color` meta (browser chrome). The `App.tsx` effect subscribes to `settings?.colorScheme` (falling back to `"system"` before the IndexedDB bootstrap completes, so first paint matches the old behavior and corrects on load — a brief flash when the stored value differs from the OS value is accepted).
+
+The initial `index.html` ships two `media=`-qualified `theme-color` metas for the OS-following default. A forced `light`/`dark` choice cannot rely on media evaluation, so the first `applyColorScheme` call collapses extras into a single media-less meta whose `content` (`#fbf9fa` / `#030712`, exported as `LIGHT_THEME_COLOR` / `DARK_THEME_COLOR`) tracks the effective theme; repeated application is idempotent.
+
+The selector lives in `Settings > Display` (below the game-text-size selector); writes go through `updateSettings` like every other setting, so old records pick up the `"system"` default with no migration. i18n keys `colorSchemeLabel/System/Light/Dark` exist in all 5 built-in locales (346 keys each).
 
 # Connectivity Test
 

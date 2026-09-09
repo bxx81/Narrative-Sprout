@@ -177,6 +177,7 @@ describe("wipeRepository", () => {
       autoRetrySeconds: 0,
       showElapsedTime: false,
       gameTextSize: "medium",
+      colorScheme: "system",
       aiTranslations: {},
       aiLanguageMappings: {},
     });

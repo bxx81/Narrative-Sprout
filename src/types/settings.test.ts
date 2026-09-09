@@ -10,6 +10,7 @@ describe("SettingsRecord", () => {
     expect(defaultSettingsRecord.memoryStrategy).toBe("single");
     expect(defaultSettingsRecord.enableStoryLogCompaction).toBe(true);
     expect(defaultSettingsRecord.gameTextSize).toBe("medium");
+    expect(defaultSettingsRecord.colorScheme).toBe("system");
   });
 
   test("parses minimal record with defaults for new fields", () => {
@@ -43,6 +44,23 @@ describe("SettingsRecord", () => {
     const parsed = settingsRecordSchema.safeParse({
       ...defaultSettingsRecord,
       gameTextSize: "huge",
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  test("defaults old records without colorScheme to system", () => {
+    const { colorScheme: _dropped, ...withoutColorScheme } = defaultSettingsRecord;
+    const parsed = settingsRecordSchema.safeParse(withoutColorScheme);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.colorScheme).toBe("system");
+    }
+  });
+
+  test("rejects invalid colorScheme", () => {
+    const parsed = settingsRecordSchema.safeParse({
+      ...defaultSettingsRecord,
+      colorScheme: "sepia",
     });
     expect(parsed.success).toBe(false);
   });
