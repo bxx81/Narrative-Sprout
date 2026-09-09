@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { useGameStore } from "../store/gameStore";
-import type { ImageGeneratorType } from "../types/settings";
+import type { GameTextSize, ImageGeneratorType } from "../types/settings";
 import { parseTextModelOptions, DEFAULT_OPENROUTER_BASE_URL } from "../lib/modelOptions";
 import { isDebug, setDebugMode } from "../lib/debugLog";
 import { builtInLanguages } from "../features/i18n/api";
@@ -524,11 +524,29 @@ const SettingsScreen: React.FC = () => {
           header={t("displaySectionTitle")}
           icon={<Icon iconName="display_settings" />}
         >
+          <div>
+            <label htmlFor="game-text-size-select" className="explanation-text-style">
+              {t("gameTextSizeLabel")}
+            </label>
+            <select
+              id="game-text-size-select"
+              value={settings.gameTextSize ?? "medium"}
+              onChange={(e) =>
+                void updateSettings({ gameTextSize: e.target.value as GameTextSize })
+              }
+              className="form-style mt-2"
+            >
+              <option value="small">{t("gameTextSizeSmall")}</option>
+              <option value="medium">{t("gameTextSizeMedium")}</option>
+              <option value="large">{t("gameTextSizeLarge")}</option>
+              <option value="xlarge">{t("gameTextSizeXLarge")}</option>
+            </select>
+          </div>
           <Button
             onClick={() => void toggleFullscreen()}
             intent="tertiary"
             size="medium"
-            className="w-full"
+            className="mt-4 w-full"
           >
             {!isFullscreen ? (
               <>

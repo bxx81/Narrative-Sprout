@@ -176,6 +176,7 @@ describe("wipeRepository", () => {
       enableStreaming: true,
       autoRetrySeconds: 0,
       showElapsedTime: false,
+      gameTextSize: "medium",
       aiTranslations: {},
       aiLanguageMappings: {},
     });

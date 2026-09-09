@@ -20,6 +20,39 @@ import { Divider } from "../components/ui/Divider";
 import Button from "../components/ui/Button";
 import { countWords } from "../features/narrative/api";
 import { IMAGE_ALT_MAX_LENGTH, truncateText } from "../lib/truncateText";
+import type { GameTextSize } from "../types/settings";
+
+/**
+ * Game screen body text sizes. The baseline (`medium`) matches the legacy
+ * fixed sizes (scene 18px / choices `text-base` / choice echo `text-sm`).
+ * The choice echo (`displayChoiceText`) is always one step smaller than the
+ * choices buttons.
+ */
+const GAME_TEXT_SIZE_CLASSES: Record<
+  GameTextSize,
+  { displayChoiceText: string; sceneText: string; choices: string }
+> = {
+  small: {
+    displayChoiceText: "text-xs/relaxed",
+    sceneText: "text-[16px]",
+    choices: "text-sm",
+  },
+  medium: {
+    displayChoiceText: "text-sm/relaxed",
+    sceneText: "text-[18px]",
+    choices: "text-base",
+  },
+  large: {
+    displayChoiceText: "text-base/relaxed",
+    sceneText: "text-[20px]",
+    choices: "text-lg",
+  },
+  xlarge: {
+    displayChoiceText: "text-lg/relaxed",
+    sceneText: "text-[22px]",
+    choices: "text-xl",
+  },
+};
 
 const ordinal = (n: number): string => {
   const suffixes = ["th", "st", "nd", "rd"];
@@ -203,6 +236,8 @@ const GameScreen: React.FC = () => {
 
   const { scene, turnNumber, choiceText } = node;
   const isCurrentStoryOver = scene.isStoryOver;
+  const gameTextSize: GameTextSize = settings.gameTextSize ?? "medium";
+  const gameTextClasses = GAME_TEXT_SIZE_CLASSES[gameTextSize];
 
   // During streaming the final data does not exist yet: show the submitted
   // choice and a faked turn number to avoid mismatching the previous scene.
@@ -251,7 +286,7 @@ const GameScreen: React.FC = () => {
       )}
       {displayChoiceText ? (
         <p
-          className="font-serif-display text-center text-sm/relaxed select-text [line-break:strict] selection:bg-lime-500/30"
+          className={`font-serif-display text-center ${gameTextClasses.displayChoiceText} select-text [line-break:strict] selection:bg-lime-500/30`}
           onMouseDown={() => {
             choicePresetTimer.current = setTimeout(() => {
               setChoicePresetSignal({ choice: displayChoiceText });
@@ -331,12 +366,16 @@ const GameScreen: React.FC = () => {
           <MainText
             text={isStreamingLive ? stream.sceneText : scene.sceneText}
             streamingCursor={isStreamingLive && !stream.sceneTextComplete}
+            className={gameTextClasses.sceneText}
           />
         )}
         {isCurrentStoryOver && !isStreamingLive && !isEditingScene && scene.storyClosingText && (
           <>
             <Divider className="my-8" />
-            <MainText text={scene.storyClosingText} className="font-semibold" />
+            <MainText
+              text={scene.storyClosingText}
+              className={`${gameTextClasses.sceneText} font-semibold`}
+            />
           </>
         )}
       </div>
@@ -345,7 +384,10 @@ const GameScreen: React.FC = () => {
       {loading && stream.status !== "idle" ? (
         <div className="flex flex-col gap-3" aria-hidden="true">
           {[0, 1, 2, 3].map((index) => (
-            <div key={index} className="choice-style animate-pulse select-none">
+            <div
+              key={index}
+              className={`choice-style animate-pulse select-none ${gameTextClasses.choices}`}
+            >
               &nbsp;
             </div>
           ))}
@@ -359,6 +401,7 @@ const GameScreen: React.FC = () => {
           onRestart={() => void handleRestart()}
           viewingNodeId={viewingNodeId}
           choicePreset={choicePresetSignal}
+          choicesTextClass={gameTextClasses.choices}
         />
       )}
 

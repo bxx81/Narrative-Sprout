@@ -16,6 +16,8 @@ interface GameChoicesProps {
   onRestart: () => void;
   viewingNodeId: string;
   choicePreset?: { choice: string };
+  /** Tailwind text-size class for the choice buttons and custom input. */
+  choicesTextClass?: string;
 }
 
 const GameChoices: React.FC<GameChoicesProps> = ({
@@ -26,6 +28,7 @@ const GameChoices: React.FC<GameChoicesProps> = ({
   onRestart,
   viewingNodeId,
   choicePreset,
+  choicesTextClass = "text-base",
 }) => {
   const { t } = useTranslation();
   const [customChoice, setCustomChoice] = useState("");
@@ -89,7 +92,7 @@ const GameChoices: React.FC<GameChoicesProps> = ({
                 onTouchEnd={cancelLongPress}
                 onTouchMove={cancelLongPress}
                 disabled={loading}
-                className={`choice-style ${
+                className={`choice-style ${choicesTextClass} ${
                   choice != "" ? `cursor-pointer disabled:cursor-default` : "text-text-disable"
                 }`}
               >
@@ -110,7 +113,7 @@ const GameChoices: React.FC<GameChoicesProps> = ({
                 onChange={(e) => setCustomChoice(e.target.value)}
                 placeholder={t("customChoicePlaceholder")}
                 disabled={loading}
-                className="choice-input"
+                className={`choice-input ${choicesTextClass}`}
               />
               <button
                 type="submit"
