@@ -3,8 +3,8 @@ type: Feature
 title: Settings System
 description: All user-configurable settings and developer options in Narrative Sprout v2.
 tags: [settings, configuration]
-timestamp: 2026-09-08T00:00:00Z
-source: src/types/settings.ts, src/screens/SettingsScreen.tsx, src/store/gameStore.ts, src/components/settings/EndpointConnectionTest.tsx, src/features/connectivity/
+timestamp: 2026-09-09T00:00:00Z
+source: src/types/settings.ts, src/screens/SettingsScreen.tsx, src/screens/GameScreen.tsx, src/components/game/GameChoices.tsx, src/store/gameStore.ts, src/components/settings/EndpointConnectionTest.tsx, src/features/connectivity/
 ---
 
 # Overview
@@ -34,9 +34,23 @@ Settings are a global singleton (`settings` table, `key: "app"`); the store's `u
 | `enableStreaming` | `true` | Live text streaming (ANDed with per-model `--stream`). See [Streaming](streaming.md). |
 | `autoRetrySeconds` | `0` | 429 auto-retry countdown seconds (`0` = manual only). See [Error Handling](/services/error-service.md). |
 | `showElapsedTime` | `false` | Elapsed-seconds display in the loading overlay. |
+| `gameTextSize` | `"medium"` | Game screen body text size (`small/medium/large/xlarge`). See [Game Text Size](#game-text-size) below. |
 | `aiTranslations` / `aiLanguageMappings` | `{}` | AI-translated UI bundles + IETF tag table. See [Localization](/configuration/localization.md). |
 
 Settings validate with `z.infer`-derived schemas; AI-translation tables validate element-wise (corrupt languages/values skipped with warnings). A malformed settings row falls back to defaults with a warning instead of crashing startup.
+
+# Game Text Size
+
+`gameTextSize` (`small` / `medium` / `large` / `xlarge`, default `"medium"`) scales the three Game screen body text areas together via `GAME_TEXT_SIZE_CLASSES` (`src/screens/GameScreen.tsx`); `medium` reproduces the legacy fixed sizes. The choice echo (`displayChoiceText`) is always one step smaller than the choice buttons:
+
+| `gameTextSize` | Scene text (`MainText`, incl. `storyClosingText`) | Choice buttons + custom input (`GameChoices`, skeleton placeholders) | Choice echo (`displayChoiceText`) |
+|---|---|---|---|
+| `small` | 16px | `text-sm` (14px) | `text-xs` (12px) |
+| `medium` | 18px | `text-base` (16px) | `text-sm` (14px) |
+| `large` | 20px | `text-lg` (18px) | `text-base` (16px) |
+| `xlarge` | 22px | `text-xl` (20px) | `text-lg` (18px) |
+
+The scene size is passed as `MainText`'s `className` (per-`<p>`, overriding the `.main-text` 18px base); the choices size flows into `GameChoices` via a `choicesTextClass` prop (Tailwind utilities layer beats the `.choice-style` components-layer `text-base`). The selector lives in `Settings > Display` (above the fullscreen button); writes go through `updateSettings` like every other setting, so old records pick up the `"medium"` default with no migration.
 
 # Connectivity Test
 

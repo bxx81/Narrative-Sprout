@@ -3,7 +3,7 @@ type: Configuration
 title: Localization (v2)
 description: Built-in UI languages, AI dynamic translation, and per-language fonts in Narrative Sprout v2.
 tags: [i18n, translation, fonts]
-timestamp: 2026-09-02T00:00:00Z
+timestamp: 2026-09-09T00:00:00Z
 source: src/features/i18n/config.ts, index.ts, translateService.ts, englishUiTexts.ts, locales/
 ---
 
@@ -13,7 +13,7 @@ UI language (`settings.uiLanguage`, stored as the **native display name**) drive
 
 # Built-in Languages
 
-Five languages bundled at build time (`src/features/i18n/locales/*.json`, 327 keys each) and precached for offline use — no http-backend, unlike legacy:
+Five languages bundled at build time (`src/features/i18n/locales/*.json`, 342 keys each) and precached for offline use — no http-backend, unlike legacy:
 
 | Display name | Code | File |
 |--------------|------|------|

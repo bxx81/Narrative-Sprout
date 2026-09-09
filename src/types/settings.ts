@@ -27,6 +27,9 @@ export type WebpCompression = z.infer<typeof webpCompressionSchema>;
 export const memoryStrategySchema = z.enum(["auto", "single", "split"]);
 export type MemoryStrategy = z.infer<typeof memoryStrategySchema>;
 
+export const gameTextSizeSchema = z.enum(["small", "medium", "large", "xlarge"]);
+export type GameTextSize = z.infer<typeof gameTextSizeSchema>;
+
 /** Default A1111 generation parameters (matches legacy `defaultA1111Config`). */
 export const DEFAULT_A1111_CONFIG = JSON.stringify(
   {
@@ -223,6 +226,8 @@ export const settingsRecordSchema = z.object({
   autoRetrySeconds: z.number().int().min(0).max(300).default(0),
   /** Show elapsed seconds in the loading overlay while generating. */
   showElapsedTime: z.boolean().default(false),
+  /** Game screen body text size (scene text, choices, choice echo). */
+  gameTextSize: gameTextSizeSchema.default("medium"),
   /** AI-translated UI bundles keyed by the user-typed language name. */
   aiTranslations: aiTranslationsSchema,
   /** IETF tags for AI-translated languages (display name → tag). */

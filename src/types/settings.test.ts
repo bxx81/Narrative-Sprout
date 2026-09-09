@@ -9,6 +9,7 @@ describe("SettingsRecord", () => {
     expect(defaultSettingsRecord.webpCompression).toBe("normal");
     expect(defaultSettingsRecord.memoryStrategy).toBe("single");
     expect(defaultSettingsRecord.enableStoryLogCompaction).toBe(true);
+    expect(defaultSettingsRecord.gameTextSize).toBe("medium");
   });
 
   test("parses minimal record with defaults for new fields", () => {
@@ -26,6 +27,7 @@ describe("SettingsRecord", () => {
       expect(parsed.data.enableStoryLogCompaction).toBe(true);
       expect(parsed.data.showElapsedTime).toBe(false);
       expect(parsed.data.autoRetrySeconds).toBe(0);
+      expect(parsed.data.gameTextSize).toBe("medium");
     }
   });
 
@@ -33,6 +35,14 @@ describe("SettingsRecord", () => {
     const parsed = settingsRecordSchema.safeParse({
       ...defaultSettingsRecord,
       imageGenerator: "unknown",
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  test("rejects invalid gameTextSize", () => {
+    const parsed = settingsRecordSchema.safeParse({
+      ...defaultSettingsRecord,
+      gameTextSize: "huge",
     });
     expect(parsed.success).toBe(false);
   });
