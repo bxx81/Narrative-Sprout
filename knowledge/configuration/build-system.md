@@ -3,7 +3,7 @@ type: Configuration
 title: Build System (v2)
 description: Vite, TypeScript, chunk splitting, and build toolchain of Narrative Sprout v2.
 tags: [build, vite, typescript, chunks]
-timestamp: 2026-09-02T00:00:00Z
+timestamp: 2026-09-09T00:00:00Z
 source: vite.config.ts, tsconfig.json, package.json
 ---
 
@@ -29,7 +29,8 @@ Vite 7 + React plugin + Tailwind v4 plugin + `vite-plugin-pwa`. TypeScript is st
 | Script | Command |
 |--------|---------|
 | `bun dev` | `vite` (dev server, HMR) |
-| `bun test` | `bun test` (unit tests, happy-dom) |
+| `bun test` | `bun test --path-ignore-patterns='e2e/**'` (unit tests, happy-dom; e2e/ excluded) |
+| `bun run test:e2e` | `playwright test` (E2E, chromium + webkit) |
 | `bun run build` | `tsc --noEmit && vite build` |
 | `bun run lint` | `eslint .` |
 | `bun run format:check` | `prettier --check .` |

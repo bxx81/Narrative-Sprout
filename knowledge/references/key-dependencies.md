@@ -3,7 +3,7 @@ type: Reference
 title: Key Dependencies (v2)
 description: Major third-party libraries used by Narrative Sprout v2.
 tags: [dependencies, libraries]
-timestamp: 2026-09-08T00:00:00Z
+timestamp: 2026-09-09T00:00:00Z
 source: package.json, bun.lock
 ---
 
@@ -37,6 +37,7 @@ source: package.json, bun.lock
 | prettier-plugin-tailwindcss | Class sorting on `--write` (`tailwindStylesheet: ./src/index.css`). |
 | fake-indexeddb | Dexie tests under `bun test`. |
 | happy-dom | DOM for hook/component tests. |
+| @playwright/test | 1.x E2E runner (chromium + webkit projects; Firefox excluded, see [Testing Strategy](/operations/testing.md)). |
 | bun-types | Bun runtime types. |
 
 No OpenAI SDK (custom client), no `gapi-script` (dynamic GIS), no Tauri packages on `main` (Phase 7 branch).

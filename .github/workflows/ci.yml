@@ -17,8 +17,31 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run lint
       - run: bunx tsc --noEmit
-      - run: bun test
+      - run: bun test --path-ignore-patterns='e2e/**'
       - run: bun run format:check
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps ${{ matrix.browser }}
+      - run: bunx playwright test --project=${{ matrix.browser }}
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: playwright-report/
+          retention-days: 7
 
   secret-scan:
     runs-on: ubuntu-latest

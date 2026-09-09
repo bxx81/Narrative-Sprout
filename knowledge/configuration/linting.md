@@ -3,17 +3,17 @@ type: Configuration
 title: Linting & Code Quality (v2)
 description: ESLint, Prettier, and secret scanning enforcement in Narrative Sprout v2.
 tags: [lint, prettier, eslint, gitleaks, tailwindcss]
-timestamp: 2026-09-08T00:00:00Z
+timestamp: 2026-09-09T00:00:00Z
 source: eslint.config.js, .prettierrc.json, .prettierignore, .github/workflows/ci.yml, src/index.css
 ---
 
 # Overview
 
-CI (`ci.yml` `check` job) runs `bun run lint` → `bunx tsc --noEmit` → `bun test` → `bun run format:check`; the `secret-scan` job runs the gitleaks release binary over full history. All jobs must be green to merge.
+CI (`ci.yml` `check` job) runs `bun run lint` → `bunx tsc --noEmit` → `bun test` → `bun run format:check`; the `e2e` job runs Playwright on a chromium/webkit matrix; the `secret-scan` job runs the gitleaks release binary over full history. All jobs must be green to merge.
 
 # ESLint
 
-Flat config (`eslint.config.js`): `js.configs.recommended` + `typescript-eslint` recommended, ignoring `dist/` and `node_modules/`. Plus one project-specific rule (REDESIGN §5.7):
+Flat config (`eslint.config.js`): `js.configs.recommended` + `typescript-eslint` recommended, ignoring `dist/`, `node_modules/`, `playwright-report/`, and `test-results/`. Plus one project-specific rule (REDESIGN §5.7):
 
 - `no-restricted-syntax`: **`.catch()` on `z.record(…)` / `z.array(…)` results is an error** — validate element-wise instead. (Selector targets `CallExpression[callee.property.name="catch"][callee.object.callee.property.name=/^(record|array)$/]`.)
 
