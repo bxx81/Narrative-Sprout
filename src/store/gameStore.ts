@@ -24,6 +24,7 @@ import {
   DriveUnauthorizedError,
   hasDriveAccessToken,
   importSaveFromZipBytes,
+  importSampleSaves as importSampleSavesFromBundle,
   listDriveBackups,
   requestDriveAccessToken,
   restoreBackupFromDrive,
@@ -34,6 +35,7 @@ import {
   type DriveFileMetadata,
   type RestoreSummaryWithManifest,
   type SaveImportResult,
+  type SampleImportSummary,
 } from "../features/backup/api";
 import type { GameRecord, SettingsRecord, StoryNodeRecord, StoryNodeId } from "../types";
 import type { AssetRecord } from "../types/asset";
@@ -173,6 +175,12 @@ interface GameState {
   downloadEncryptedBackup: (passphrase: string) => Promise<void>;
   restoreBackupFromFile: (file: File, passphrase: string) => Promise<RestoreSummaryWithManifest>;
   importSaveFromFile: (file: File) => Promise<SaveImportResult>;
+  /**
+   * Fetches the bundled sample saves (`public/savedata/`) and imports each
+   * via the regular ns-save path. Refreshes the save list even on partial
+   * failure (finally) so successfully imported samples stay visible.
+   */
+  importSampleSaves: () => Promise<SampleImportSummary>;
   connectGoogleDrive: () => Promise<void>;
   disconnectGoogleDrive: () => Promise<void>;
   uploadBackupToGoogleDrive: (passphrase: string) => Promise<{ fileName: string }>;
@@ -1152,6 +1160,15 @@ export const useGameStore = create<GameState>()(
         const result = await importSaveFromZipBytes(new Uint8Array(await file.arrayBuffer()));
         set({ games: await gameRepository.listGames() });
         return result;
+      },
+
+      importSampleSaves: async () => {
+        using _guard = new WakeLockGuard("backup");
+        try {
+          return await importSampleSavesFromBundle();
+        } finally {
+          set({ games: await gameRepository.listGames() });
+        }
       },
 
       connectGoogleDrive: async () => {

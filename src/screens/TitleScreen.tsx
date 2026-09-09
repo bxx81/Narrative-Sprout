@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
+import toast from "react-hot-toast";
 import { useGameStore } from "../store/gameStore";
 import { ROUTES } from "../app/routes";
 import Button from "../components/ui/Button";
@@ -39,7 +40,9 @@ const TitleScreen: React.FC = () => {
   const games = useGameStore((s) => s.games);
   const apiKey = useGameStore((s) => s.openrouterApiKey);
   const openGame = useGameStore((s) => s.openGame);
+  const importSampleSaves = useGameStore((s) => s.importSampleSaves);
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
+  const [isLoadingSample, setIsLoadingSample] = useState(false);
 
   useEffect(() => {
     const getAspectRatio = () => {
@@ -83,6 +86,25 @@ const TitleScreen: React.FC = () => {
     navigate(ROUTES.LOAD, { viewTransition: true });
   };
 
+  // Bundled sample saves (`public/savedata/`): shown instead of the
+  // disabled Load button while no saves exist (legacy StartScreen).
+  const handleLoadSample = async () => {
+    if (isLoadingSample) return;
+    setIsLoadingSample(true);
+    try {
+      const summary = await toast.promise(importSampleSaves(), {
+        loading: t("toastLoading"),
+        success: t("toastLoadSampleSuccess"),
+        error: (error) => (error instanceof Error ? error.message : t("operationFailed")),
+      });
+      if (summary.importedGameCount > 0) {
+        navigate(ROUTES.LOAD, { viewTransition: true });
+      }
+    } finally {
+      setIsLoadingSample(false);
+    }
+  };
+
   const hasSaves = games.length > 0;
 
   return (
@@ -123,8 +145,14 @@ const TitleScreen: React.FC = () => {
               <Button onClick={handleBegin} intent="primary" size="large">
                 {t("beginStoryButton")}
               </Button>
-              <Button onClick={handleLoad} disabled intent="secondary" size="large">
-                {t("loadStoryButton")}
+              <Button
+                onClick={() => void handleLoadSample()}
+                disabled={isLoadingSample}
+                isWorking={isLoadingSample}
+                intent="secondary"
+                size="large"
+              >
+                {t("loadSampleButton")}
               </Button>
             </>
           )}

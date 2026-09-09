@@ -230,6 +230,7 @@
   "loadSavedataButton": "Load Save Data",
   "toastLoadSampleSuccess": "Sample loaded.",
   "loadSampleButton": "Load Sample",
+  "importSampleSavedataLabel": "Import sample savedata",
   "toastLoading": "Loading...",
   "importSettingsConfirmTitle": "Security Warning",
   "importSettingsConfirmMessage": "This save data contains custom image generator settings (endpoint URLs or ComfyUI workflows) that could be unsafe if from an untrusted source. Do you want to clear these settings and use the default settings? (Choose 'Keep Settings (Advanced)' to keep the custom settings).",

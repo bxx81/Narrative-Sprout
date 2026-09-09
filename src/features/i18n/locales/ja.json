@@ -230,6 +230,7 @@
   "loadSavedataButton": "セーブデータをロード",
   "toastLoadSampleSuccess": "サンプルを読み込みました。",
   "loadSampleButton": "サンプル読み込み",
+  "importSampleSavedataLabel": "サンプルセーブデータの読み込み",
   "toastLoading": "ロード中...",
   "importSettingsConfirmTitle": "セキュリティ警告",
   "importSettingsConfirmMessage": "このセーブデータには、独自の画像生成設定（接続先URLやComfyUIワークフロー）が含まれています。信頼できないデータの場合、セキュリティ上のリスクが生じる可能性があります。これらのカスタム設定を消去して初期設定に戻しますか？（「設定を維持（高度）」を選ぶと、カスタム設定を維持して読み込みます）",

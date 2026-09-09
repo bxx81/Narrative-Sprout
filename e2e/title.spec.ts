@@ -10,8 +10,8 @@ test.describe("title screen", () => {
 
     await expect(page.getByRole("heading", { name: "Narrative Sprout" })).toBeVisible();
     await expect(page.getByRole("button", { name: "New Story" })).toBeVisible();
-    // セーブなしの初回状態では Load は disabled
-    await expect(page.getByRole("button", { name: "Load" })).toBeDisabled();
+    // セーブなしの初回状態では Load の代わりに Load Sample を表示
+    await expect(page.getByRole("button", { name: "Load Sample", exact: true })).toBeVisible();
   });
 
   test("New Story without API key goes to settings", async ({ page }) => {

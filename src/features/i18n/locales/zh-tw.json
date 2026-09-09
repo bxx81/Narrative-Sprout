@@ -230,6 +230,7 @@
   "loadSavedataButton": "讀取存檔",
   "toastLoadSampleSuccess": "已讀取範例。",
   "loadSampleButton": "讀取範例",
+  "importSampleSavedataLabel": "匯入範例存檔",
   "toastLoading": "正在載入...",
   "importSettingsConfirmTitle": "安全警告",
   "importSettingsConfirmMessage": "此存檔包含自定義圖像產生器設定（端點 URL 或 ComfyUI 工作流程），如果來自不可信的來源，可能會存在安全隱患。您要清除這些設定並使用預設設定嗎？（選擇「保留設定（進階）」將保留自定義設定）",

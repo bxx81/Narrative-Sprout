@@ -63,6 +63,18 @@ export default defineConfig({
               expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 30 },
             },
           },
+          // Bundled sample saves (`public/savedata/*.zip`, listed by
+          // `samples.json`): NetworkFirst so replaced samples propagate on
+          // the next load, with a cache fallback for offline use.
+          {
+            urlPattern: /\/savedata\/.*\.zip$/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "sample-saves",
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              networkTimeoutSeconds: 30,
+            },
+          },
         ],
       },
       manifest: {
