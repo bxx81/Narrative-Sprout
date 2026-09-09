@@ -29,6 +29,13 @@ export {
 export { restoreBackupFromEnvelopeText, type RestoreSummaryWithManifest } from "./restoreBackup";
 export { importSaveFromZipBytes, type SaveImportResult } from "./importSave";
 export {
+  SAMPLE_MANIFEST_FILE,
+  SAMPLE_SAVEDATA_DIR,
+  importSampleSaves,
+  type SampleImportOptions,
+  type SampleImportSummary,
+} from "./sampleSaves";
+export {
   GoogleDriveAuthError,
   hasDriveAccessToken,
   requestDriveAccessToken,

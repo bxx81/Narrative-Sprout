@@ -23,9 +23,9 @@ test.describe("save slot deletion", () => {
     await expect(page.getByText("No saved games found.")).toBeVisible();
     await expect(page.getByText("E2E Doomed Tale")).toHaveCount(0);
 
-    // The slot is really gone: title offers no loadable game.
+    // The slot is really gone: title offers the sample button again.
     await page.goto("/");
-    await expect(page.getByRole("button", { name: "Load" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Load Sample", exact: true })).toBeVisible();
   });
 });
 
@@ -105,6 +105,6 @@ test.describe("full data wipe", () => {
 
     await page.getByRole("button", { name: "Return to Start Screen" }).click();
     await expect(page.getByRole("heading", { name: "Narrative Sprout" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Load" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Load Sample", exact: true })).toBeVisible();
   });
 });

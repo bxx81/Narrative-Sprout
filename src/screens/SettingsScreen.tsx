@@ -222,9 +222,11 @@ const SettingsScreen: React.FC = () => {
   const wipeAllData = useGameStore((s) => s.wipeAllData);
   const translateUi = useGameStore((s) => s.translateUi);
   const deleteAiTranslation = useGameStore((s) => s.deleteAiTranslation);
+  const importSampleSaves = useGameStore((s) => s.importSampleSaves);
 
   const [key, setKey] = useState("");
   const [targetLanguage, setTargetLanguage] = useState("");
+  const [isLoadingSample, setIsLoadingSample] = useState(false);
   const pkceProcessedRef = useRef(false);
 
   const cameFromPath = location.state?.from as string | undefined;
@@ -322,6 +324,22 @@ const SettingsScreen: React.FC = () => {
     });
     if (result !== true) return;
     await wipeAllData();
+  };
+
+  // Bundled sample saves (`public/savedata/`): loadable from here even
+  // while saves exist (the title-screen button only shows with no saves).
+  const handleLoadSample = async () => {
+    if (isLoadingSample) return;
+    setIsLoadingSample(true);
+    try {
+      await toast.promise(importSampleSaves(), {
+        loading: t("toastLoading"),
+        success: t("toastLoadSampleSuccess"),
+        error: (error) => (error instanceof Error ? error.message : t("operationFailed")),
+      });
+    } finally {
+      setIsLoadingSample(false);
+    }
   };
 
   // The debug flag is a module-load constant, so the toggle can never flip in
@@ -772,6 +790,20 @@ const SettingsScreen: React.FC = () => {
                 checked={isDebug}
                 onChange={(e) => void handleDebugLoggingToggle(e.target.checked)}
               />
+            </div>
+            <div>
+              <p className="explanation-text-style">{t("importSampleSavedataLabel")}</p>
+              <Button
+                type="button"
+                intent="secondary"
+                size="small"
+                onClick={() => void handleLoadSample()}
+                disabled={isLoadingSample}
+                isWorking={isLoadingSample}
+                className="mt-2 w-full"
+              >
+                {t("loadSampleButton")}
+              </Button>
             </div>
           </Expander>
         </SettingsSection>
