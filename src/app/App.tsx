@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import i18n from "../features/i18n/config";
 import { getLanguageCode, applyLanguageDocumentEffects } from "../features/i18n/api";
 import { setWordCountLanguage } from "../features/narrative/api";
+import { applyColorScheme, resolveIsDark } from "../features/theme/api";
 import { playSound } from "../features/sound/api";
 import { useGameStore } from "../store/gameStore";
 import ErrorDialog from "../components/ErrorDialog";
@@ -56,21 +57,24 @@ function ToastSoundPlayer() {
 
 export function App() {
   const bootstrap = useGameStore((s) => s.bootstrap);
+  // Before settings load from IndexedDB this falls back to "system", which
+  // matches the legacy OS-following behavior; it corrects once loaded.
+  const colorScheme = useGameStore((s) => s.settings?.colorScheme ?? "system");
 
   useEffect(() => {
     void bootstrap();
   }, [bootstrap]);
 
-  // Dark mode follows the OS preference (legacy behavior)
+  // Dark mode follows the `colorScheme` setting (`system` = OS preference).
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const apply = () => {
-      document.documentElement.classList.toggle("dark", mediaQuery.matches);
+      applyColorScheme(resolveIsDark(colorScheme, mediaQuery.matches));
     };
     apply();
     mediaQuery.addEventListener("change", apply);
     return () => mediaQuery.removeEventListener("change", apply);
-  }, []);
+  }, [colorScheme]);
 
   // F11 fullscreen shortcut (legacy behavior)
   useEffect(() => {

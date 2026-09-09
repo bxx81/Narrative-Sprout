@@ -13,7 +13,7 @@ UI language (`settings.uiLanguage`, stored as the **native display name**) drive
 
 # Built-in Languages
 
-Five languages bundled at build time (`src/features/i18n/locales/*.json`, 342 keys each) and precached for offline use — no http-backend, unlike legacy:
+Five languages bundled at build time (`src/features/i18n/locales/*.json`, 346 keys each) and precached for offline use — no http-backend, unlike legacy:
 
 | Display name | Code | File |
 |--------------|------|------|

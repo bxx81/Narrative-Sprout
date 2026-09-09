@@ -30,6 +30,9 @@ export type MemoryStrategy = z.infer<typeof memoryStrategySchema>;
 export const gameTextSizeSchema = z.enum(["small", "medium", "large", "xlarge"]);
 export type GameTextSize = z.infer<typeof gameTextSizeSchema>;
 
+export const colorSchemeSchema = z.enum(["system", "light", "dark"]);
+export type ColorScheme = z.infer<typeof colorSchemeSchema>;
+
 /** Default A1111 generation parameters (matches legacy `defaultA1111Config`). */
 export const DEFAULT_A1111_CONFIG = JSON.stringify(
   {
@@ -228,6 +231,8 @@ export const settingsRecordSchema = z.object({
   showElapsedTime: z.boolean().default(false),
   /** Game screen body text size (scene text, choices, choice echo). */
   gameTextSize: gameTextSizeSchema.default("medium"),
+  /** UI color scheme override (system follows the OS preference). */
+  colorScheme: colorSchemeSchema.default("system"),
   /** AI-translated UI bundles keyed by the user-typed language name. */
   aiTranslations: aiTranslationsSchema,
   /** IETF tags for AI-translated languages (display name → tag). */

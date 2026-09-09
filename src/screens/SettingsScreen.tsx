@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { useGameStore } from "../store/gameStore";
-import type { GameTextSize, ImageGeneratorType } from "../types/settings";
+import type { ColorScheme, GameTextSize, ImageGeneratorType } from "../types/settings";
 import { parseTextModelOptions, DEFAULT_OPENROUTER_BASE_URL } from "../lib/modelOptions";
 import { isDebug, setDebugMode } from "../lib/debugLog";
 import { builtInLanguages } from "../features/i18n/api";
@@ -540,6 +540,21 @@ const SettingsScreen: React.FC = () => {
               <option value="medium">{t("gameTextSizeMedium")}</option>
               <option value="large">{t("gameTextSizeLarge")}</option>
               <option value="xlarge">{t("gameTextSizeXLarge")}</option>
+            </select>
+          </div>
+          <div className="mt-4">
+            <label htmlFor="color-scheme-select" className="explanation-text-style">
+              {t("colorSchemeLabel")}
+            </label>
+            <select
+              id="color-scheme-select"
+              value={settings.colorScheme ?? "system"}
+              onChange={(e) => void updateSettings({ colorScheme: e.target.value as ColorScheme })}
+              className="form-style mt-2"
+            >
+              <option value="system">{t("colorSchemeSystem")}</option>
+              <option value="light">{t("colorSchemeLight")}</option>
+              <option value="dark">{t("colorSchemeDark")}</option>
             </select>
           </div>
           <Button
