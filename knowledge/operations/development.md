@@ -3,7 +3,7 @@ type: Playbook
 title: Development Setup (v2)
 description: Dev environment, repository layout, and daily workflow for Narrative Sprout v2.
 tags: [dev, setup, workflow]
-timestamp: 2026-09-08T00:00:00Z
+timestamp: 2026-09-09T00:00:00Z
 source: package.json, README, CONTRIBUTING.md, AGENTS.md, SESSION_HANDOFF.md, scripts/
 ---
 
@@ -15,7 +15,8 @@ Prerequisites: [Bun](https://bun.sh/) 1.4.0 (see [Environment Configuration](/co
 git checkout main && git pull
 bun install
 bun dev        # local dev server (HMR)
-bun test       # unit tests
+bun test       # unit tests (excludes e2e/)
+bun run test:e2e  # Playwright E2E (needs browsers: bunx playwright install chromium webkit)
 bun run lint   # ESLint
 bun run build  # tsc --noEmit + production build
 bun run update:icons  # regenerate the Material Symbols icon font subset (see below)
@@ -36,6 +37,8 @@ src/
   hooks/          # navigation, lazy images, confirm, breakpoint, fullscreen, …
 public/           # icons, images (title art per aspect), s/ (fonts + css)
 scripts/          # maintenance scripts (update-icon-font.ts)
+e2e/              # Playwright specs + helpers/ (seed, LLM mock); see Testing Strategy
+playwright.config.ts  # E2E config (chromium + webkit projects, dev-server webServer)
 knowledge/        # this OKF bundle
 functions/        # reserved for Pages Functions (absent until needed)
 ```

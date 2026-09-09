@@ -10,7 +10,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "bun test",
+    "test": "bun test --path-ignore-patterns='e2e/**'",
+    "test:e2e": "playwright test",
     "lint": "eslint .",
     "update:icons": "bun scripts/update-icon-font.ts",
     "format:check": "prettier --check ."
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

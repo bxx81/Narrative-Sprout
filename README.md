@@ -14,12 +14,20 @@ Prerequisites: [Bun](https://bun.sh/)
 
 ```sh
 bun install
-bun dev        # local dev server
-bun test       # run tests
-bun run build  # type-check + production build
+bun dev           # local dev server
+bun test          # unit tests (bun test + happy-dom)
+bun run test:e2e  # end-to-end tests (Playwright, chromium + webkit)
+bun run lint      # ESLint
+bun run build     # type-check + production build
 ```
 
 Copy `.env.example` to `.env.local` and fill in values for local development. **Never commit real keys** — see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Testing
+
+- **Unit tests** (`bun test`) colocate with sources (`*.test.ts`). IndexedDB-backed tests run against fake-indexeddb; LLM/Drive code is tested with stubbed network.
+- **E2E tests** (`bun run test:e2e`) drive the real app in Chromium and WebKit: title/setup/load/settings smoke, route guards, save/branch/wipe deletions, and a mocked-LLM two-turn playthrough. First run needs browsers: `bunx playwright install chromium webkit`. No real API keys or network are used — the LLM endpoint is mocked and fixtures are seeded straight into IndexedDB.
+- Details: `knowledge/operations/testing.md`.
 
 ## Backup & Restore
 

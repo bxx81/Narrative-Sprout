@@ -18,5 +18,9 @@ Thumbs.db
 # Logs
 *.log
 
+# Playwright E2E output — never commit
+playwright-report/
+test-results/
+
 # Tauri (managed on its own branch; see README)
 src-tauri/target/

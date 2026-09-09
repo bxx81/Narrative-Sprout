@@ -28,7 +28,8 @@ The full design rationale lives in `REDESIGN.md`; this file is the working ruleb
 ## Commands
 
 - `bun dev` — dev server
-- `bun test` — unit tests (bun test + happy-dom)
+- `bun test` — unit tests (bun test + happy-dom; `e2e/` excluded via `--path-ignore-patterns`)
+- `bun run test:e2e` — E2E tests (Playwright, chromium + webkit; needs `bunx playwright install chromium webkit`)
 - `bun run build` — `tsc --noEmit` + production build
 - `bun run lint` — ESLint
 
@@ -37,3 +38,4 @@ The full design rationale lives in `REDESIGN.md`; this file is the working ruleb
 - Feature modules under `src/features/<name>/` expose only their `api.ts`; internals stay private.
 - New `VITE_` env vars require PR review: they are embedded in the public build.
 - Async operations in the UI store use the `AsyncOperation<TPayload, TResult>` union (REDESIGN.md §4.3) — no ad-hoc `*_PENDING` flags.
+- **E2E**: specs live in `e2e/` with shared helpers in `e2e/helpers/` (`seed.ts`, `mockLlm.ts`). No external network — mock the LLM endpoint, seed IndexedDB directly, use the dummy key `sk-or-test`. Each test gets a fresh browser context (empty IndexedDB). Scope confirm-dialog buttons to `getByRole("dialog")` and use `exact: true` where labels collide.
