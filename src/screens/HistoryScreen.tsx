@@ -1,10 +1,12 @@
-import React, { useMemo } from "react";
+import React, { memo, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router";
 import { useGameStore } from "../store/gameStore";
 import type { StoryNodeRecord } from "../types";
+import type { AssetRecord } from "../types/asset";
 import { useLazyNodeImage } from "../hooks/useLazyNodeImage";
+import { useIncrementalList } from "../hooks/useIncrementalList";
 import StoryCard from "../components/StoryCard";
 import BackButton from "../components/ui/BackButton";
 import { ROUTES } from "../app/routes";
@@ -14,10 +16,18 @@ import { LOAD_SCREEN_FALLBACK_URL } from "../components/game/imageFallbacks";
 import { useConfirm } from "../hooks/useConfirm";
 import { CARD_TITLE_MAX_LENGTH, truncateText } from "../lib/truncateText";
 
+const CARD_PAGE_SIZE = 24;
+
 /**
  * A card component for displaying an end (leaf) node.
+ *
+ * `getAsset` reuses the store's already-loaded assets so visible cards don't
+ * re-read IndexedDB per card on top of `openGame`'s bulk load.
  */
-const EndNodeCard: React.FC<{ node: StoryNodeRecord }> = ({ node }) => {
+const EndNodeCard: React.FC<{
+  node: StoryNodeRecord;
+  getAsset: (nodeId: string) => Promise<AssetRecord | undefined>;
+}> = memo(({ node, getAsset }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const confirm = useConfirm();
@@ -31,6 +41,7 @@ const EndNodeCard: React.FC<{ node: StoryNodeRecord }> = ({ node }) => {
     isLoading: isLoadingImage,
   } = useLazyNodeImage(node.id, {
     fallbackUrl: LOAD_SCREEN_FALLBACK_URL,
+    getAsset,
   });
 
   // Legacy rewind semantics: the playhead moves to this leaf so that
@@ -61,18 +72,34 @@ const EndNodeCard: React.FC<{ node: StoryNodeRecord }> = ({ node }) => {
     }
   };
 
-  const scenePreviewText =
-    node.scene.sceneText + (node.scene.isStoryOver ? " - " : "") + node.scene.storyClosingText;
+  const scenePreviewText = useMemo(
+    () =>
+      node.scene.sceneText + (node.scene.isStoryOver ? " - " : "") + node.scene.storyClosingText,
+    [node.scene.sceneText, node.scene.isStoryOver, node.scene.storyClosingText],
+  );
 
-  const cardActions = (
-    <div className="flex flex-col gap-2 sm:flex-row">
-      <Button onClick={handleViewChronicle} intent="secondary" size="small" className="flex-1">
-        <p className="line-clamp-3">{t("historyViewStoryButton")}</p>
-      </Button>
-      <Button onClick={handleRewind} intent="primary" size="small" className="flex-1">
-        <p className="line-clamp-3">{t("historyContinueButton")}</p>
-      </Button>
-    </div>
+  const mainText = useMemo(
+    () =>
+      node.choiceText
+        ? t("historyChoicePrefixText", {
+            choice: truncateText(node.choiceText, CARD_TITLE_MAX_LENGTH),
+          })
+        : t("historyInitialEntry"),
+    [node.choiceText, t],
+  );
+
+  const cardActions = useMemo(
+    () => (
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Button onClick={handleViewChronicle} intent="secondary" size="small" className="flex-1">
+          <p className="line-clamp-3">{t("historyViewStoryButton")}</p>
+        </Button>
+        <Button onClick={handleRewind} intent="primary" size="small" className="flex-1">
+          <p className="line-clamp-3">{t("historyContinueButton")}</p>
+        </Button>
+      </div>
+    ),
+    [t, node.id],
   );
 
   return (
@@ -85,35 +112,46 @@ const EndNodeCard: React.FC<{ node: StoryNodeRecord }> = ({ node }) => {
         onImageClick={handleRewind}
         onMenuClick={() => void handleDelete()}
         menuText={t("deleteButton")}
-        mainText={
-          node.choiceText
-            ? t("historyChoicePrefixText", {
-                choice: truncateText(node.choiceText, CARD_TITLE_MAX_LENGTH),
-              })
-            : t("historyInitialEntry")
-        }
+        mainText={mainText}
         subText={scenePreviewText}
       />
     </article>
   );
-};
+});
+EndNodeCard.displayName = "EndNodeCard";
 
 /**
  * The history screen: every ending / branching point of the active game.
+ *
+ * Only the visible window (`CARD_PAGE_SIZE` at a time) is mounted so games
+ * with hundreds of branches don't mount N cards and N image observers
+ * up front; the rest reveal as the sentinel scrolls into view.
  */
 const HistoryScreen: React.FC = () => {
   const { t } = useTranslation();
   const activeGame = useGameStore((s) => s.activeGame);
   const nodes = useGameStore((s) => s.nodes);
+  const assets = useGameStore((s) => s.assets);
   const exportSave = useGameStore((s) => s.exportSave);
   const [isExporting, setIsExporting] = React.useState(false);
+
+  // Stable loader over the store's bulk-loaded assets (ref avoids effect churn).
+  const assetsRef = useRef(assets);
+  assetsRef.current = assets;
+  const getAsset = useCallback((nodeId: string) => Promise.resolve(assetsRef.current[nodeId]), []);
 
   const endNodes = useMemo(() => {
     const parentIds = new Set(nodes.flatMap((n) => (n.parentNodeId ? [n.parentNodeId] : [])));
     return nodes
       .filter((node) => !parentIds.has(node.id))
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }, [nodes]);
+
+  const { visibleCount, sentinelRef, canShowMore, showMore } = useIncrementalList(
+    endNodes.length,
+    CARD_PAGE_SIZE,
+  );
+  const visibleNodes = useMemo(() => endNodes.slice(0, visibleCount), [endNodes, visibleCount]);
 
   const handleExport = async () => {
     if (!activeGame || isExporting) return;
@@ -159,12 +197,22 @@ const HistoryScreen: React.FC = () => {
         </Button>
       </div>
       <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-        {endNodes.map((node) => (
+        {visibleNodes.map((node) => (
           <li key={node.id}>
-            <EndNodeCard node={node} />
+            <EndNodeCard node={node} getAsset={getAsset} />
           </li>
         ))}
       </ul>
+      {canShowMore && (
+        <>
+          <div ref={sentinelRef} aria-hidden="true" className="h-1" />
+          <div className="mt-8 flex justify-center">
+            <Button intent="tertiary" size="small" onClick={showMore}>
+              {t("showMoreButton", { defaultValue: "Show more" })}
+            </Button>
+          </div>
+        </>
+      )}
       <BackButton />
     </main>
   );

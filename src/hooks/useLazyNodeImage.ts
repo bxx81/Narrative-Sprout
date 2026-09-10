@@ -1,16 +1,27 @@
 import { useState, useEffect, useRef } from "react";
 import { assetRepository } from "../db/assetRepository";
+import type { AssetRecord } from "../types/asset";
 
 /**
  * Lazy-loads a node image (AssetRecord blob -> object URL) when the element
  * enters the viewport. v2 equivalent of the legacy useLazyNodeImage, reading
  * from the Dexie `assets` store instead of OPFS.
+ *
+ * `getAsset` overrides the IndexedDB read (e.g. History reuses the
+ * already-loaded store assets instead of re-reading IndexedDB per card).
+ * It is stored in a ref so inline closures don't restart the load effect.
  */
 export const useLazyNodeImage = (
   nodeId: string | null,
-  options: { rootMargin?: string; fallbackUrl?: string | null } = {},
+  options: {
+    rootMargin?: string;
+    fallbackUrl?: string | null;
+    getAsset?: (nodeId: string) => Promise<AssetRecord | undefined>;
+  } = {},
 ) => {
-  const { rootMargin = "200px", fallbackUrl = null } = options;
+  const { rootMargin = "200px", fallbackUrl = null, getAsset } = options;
+  const getAssetRef = useRef(getAsset);
+  getAssetRef.current = getAsset;
 
   const [isVisible, setIsVisible] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(fallbackUrl);
@@ -49,7 +60,9 @@ export const useLazyNodeImage = (
 
       setIsLoading(true);
       try {
-        const asset = await assetRepository.get(nodeId);
+        const asset = getAssetRef.current
+          ? await getAssetRef.current(nodeId)
+          : await assetRepository.get(nodeId);
         if (isCancelled) return;
 
         if (asset) {
