@@ -1,7 +1,7 @@
 import type { AssetRecord } from "../../types/asset";
 import type { StoryNodeId } from "../../types/ids";
 import type { ImageMimeType } from "../../lib/imageFileExtensions";
-import { base64DataUrlToBlob, convertToWebpBlob, dataUrlToBlob } from "../../lib/imageConversion";
+import { convertToWebpBlob, dataUrlToBlob } from "../../lib/imageConversion";
 
 /**
  * Creates an `AssetRecord` from a `data:` URL (the output of `generateSceneImage`).
@@ -25,17 +25,9 @@ export async function assetRecordFromDataUrl(
     // If we ever want to persist them, extend `ImageMimeType` to include svg.
     return null;
   }
-  let blob: Blob;
-  if (dataUrl.startsWith("data:image")) {
-    // Fast path for base64 data URLs without fetch
-    try {
-      blob = base64DataUrlToBlob(dataUrl);
-    } catch {
-      blob = await dataUrlToBlob(dataUrl);
-    }
-  } else {
-    blob = await dataUrlToBlob(dataUrl);
-  }
+  // Decode the data URL via fetch: the platform handles base64 and
+  // URL-encoded payloads for any mime, so no manual atob path is needed.
+  const blob = await dataUrlToBlob(dataUrl);
   const webpBlob = await convertToWebpBlob(blob, quality);
   const mimeType: ImageMimeType = "image/webp";
   // Ensure the blob's type matches mimeType (convertToWebpBlob returns image/webp or original)

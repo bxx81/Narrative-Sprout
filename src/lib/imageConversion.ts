@@ -6,7 +6,8 @@
  */
 
 /**
- * Converts a `data:` URL to a Blob via fetch (fast path, works for any mime).
+ * Converts a `data:` URL to a Blob via fetch (fast path, works for any mime
+ * and any encoding — base64 or URL-encoded).
  */
 export async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
   const res = await fetch(dataUrl);
@@ -87,19 +88,4 @@ function convertViaDomCanvas(blob: Blob, quality: number): Promise<Blob> {
     };
     image.src = url;
   });
-}
-
-/**
- * Creates a Blob from a base64 data-url string without a network round-trip,
- * when the caller already has the base64 payload (e.g. from an image generator
- * returning `data:image/png;base64,...`).
- */
-export function base64DataUrlToBlob(dataUrl: string): Blob {
-  const match = dataUrl.match(/^data:([^;]+);base64,(.*)$/s);
-  if (!match) throw new Error("Invalid base64 data URL");
-  const mime = match[1]!;
-  const b64 = match[2]!;
-  const binary = atob(b64);
-  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
-  return new Blob([bytes], { type: mime });
 }
