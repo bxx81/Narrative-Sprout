@@ -1,4 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useBreakpoint } from "../hooks/useBreakpoint";
@@ -54,6 +61,14 @@ const GAME_TEXT_SIZE_CLASSES: Record<
   },
 };
 
+/**
+ * Distance (px) the streaming tail anchor may sit off the viewport bottom
+ * while still considered "at the tail". Covers text-size differences and
+ * mobile toolbar resizing. Anything below the anchor (skeleton choices,
+ * dividers, model credit) is deliberately ignored.
+ */
+const STREAMING_TAIL_FOLLOW_THRESHOLD_PX = 120;
+
 const ordinal = (n: number): string => {
   const suffixes = ["th", "st", "nd", "rd"];
   const value = n % 100;
@@ -103,6 +118,12 @@ const GameScreen: React.FC = () => {
   const [refineOpen, setRefineOpen] = useState(false);
   const [isEditingScene, setIsEditingScene] = useState(false);
   const sceneEditRef = useRef<HTMLTextAreaElement>(null);
+  // Streaming tail-follow: anchor sits right after the generated text so the
+  // skeleton choices below never count as the bottom. Scrolling above the
+  // anchor pauses follow; scrolling back to (or below) it resumes follow.
+  const tailAnchorRef = useRef<HTMLDivElement>(null);
+  const followTailRef = useRef(true);
+  const programmaticScrollRef = useRef(false);
 
   const loading = generation.phase === "running";
   const isImageRegenerating = imageRegeneration.phase === "running";
@@ -178,6 +199,53 @@ const GameScreen: React.FC = () => {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, [viewingNodeId, loading, isImageRegenerating]);
+
+  // New generation starts following the tail again.
+  useEffect(() => {
+    if (loading) {
+      followTailRef.current = true;
+    }
+  }, [loading]);
+
+  // Manual scroll above the streaming tail stops the follow; scrolling back
+  // to (or below) the tail resumes it. The anchor (not document bottom) is
+  // measured so the skeleton block below is excluded. Guarded by a live
+  // mirror so the top-scroll above never trips it.
+  const isStreamingLiveRef = useRef(false);
+  isStreamingLiveRef.current = isStreamingLive;
+  useEffect(() => {
+    const handleTailScroll = () => {
+      if (!isStreamingLiveRef.current) return;
+      if (programmaticScrollRef.current) {
+        programmaticScrollRef.current = false;
+        return;
+      }
+      const tailAnchor = tailAnchorRef.current;
+      if (!tailAnchor) return;
+      const distanceToTail = tailAnchor.getBoundingClientRect().bottom - window.innerHeight;
+      if (distanceToTail > STREAMING_TAIL_FOLLOW_THRESHOLD_PX) {
+        followTailRef.current = false;
+      } else {
+        followTailRef.current = true;
+      }
+    };
+    window.addEventListener("scroll", handleTailScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleTailScroll);
+  }, []);
+
+  // Follow the growing text while streaming. Instant (not smooth): the store
+  // flushes ~10fps and smooth scrolls would queue up and jank. When the user
+  // sits below the tail (e.g. scrolled all the way down), stay put and wait
+  // until the growing text catches up instead of yanking back up.
+  useLayoutEffect(() => {
+    if (!isStreamingLive || !followTailRef.current) return;
+    const tailAnchor = tailAnchorRef.current;
+    if (!tailAnchor) return;
+    const distanceToTail = tailAnchor.getBoundingClientRect().bottom - window.innerHeight;
+    if (distanceToTail < -STREAMING_TAIL_FOLLOW_THRESHOLD_PX) return;
+    programmaticScrollRef.current = true;
+    tailAnchor.scrollIntoView({ behavior: "auto", block: "end" });
+  }, [isStreamingLive, stream.sceneText]);
 
   const handleChoiceSubmit = (choice: string) => {
     if (loading || autoplay) return;
@@ -379,6 +447,9 @@ const GameScreen: React.FC = () => {
           </>
         )}
       </div>
+      {/* Streaming tail anchor: the generated end. Everything below (divider,
+          skeleton choices, model credit) is excluded from follow detection. */}
+      <div ref={tailAnchorRef} aria-hidden="true" className="scroll-mb-24" />
       <Divider className="my-8 md:my-16" />
 
       {loading && stream.status !== "idle" ? (
