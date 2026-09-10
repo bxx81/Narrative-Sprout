@@ -4,7 +4,7 @@ title: History & Saves
 description: Save/load, branching, rewind, redo, chronicle, and IndexedDB persistence of playthroughs in v2.
 tags: [saves, history, branching, indexeddb]
 timestamp: 2026-09-08T00:00:00Z
-source: src/db/gameRepository.ts, src/features/storytree/treeTraversal.ts, branchDeletion.ts, src/screens/LoadScreen.tsx, HistoryScreen.tsx, ChronicleScreen.tsx
+source: src/db/gameRepository.ts, src/features/storytree/treeTraversal.ts, branchDeletion.ts, src/screens/LoadScreen.tsx, HistoryScreen.tsx, ChronicleScreen.tsx, src/hooks/useIncrementalList.ts, src/hooks/useLatestNodes.ts
 ---
 
 # Overview
@@ -24,6 +24,12 @@ One playthrough = one `GameRecord` (header) + many `StoryNodeRecord`s (tree via 
 - **Rewind / Resume Here**: `resumeStoryAtNode(nodeId, branchEndNodeId)` sets the viewing position and playhead (History tree and Chronicle linear views). `setViewingNode` moves display only; `currentNodeId` (session-only playhead) is where Forward returns to.
 - **History screen**: renders leaf/ending node cards (not a literal tree diagram) with resume/rewind, delete, and the `ns-save` export ("Download Save Data").
 - **Chronicle screen**: linear path from root to a target node (`chronicleTargetNodeId`), with resume support.
+
+# List Rendering (Incremental Window)
+
+- **Windowed grids**: `LoadScreen` and `HistoryScreen` mount only a visible window (`CARD_PAGE_SIZE = 24` each) via the shared `useIncrementalList(totalCount)` hook. A 1px sentinel (`rootMargin: 400px`) auto-appends the next page when it nears the viewport; a `Show more` button (`t("showMoreButton", defaultValue: "Show more")`, no locale entries needed) covers non-IO environments and E2E.
+- **Why windowed**: keeps DOM nodes, per-card `IntersectionObserver`s (`useLazyNodeImage`), and IndexedDB reads proportional to what was scrolled to. Load resolves latest-node previews with one `bulkGetNodes` per visible page (`useLatestNodes`, ref-cached); History reuses the store's already bulk-loaded assets via the `getAsset` override instead of re-reading IndexedDB per card. Card components are `memo`d; list sorts use `localeCompare` on ISO-8601 strings (no `Date` parsing); `LoadScreen` hoists one module-scope `Intl.DateTimeFormat`.
+- **Known UX characteristic (not a bug)**: with 25+ saves/branches, scrolling near the bottom grows the page, so the scrollbar thumb shrinks/jumps when the next page mounts. Page length is a function of `visibleCount`, which only grows — never a stable full-list height. Accepted as the performance/layout-shift tradeoff of append-style infinite scroll (no virtualizer dependency, grid CSS preserved). A stable-scrollbar virtualized grid (fixed row heights or measured virtualization) remains a possible future step if the jump becomes a UX problem.
 
 # Branch Deletion
 

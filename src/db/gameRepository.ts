@@ -68,6 +68,16 @@ export const gameRepository = {
     return db.nodes.get(nodeId);
   },
 
+  /**
+   * Bulk-loads node records by id in a single IndexedDB round-trip.
+   * Used by the save list to resolve latest-node previews without N+1 reads.
+   */
+  async bulkGetNodes(nodeIds: string[]): Promise<StoryNodeRecord[]> {
+    if (nodeIds.length === 0) return [];
+    const records = await db.nodes.bulkGet(nodeIds);
+    return records.filter((record): record is StoryNodeRecord => record !== undefined);
+  },
+
   /** All nodes of a game in play order. */
   async getNodesOfGame(gameId: string): Promise<StoryNodeRecord[]> {
     return db.nodes.where("gameId").equals(gameId).sortBy("turnNumber");

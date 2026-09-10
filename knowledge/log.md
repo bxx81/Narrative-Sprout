@@ -1,5 +1,9 @@
 # Knowledge Bundle Update Log
 
+## 2026-09-10
+* **Addition**: Incremental (windowed) card grids on `LoadScreen` / `HistoryScreen` (`CARD_PAGE_SIZE = 24`, shared `useIncrementalList`: 400px sentinel auto-append + `Show more` fallback). Load previews via `bulkGetNodes` per visible page (`useLatestNodes`); History reuses store assets via the `useLazyNodeImage` `getAsset` override; cards memoized; ISO-8601 `localeCompare` sorts. Documented in `features/history-and-saves.md` (new List Rendering section).
+* **Note**: Scrollbar thumb shrinks/jumps past 24 items is the expected page-growth behavior of append-style infinite scroll (page length follows `visibleCount`), accepted as the perf tradeoff; virtualized grid left as a future option.
+
 ## 2026-09-02
 * **Creation**: Initial OKF v0.1 knowledge bundle for Narrative Sprout v2 (clean rebuild, Phase 0–6.9.5 complete).
 * **Creation**: 39 concept documents covering overview, features, services, data model, integrations, configuration, operations, and references.

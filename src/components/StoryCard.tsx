@@ -64,6 +64,8 @@ const StoryCard: React.FC<StoryCardProps> = ({
           <img
             src={imageUrl || undefined}
             alt={displayImageAlt}
+            loading="lazy"
+            decoding="async"
             className={`aspect-video size-full object-cover ${!onImageClick ? "" : "cursor-pointer"}`}
             onError={onImageError}
             onClick={onImageClick}
