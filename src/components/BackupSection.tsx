@@ -15,10 +15,18 @@ import { DIALOG_EMBEDDED_TITLE_MAX_LENGTH, truncateText } from "../lib/truncateT
  * unencrypted path (§3.3).
  */
 
+// Module scope: one formatter shared by all rows (matches LoadScreen).
+const driveBackupDateFormatter = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
 function formatDriveBackupMetadata(backup: DriveFileMetadata): string {
   const sizeText =
     backup.sizeBytes !== null ? `${(backup.sizeBytes / 1024).toFixed(0)} KB` : "unknown size";
-  const dateText = backup.modifiedAt ? new Date(backup.modifiedAt).toLocaleString() : "";
+  const dateText = backup.modifiedAt
+    ? driveBackupDateFormatter.format(new Date(backup.modifiedAt))
+    : "";
   return `${sizeText}${dateText ? ` · ${dateText}` : ""}`;
 }
 

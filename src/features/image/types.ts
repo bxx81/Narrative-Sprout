@@ -34,5 +34,5 @@ export const FALLBACK_IMAGE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width
 export const TRANSPARENT_IMAGE_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024"><rect width="100%" height="100%" fill="#ffffff00"/></svg>';
 
-export const FALLBACK_IMAGE_URL = `data:image/svg+xml;base64,${typeof window !== "undefined" ? btoa(FALLBACK_IMAGE_SVG) : ""}`;
-export const TRANSPARENT_IMAGE_URL = `data:image/svg+xml;base64,${typeof window !== "undefined" ? btoa(TRANSPARENT_IMAGE_SVG) : ""}`;
+export const FALLBACK_IMAGE_URL = `data:image/svg+xml,${encodeURIComponent(FALLBACK_IMAGE_SVG)}`;
+export const TRANSPARENT_IMAGE_URL = `data:image/svg+xml,${encodeURIComponent(TRANSPARENT_IMAGE_SVG)}`;
