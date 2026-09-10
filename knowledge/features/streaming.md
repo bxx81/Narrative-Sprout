@@ -3,7 +3,7 @@ type: Feature
 title: Streaming Generation Display
 description: SSE streaming delivery of narration with a dedicated display store, per-model opt-out, and bulk fallback in v2.
 tags: [streaming, sse, llm]
-timestamp: 2026-09-07T00:00:00Z
+timestamp: 2026-09-10T00:00:00Z
 source: src/lib/openAiClient.ts, src/store/streamStore.ts, src/lib/modelOptions.ts, src/features/narrative/generateScene.ts, src/screens/GameScreen.tsx, src/screens/StartingScreen.tsx
 ---
 
@@ -42,5 +42,9 @@ The store computes this per generation flow (start/choose/refine/redo/rootRedo) 
 - Final data always renders through the regular success path, never from the stream store.
 
 `GameScreen` suppresses `LoadingOverlay` while streaming incomplete text (rendering it in `MainText` with a cursor + pulsing choice skeletons) and restores the spinner once `sceneTextComplete` flips (remaining JSON keys still generating) or when the image stage starts (`generationStage === "image"`). The legacy-style fixed Stop-generating button (`intent="navigator"` circle at bottom-right) appears on `GameScreen` while `(loading && stream.status !== "idle") || isAutoplayDeciding` and on `StartingScreen` while the stream store is active — i.e. `GameScreen` stays stoppable during the autoplay decision phase, which produces no stream output and aborts via its own controller (see [Autoplay](autoplay.md)), while narrative/image generation aborts via `cancelGeneration` → `streamStore.cancel()`. Reasoning output is never shown live.
+
+# Tail Follow
+
+`GameScreen` follows the growing text chatbot-style: a sentinel `div` sits right after `MainText` (before the divider, skeleton choices, and model credit, so those never count as the bottom) and each `sceneText` update calls `scrollIntoView({ behavior: "auto", block: "end" })` on it — instant, not smooth, since the store flushes ~10 fps. Own scrolls are told apart from manual ones via a single-shot programmatic flag, and a live-mirror guard keeps the scene-change top-scroll from tripping detection. Scrolling above the sentinel (anchor bottom more than `STREAMING_TAIL_FOLLOW_THRESHOLD_PX = 120` below the viewport) pauses follow; scrolling back to or below it resumes. While sitting below the tail the page stays put until the growing text catches up instead of yanking back up. Each new generation re-arms follow.
 
 `StartingScreen` also renders a word-count pseudo progress bar while `stream.status === "streaming"`: `min(0.9, wordCount / minWordsTarget(sceneTextLength))` (no numeric label). Tail behavior — with a progress-reporting image generator (A1111/ComfyUI) the bar continues as `0.9 + 0.1 × imageGenerationProgress` (monotonic; the word-based cap is 90%); with no image generator configured it jumps to 100% at `sceneTextComplete`; generators without progress reporting hold at 90%. The label message follows `generationStage` (`loadingWeavingScene` → `loadingPaintingScene`).
