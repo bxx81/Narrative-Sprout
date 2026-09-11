@@ -16,3 +16,4 @@ export {
   createCodeChallenge,
   parseLoopbackCallbackUrl,
 } from "./oauthLoopback";
+export { vaultCredentialBackend, type CredentialBackend } from "./credentialVault";

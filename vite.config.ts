@@ -20,6 +20,14 @@ export default defineConfig(({ mode }) => {
     define: {
       __APP_VERSION__: JSON.stringify(version),
     },
+    server: {
+      // Tauri dev rebuilds Rust binaries under src-tauri/target while Vite
+      // is watching: without this, the watcher trips over locked .exe files
+      // (EBUSY crash) and wastes cycles on build artifacts (legacy parity).
+      watch: {
+        ignored: ["**/src-tauri/**"],
+      },
+    },
     build: {
       // Vendor chunks (zod 90 kB / react 243 kB raw) are split below for PWA
       // cache efficiency: app code changes every release, vendors only with

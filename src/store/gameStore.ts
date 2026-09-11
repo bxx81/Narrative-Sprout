@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { devtools, subscribeWithSelector } from "zustand/middleware";
-import { credentialsRepository } from "../db/credentialsRepository";
+import { credentialsRepository, migrateCredentialsToVault } from "../db/credentialsRepository";
+import { isTauri } from "../features/desktop/api";
 import type { CredentialKey } from "../types";
 import { gameRepository } from "../db/gameRepository";
 import { settingsRepository } from "../db/settingsRepository";
@@ -259,6 +260,15 @@ export const useGameStore = create<GameState>()(
       driveBackups: [],
 
       bootstrap: async () => {
+        // Tauri first launch: move IndexedDB credentials into the Stronghold
+        // Vault BEFORE any read below (reads go to the Vault when Tauri).
+        // Retried every launch until the IndexedDB side is empty; a failure
+        // leaves rows behind for the next attempt, never deletes blindly.
+        if (isTauri()) {
+          await migrateCredentialsToVault().catch((error: unknown) => {
+            console.error("[vault] credential migration failed (will retry next launch)", error);
+          });
+        }
         const [settings, apiKey, hfToken, nimToken, games] = await Promise.all([
           settingsRepository.get(),
           credentialsRepository.get("openrouterApiKey"),
