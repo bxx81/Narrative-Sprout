@@ -1,9 +1,10 @@
-import React, { useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { useGameStore } from "../store/gameStore";
 import { parseScenarioFile } from "../features/attachments/api";
+import { useTauriFileDrop } from "../features/desktop/api";
 import { ROUTES } from "../app/routes";
 import A1111ImageSettings from "../components/settings/A1111ImageSettings";
 import ComfyUIImageSettings from "../components/settings/ComfyUIImageSettings";
@@ -43,6 +44,15 @@ const ThemeSetupScreen: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  // OS-level file drop onto the Tauri window (the WebView never sees it):
+  // merged into the same attachment pipeline as picker/drag-drop below.
+  const tauriFileDrop = useTauriFileDrop();
+  useEffect(() => {
+    if (tauriFileDrop.files.length > 0) {
+      void handleFiles(tauriFileDrop.files);
+      tauriFileDrop.clearFiles();
+    }
+  });
 
   const loading = generation.phase === "running";
   const isGeneratingThemes = themeGeneration.phase === "running";

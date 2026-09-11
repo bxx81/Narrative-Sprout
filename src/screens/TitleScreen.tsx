@@ -6,6 +6,7 @@ import { useGameStore } from "../store/gameStore";
 import { ROUTES } from "../app/routes";
 import Button from "../components/ui/Button";
 import { guideUrl, licenseUrl, privacyUrl, termsUrl } from "../lib/cloudFlarePages";
+import { exitApplication, isTauri, resolveAssetUrl } from "../features/desktop/api";
 
 // セーブデータがある場合に「続きから」ボタンが表示される
 
@@ -57,14 +58,23 @@ const TitleScreen: React.FC = () => {
     const aspectRatioFolder = getAspectRatio();
     const path = `/images/${aspectRatioFolder}/${imageId}.webp`;
 
-    const img = new Image();
-    img.onload = () => {
-      setBackgroundUrl(path);
+    // Tauri production builds serve images from the bundled native
+    // resources instead of dist/ (resolveAssetUrl is identity on web).
+    let cancelled = false;
+    void resolveAssetUrl(path).then((resolved) => {
+      if (cancelled) return;
+      const img = new Image();
+      img.onload = () => {
+        if (!cancelled) setBackgroundUrl(resolved);
+      };
+      img.onerror = () => {
+        if (!cancelled) setBackgroundUrl(FALLBACK_BG_URL);
+      };
+      img.src = resolved;
+    });
+    return () => {
+      cancelled = true;
     };
-    img.onerror = () => {
-      setBackgroundUrl(FALLBACK_BG_URL);
-    };
-    img.src = path;
   }, []);
 
   const handleBegin = () => {
@@ -221,6 +231,13 @@ const TitleScreen: React.FC = () => {
             Version: {__APP_VERSION__}
           </a>
         </div>
+        {isTauri() && (
+          <div className="mt-2 flex justify-center">
+            <Button onClick={() => void exitApplication()} intent="tertiary" size="medium">
+              {t("exitAppButton")}
+            </Button>
+          </div>
+        )}
       </footer>
     </div>
   );

@@ -21,6 +21,9 @@
   },
   "dependencies": {
     "@gradio/client": "^2.5.1",
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-fs": "^2.5.1",
+    "@tauri-apps/plugin-process": "^2.3.1",
     "@types/fs-extra": "^11.0.4",
     "dexie": "^4.0.0",
     "fflate": "^0.8.3",

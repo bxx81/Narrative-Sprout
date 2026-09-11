@@ -6,6 +6,7 @@
  * "汉语", "한국어", "臺灣華語") in the settings record, and mapped to IETF
  * language tags only where a code is required (i18next, DOM, Intl).
  */
+import { loadDesktopFontCss } from "../desktop/api";
 
 /** A flat UI translation bundle: translation key → translated text. */
 export type Translation = Record<string, string>;
@@ -101,7 +102,8 @@ const languageFontCss: Record<string, string> = {
  * two-letter primary tag for tags like `xx-YY`.
  */
 export function loadFontForLanguage(languageCode: string): void {
-  if (document.querySelector(`link[data-lang-font="${languageCode}"]`)) return;
+  // Either a web `<link>` or a Tauri `<style>` may already carry the font.
+  if (document.querySelector(`[data-lang-font="${languageCode}"]`)) return;
   if (languageCode.toLowerCase().startsWith("en")) return;
 
   const fontUrl = languageFontCss[languageCode.toLowerCase()];
@@ -113,11 +115,9 @@ export function loadFontForLanguage(languageCode: string): void {
     return;
   }
 
-  const link = document.createElement("link");
-  link.rel = "stylesheet";
-  link.href = fontUrl;
-  link.setAttribute("data-lang-font", languageCode);
-  document.head.appendChild(link);
+  // Tauri production builds resolve the font binaries from the bundled
+  // native resources; web builds append a plain stylesheet link.
+  void loadDesktopFontCss(fontUrl, languageCode).catch(() => undefined);
 }
 
 /**
