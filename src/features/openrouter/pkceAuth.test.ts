@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeEach, beforeAll } from "bun:test";
 import { Window } from "happy-dom";
 import {
+  beginPkceRoundtrip,
   buildPkceAuthUrl,
   exchangeCodeForApiKey,
   consumePkceCallback,
@@ -73,6 +74,25 @@ describe("exchangeCodeForApiKey", () => {
     expect(exchangeCodeForApiKey("code-2", { fetchImpl })).rejects.toThrow(
       "Failed to exchange code: 400 Bad Request",
     );
+  });
+});
+
+describe("beginPkceRoundtrip", () => {
+  test("stores state+verifier and returns a challenge matching the verifier", async () => {
+    localStorage.clear();
+    const { state, codeChallenge } = await beginPkceRoundtrip();
+    expect(localStorage.getItem("nsOAuthState")).toEqual(state);
+    const verifier = localStorage.getItem("nsOAuthCodeVerifier");
+    expect(verifier).toBeTruthy();
+    // Recompute the S256 challenge independently (node:crypto).
+    const { createHash } = await import("node:crypto");
+    const expected = createHash("sha256")
+      .update(verifier!)
+      .digest("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+    expect(codeChallenge).toBe(expected);
   });
 });
 

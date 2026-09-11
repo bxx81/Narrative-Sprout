@@ -9,3 +9,10 @@ export {
   setDesktopFullscreen,
   onDesktopResize,
 } from "./applicationControl";
+export {
+  openExternalUrl,
+  startLoopbackServer,
+  waitForLoopbackRedirect,
+  createCodeChallenge,
+  parseLoopbackCallbackUrl,
+} from "./oauthLoopback";

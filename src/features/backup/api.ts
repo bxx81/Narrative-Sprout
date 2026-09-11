@@ -41,6 +41,9 @@ export {
   requestDriveAccessToken,
   revokeDriveAccessToken,
   clearDriveAccessToken,
+  buildGoogleDesktopAuthUrl,
+  exchangeGoogleCodeForToken,
+  type GoogleFetchLike,
 } from "./googleAuth";
 export {
   createDriveClient,
