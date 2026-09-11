@@ -53,9 +53,38 @@ The Drive backup uses Google Identity Services (OAuth implicit token flow) and n
 
 The client id is embedded in the public build by design; restricting it to your origins is what protects it from being reused elsewhere. The Drive access token is kept in memory only and never persisted.
 
+### Desktop app variant
+
+The desktop build needs a **Desktop** application-type OAuth client (same project) instead of the web client above, because consent runs in the OS browser against a temporary localhost server. Google requires the client secret at the token endpoint even for Desktop clients.
+
+1. **APIs & Services → Credentials → Create credentials → OAuth client ID**: Application type **Desktop app**. No redirect URI registration is needed (any localhost port is allowed).
+2. Create `.env.tauri` next to `package.json` (gitignored — never commit it) with the two values:
+   - `VITE_GOOGLE_CLIENT_ID_TAURI=` — the Desktop client id
+   - `VITE_GOOGLE_CLIENT_SECRET_TAURI=` — its client secret
+3. Rebuild the app. Without these, the desktop build falls back to `VITE_GOOGLE_CLIENT_ID`, which fails at the token exchange.
+
+The Desktop client secret is embedded in the desktop build by design (installed apps cannot keep a secret). It authorizes only the narrow `drive.file` scope and cannot touch billing — but treat the built binary accordingly and never put the values in the repository (`.env.example` stays empty).
+
+## Desktop app (Tauri)
+
+The same codebase builds a Windows desktop app from `main` (no separate branch — `src-tauri/` lives alongside the web app; only build outputs are ignored).
+
+```sh
+bun run tauri:dev    # Vite dev server in `--mode tauri` + Tauri window
+bunx tauri build     # NSIS installer (frontend built with PWA disabled)
+```
+
+Notes:
+
+- **Credentials**: API keys/tokens are kept in an encrypted Stronghold Vault, unlocked by a random password in the OS credential store — never as plaintext files. Bulk data (stories, images) is protected by the OS user account boundary, like other desktop apps.
+- **OAuth** (OpenRouter key setup, Google Drive) opens the OS browser and returns through a temporary localhost server; consent never happens inside the app window.
+- **Files**: OS-level drag & drop onto the window works for attachments and save imports; fonts/images ship as native resources instead of web assets.
+- **Single instance**: launching twice focuses the first window instead of starting a second process.
+- The honest threat model (what the Vault does and does not protect against) is documented in `REDESIGN.md` §3.4 — same-account processes are outside the protection boundary.
+
 ## Security
 
-- API keys you enter in the app are stored separately from game settings and are excluded from exports and backups by default. Optional cloud backups are always encrypted with your passphrase (AES-GCM via WebCrypto).
+- API keys you enter in the app are stored separately from game settings and are excluded from exports and backups by default. On the web they live in IndexedDB; on desktop in the encrypted Stronghold Vault (see above). Optional cloud backups are always encrypted with your passphrase (AES-GCM via WebCrypto).
 - The public site is built from this repository by Cloudflare Pages; build artifacts are never committed.
 - For the honest threat model of local data storage, see the design document (`REDESIGN.md` §3).
 

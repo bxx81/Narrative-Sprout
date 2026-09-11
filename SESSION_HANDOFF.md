@@ -43,7 +43,7 @@
 | 6.9.3 | ✅ 完了（PR #18 merged） | sceneTextLength をセーブスロット毎に保持（Legacy 準拠・REDESIND §5.4 の例外規定追加）: `GameRecord.sceneTextLength`（optional、旧セーブはグローバル設定フォールバック）に作成時スナップショット、choose/refine/redo/rootRedo はスナップショット値で生成。実機確認済み（旧データフォールバック・新データの長さ保持） |
 | 6.9.4 | ✅ 完了（PR #19 merged） | JSON Schema クリーニング（Legacy cleanJsonSchemaForStructuredOutputs + removeUnsupported の移植）: zod v4 が出す `propertyNames`（z.record 由来・notes 等）と top-level `$schema` を response_format とプロンプト埋め込み schema から再帰除去。未対応モデルの 400 bad request 対策。実機確認済み（エラーを出していたモデルでの生成） |
 | 6.9.5 | ✅ 完了（PR #20 merged） | ビルドチャンク分割（vite.config manualChunks）: 単一 943 kB だったバンドルを index 555 / react 249 / zod 92 / i18next 43 kB に分離（PWA キャッシュ差分の軽減 + 500 kB 警告解消のため chunkSizeWarningLimit 600）。zod mini 化は「利得 gzip ~10 kB vs 全 schema の関数スタイル書き換えコスト」で見送り（§6.9.5 要点） |
-| 7     | 進行中（`feature/phase7-tauri`。7.0/7.1/7.2/7.3-WIP commit 済み。7.3 の keyring ブロッカーは解決済み — 未 commit の修正あり、下記「Phase 7.3 ブロッカー」） | Tauri 版（`main` 同居に方針変更済み・REDESIGN §3.4 更新、dist は全ブランチ ignore 済み）                                                                    |
+| 7     | ✅ 完了（`feature/phase7-tauri`。7.0 基盤 / 7.1 デスクトップ統合 / 7.2 システムブラウザ OAuth / 7.3 Stronghold Vault / 7.4 実機確認 / 7.5 ドキュメント。実機確認済み：API キー保持・Drive 全バックアップ/全削除/リストア） | Tauri 版（`main` 同居・REDESIGN §3.4 更新、dist は全ブランチ ignore 済み） |
 
 ## Phase 2 の実機確認方法（自分で試すには）
 
@@ -197,14 +197,9 @@
 3. 次のフェーズの作業ブランチを切る（例: `feature/phase7-tauri`）
 4. 着手
 
-## Phase 7.3 ブロッカー — 解決済み（2026-09-12、未 commit 修正あり）
+## Phase 7 完了記録（2026-09-12）
 
-- **根本原因が確定**: EDR / Credential Manager 掃除ではなかった。`src-tauri/Cargo.toml` が `keyring = "3"` と**feature 無し**で宣言していたのが原因。keyring v3 はデフォルト feature を一切持たず、`windows-native` が無いと Windows では**プロセス内 in-memory の mock ストア**にフォールバックする（`keyring-3.6.3/src/lib.rs` の `pub use mock as default`）。mock は set/get/delete をエラーなしで受け付けるが永続化しない →「`cargo test` の scratch round-trip は成功（同一プロセス内だから）」「`cmdkey` に残らない（一度も OS に書いていない）」「指紋が毎回変わる（プロセス起動ごとに mock 空 → NoEntry → 新乱数）」がすべて説明つく。Cargo.lock の keyring 依存が log+zeroize のみ（windows-sys/byteorder を含まない）が決定的証拠だった。
-- **修正**（未 commit。ブランチ `feature/phase7-tauri` 上）:
-  1. `Cargo.toml`: `keyring = { version = "3", features = ["windows-native"] }`。
-  2. `vault_password()` は `(Vec<u8>, bool /* 新規生成か */)` を返すように変更。
-  3. `credential_entry()` + `is_mock_entry()`: Entry が mock credential に downcast できたら setup を fail-fast（feature 落としが再発してもサイレントデータロスにならない tripwire）。
-  4. 孤立 snapshot 復旧: 新規パスワード生成時（NoEntry）に既存 `credentials.hold` があれば削除して新規 Vault 作成（旧パスワードは復元不能なため、毎回起動失敗より安全。log::warn あり）。
-  5. テスト 3件（`mock_store_is_detected_as_unpersistable` / `windows_entry_is_not_mock` / 既存 `vault_snapshot_roundtrip`）全グリーン、cargo fmt 済み。
-- **実証済み**: scratch probe（keyring + windows-native のみの別プロジェクト）で**プロセスをまたぐ** set→get ラウンドトリップ成功、`cmdkey /list` に `LegacyGeneric:target=probe.ns-probe-test` 定着、削除後に消えることを確認（ターゲット名は `username.service` 形式になる）。
-- **残タスク**: 実機確認（アプリ起動 → 指紋が 2 回連続で同一・`cmdkey /list` に `stronghold-vault-password.dev.pages.narrative-sprout` が出る・API キー保存がリロード後も残る）→ commit（ユーザー承認済み手順どおり）。macOS/Linux 対応時は `apple-native` / `linux-native-*` feature 追加が必要（今は mock ガードが fail-fast するだけ）。
+- 7.3 の keyring ブロッカー（`windows-native` feature 不足 → mock フォールバック）は別セッションで特定・修正・commit 済み。詳細は git log の `45396ff` を参照。
+- 実機確認済み（ユーザー実施）: API キーの再起動後保持、Drive への全バックアップ・全削除・リストア、OpenRouter PKCE、NIM/A1111/HF 画像生成、D&D、フルスクリーン、フォント、終了ボタン。
+- 7.5 ドキュメント整備済み: REDESIGN §3.4（as-built：Rust 独自コマンド・32B 制約・keyring gotcha・WF0 根拠・Desktop secret 必須）、README（Desktop 節＋Drive デスクトップ手順＋脅威モデル）、`knowledge/operations/desktop-app.md` 新設＋索引・ログ。
+- 次は `feature/phase7-tauri` → PR → squash merge（Cloudflare プレビューで確認後）。git 操作は毎回承認を得ること。
