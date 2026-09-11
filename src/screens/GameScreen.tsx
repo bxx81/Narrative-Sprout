@@ -1,4 +1,5 @@
 import React, {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -113,6 +114,12 @@ const GameScreen: React.FC = () => {
     undefined,
   );
   const choicePresetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // One-shot consumption: once GameChoices applies the preset to its input,
+  // the signal is discarded so a stale preset can never refill the input on
+  // a later remount (each generation swaps GameChoices for a skeleton).
+  const handleChoicePresetConsumed = useCallback(() => {
+    setChoicePresetSignal(undefined);
+  }, []);
   const [isZoomed, setIsZoomed] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [refineOpen, setRefineOpen] = useState(false);
@@ -472,6 +479,7 @@ const GameScreen: React.FC = () => {
           onRestart={() => void handleRestart()}
           viewingNodeId={viewingNodeId}
           choicePreset={choicePresetSignal}
+          onChoicePresetConsumed={handleChoicePresetConsumed}
           choicesTextClass={gameTextClasses.choices}
         />
       )}

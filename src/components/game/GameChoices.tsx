@@ -16,6 +16,13 @@ interface GameChoicesProps {
   onRestart: () => void;
   viewingNodeId: string;
   choicePreset?: { choice: string };
+  /**
+   * Called once the preset has been applied to the input, so the parent can
+   * discard the signal. Without this the stale signal would refill the input
+   * on every remount (GameScreen swaps this component for a skeleton during
+   * each generation), resurrecting submitted text.
+   */
+  onChoicePresetConsumed: () => void;
   /** Tailwind text-size class for the choice buttons and custom input. */
   choicesTextClass?: string;
 }
@@ -28,6 +35,7 @@ const GameChoices: React.FC<GameChoicesProps> = ({
   onRestart,
   viewingNodeId,
   choicePreset,
+  onChoicePresetConsumed,
   choicesTextClass = "text-base",
 }) => {
   const { t } = useTranslation();
@@ -53,9 +61,10 @@ const GameChoices: React.FC<GameChoicesProps> = ({
     if (choicePreset) {
       Promise.resolve().then(() => {
         setCustomChoice(choicePreset.choice);
+        onChoicePresetConsumed();
       });
     }
-  }, [choicePreset]);
+  }, [choicePreset, onChoicePresetConsumed]);
 
   const handleCustomChoiceSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
