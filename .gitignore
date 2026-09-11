@@ -22,5 +22,6 @@ Thumbs.db
 playwright-report/
 test-results/
 
-# Tauri (managed on its own branch; see README)
+# Tauri (src-tauri/ lives in main; see REDESIGN §3.4)
 src-tauri/target/
+src-tauri/gen/

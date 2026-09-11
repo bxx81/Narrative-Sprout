@@ -7,6 +7,13 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    // Node/Bun で実行するビルド補助スクリプト (Tauri の separate-assets 等)。
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: { console: "readonly", process: "readonly" },
+    },
+  },
+  {
     plugins: {
       "better-tailwindcss": betterTailwindcss,
     },

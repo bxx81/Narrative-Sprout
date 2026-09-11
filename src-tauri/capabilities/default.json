@@ -1,0 +1,33 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "enables the default permissions",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-set-fullscreen",
+    "log:default",
+    {
+      "identifier": "shell:allow-open",
+      "allow": [
+        { "url": "https://narrative-sprout-docs.pages.dev/**" },
+        { "url": "https://narrative-sprout.pages.dev/**" },
+        { "url": "https://openrouter.ai/**" },
+        { "url": "https://accounts.google.com/**" }
+      ]
+    },
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://accounts.google.com/**" },
+        { "url": "https://narrative-sprout-docs.pages.dev/**" },
+        { "url": "https://narrative-sprout.pages.dev/**" },
+        { "url": "https://openrouter.ai/**" }
+      ]
+    },
+    "oauth:allow-start",
+    "process:allow-exit",
+    "fs:allow-read-file",
+    "cors-fetch:default"
+  ]
+}
