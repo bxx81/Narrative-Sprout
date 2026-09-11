@@ -23,7 +23,9 @@ async fn start_server(window: Window) -> Result<u16, String> {
 
 /// Returns the 32-byte Vault password, generating and storing a random one on
 /// first run. The password lives in the OS credential store — never in a file
-/// and never asked from the user (Phase 7 / A1 decision).
+/// and never asked from the user (Phase 7 / A1 decision). The bool result says
+/// whether the password was freshly generated (used to detect an orphaned
+/// snapshot file, see setup()).
 ///
 /// Two hard constraints shape this function:
 /// - Stronghold's key store only accepts exactly 32-byte keys
@@ -32,12 +34,14 @@ async fn start_server(window: Window) -> Result<u16, String> {
 ///   paths below decode it back to the same 32 raw bytes.
 /// - The same bytes must be used on every launch (an earlier version mixed
 ///   raw and hex bytes, breaking every second launch).
-fn vault_password() -> Result<Vec<u8>, String> {
-    let entry = keyring::Entry::new(VAULT_PASSWORD_SERVICE, VAULT_PASSWORD_ACCOUNT)
-        .map_err(|err| err.to_string())?;
+fn vault_password() -> Result<(Vec<u8>, bool), String> {
+    let entry = credential_entry()?;
     match entry.get_password() {
-        Ok(stored) => hex::decode(stored.trim())
-            .map_err(|err| format!("stored vault password is corrupt: {}", err)),
+        Ok(stored) => {
+            let raw = hex::decode(stored.trim())
+                .map_err(|err| format!("stored vault password is corrupt: {}", err))?;
+            Ok((raw, false))
+        }
         Err(keyring::Error::NoEntry) => {
             let mut raw = [0u8; 32];
             getrandom::getrandom(&mut raw).map_err(|err| err.to_string())?;
@@ -48,11 +52,39 @@ fn vault_password() -> Result<Vec<u8>, String> {
             // process must converge on the value actually stored now.
             // (Single-instance normally makes this unreachable.)
             let stored = entry.get_password().map_err(|err| err.to_string())?;
-            hex::decode(stored.trim())
-                .map_err(|err| format!("stored vault password is corrupt: {}", err))
+            let raw = hex::decode(stored.trim())
+                .map_err(|err| format!("stored vault password is corrupt: {}", err))?;
+            Ok((raw, true))
         }
         Err(err) => Err(err.to_string()),
     }
+}
+
+/// Creates the keyring entry for the Vault password, refusing to run against
+/// keyring's in-process mock store. The mock accepts set/get/delete without
+/// error but persists nothing across processes, so if a build ever loses the
+/// `windows-native` feature the Vault would silently rotate its password on
+/// every launch (all saved credentials lost). Failing setup is the only safe
+/// response — this is the exact failure mode that blocked Phase 7.3.
+fn credential_entry() -> Result<keyring::Entry, String> {
+    let entry = keyring::Entry::new(VAULT_PASSWORD_SERVICE, VAULT_PASSWORD_ACCOUNT)
+        .map_err(|err| err.to_string())?;
+    if is_mock_entry(&entry) {
+        return Err(
+            "keyring is using its in-process mock store (no real credential store is \
+             compiled in). Without a real store the Vault password cannot persist — \
+             refusing to start rather than silently losing every saved credential."
+                .to_string(),
+        );
+    }
+    Ok(entry)
+}
+
+fn is_mock_entry(entry: &keyring::Entry) -> bool {
+    entry
+        .get_credential()
+        .downcast_ref::<keyring::mock::MockCredential>()
+        .is_some()
 }
 
 fn open_vault_client(stronghold: &Stronghold) -> Result<iota_stronghold::Client, String> {
@@ -86,7 +118,9 @@ async fn credential_get(
         .get(key.as_bytes())
         .map_err(|err| err.to_string())?
     {
-        Some(bytes) => Ok(Some(String::from_utf8(bytes).map_err(|err| err.to_string())?)),
+        Some(bytes) => Ok(Some(
+            String::from_utf8(bytes).map_err(|err| err.to_string())?,
+        )),
         None => Ok(None),
     }
 }
@@ -157,6 +191,31 @@ mod tests {
 
         std::fs::remove_dir_all(&dir).unwrap();
     }
+
+    /// The guard must reject keyring's mock store — that fallback accepts
+    /// set/get/delete silently but persists nothing, which is precisely how
+    /// the 7.3 Vault lost its password between launches. If the guard were
+    /// removed or the feature regressed, this test is the tripwire.
+    #[test]
+    fn mock_store_is_detected_as_unpersistable() {
+        let credential = keyring::mock::default_credential_builder()
+            .build(None, "mock-service", "mock-user")
+            .unwrap();
+        let entry = keyring::Entry::new_with_credential(credential);
+        assert!(is_mock_entry(&entry));
+    }
+
+    /// With `windows-native` compiled in, a plain Entry must NOT be the mock
+    /// (otherwise credential_entry() would refuse to start on real systems).
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn windows_entry_is_not_mock() {
+        let entry = keyring::Entry::new("narrative-sprout-guard-test", "not-mock").unwrap();
+        assert!(entry
+            .get_credential()
+            .downcast_ref::<keyring::mock::MockCredential>()
+            .is_none());
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -203,7 +262,28 @@ pub fn run() {
             if let Some(parent) = snapshot_path.parent() {
                 std::fs::create_dir_all(parent).map_err(|err| setup_error(err.to_string()))?;
             }
-            let password = vault_password().map_err(setup_error)?;
+            let (password, password_is_fresh) = vault_password().map_err(setup_error)?;
+            // A freshly generated password paired with an existing snapshot
+            // file means the snapshot is orphaned: its password came from an
+            // earlier process and was never durably stored (the 7.3 mock-store
+            // bug produced exactly this state), so the file is unloadable and
+            // its credentials are unrecoverable. Remove it so the fresh
+            // password can create a working vault instead of failing every
+            // launch until the user deletes the file by hand.
+            if password_is_fresh && snapshot_path.exists() {
+                log::warn!(
+                    "vault password was regenerated but a snapshot file exists at {} — \
+                     it belongs to a lost password and will be replaced by a fresh vault",
+                    snapshot_path.display()
+                );
+                std::fs::remove_file(&snapshot_path).map_err(|err| {
+                    setup_error(format!(
+                        "orphaned vault snapshot could not be removed ({}): {}",
+                        snapshot_path.display(),
+                        err
+                    ))
+                })?;
+            }
             // Snapshot file encryption uses age/scrypt with a deliberately
             // heavy default work factor (tens of seconds per save/load even
             // in release builds). That stretching only protects weak human
