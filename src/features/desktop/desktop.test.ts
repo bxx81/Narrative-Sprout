@@ -1,6 +1,7 @@
 import { describe, test, expect } from "bun:test";
 import { isTauri } from "./detectEnvironment";
 import { resolveAssetUrl } from "./assetResolver";
+import { legalDocumentFileNames, openLegalDocument } from "./legalDocuments";
 import { patchStaticFontStylesheetsForTauri, rewriteFontCssUrls } from "./fontLoader";
 
 // Outside a Tauri WebView the desktop feature must be inert: no
@@ -17,6 +18,20 @@ describe("assetResolver", () => {
   test("resolveAssetUrl() is identity outside Tauri", async () => {
     expect(await resolveAssetUrl("/images/16_9/1.webp")).toBe("/images/16_9/1.webp");
     expect(await resolveAssetUrl("/s/ja.css")).toBe("/s/ja.css");
+  });
+});
+
+describe("legalDocuments", () => {
+  test("every bundled legal page has a file name", () => {
+    expect(legalDocumentFileNames).toEqual({
+      terms: "terms_of_service.html",
+      privacy: "privacy_policy.html",
+      license: "license.html",
+    });
+  });
+
+  test("openLegalDocument() refuses to run outside Tauri", async () => {
+    await expect(openLegalDocument("terms")).rejects.toThrow();
   });
 });
 

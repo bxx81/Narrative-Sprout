@@ -1,10 +1,16 @@
 // Tauri build helper: strip resource-served assets from dist/.
 //
-// `tauri.conf.json` bundles `public/s` (fonts) and `public/images` as native
-// resources, and the frontend resolves them at runtime via `resourceDir` +
-// `convertFileSrc` (see Phase 7.1 `features/desktop/`). Keeping the copies
-// inside `dist/` would ship every font/image twice, so this script removes
-// them from `dist/` after `vite build --mode tauri` runs.
+// `tauri.conf.json` bundles `public/s` (fonts), `public/images`, and
+// `public/legal` (terms/privacy/OSS licenses) as native resources, and the
+// frontend resolves fonts/images at runtime via `resourceDir` +
+// `convertFileSrc` (see Phase 7.1 `features/desktop/`). Keeping the font/image
+// copies inside `dist/` would ship every font/image twice, so this script
+// removes them from `dist/` after `vite build --mode tauri` runs.
+//
+// NOTE: `public/legal` is intentionally NOT stripped from `dist/` here —
+// the TitleScreen legal links open the native resource copy via `openPath`
+// (`features/desktop/legalDocuments.ts`), while the `dist/` copy stays as a
+// negligible-size fallback (~85 KB total).
 //
 // What stays in `dist/` (and why):
 // - `s/*.css`: font stylesheets stay — the loader fetches the CSS over HTTP

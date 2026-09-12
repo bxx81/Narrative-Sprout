@@ -6,7 +6,13 @@ import { useGameStore } from "../store/gameStore";
 import { ROUTES } from "../app/routes";
 import Button from "../components/ui/Button";
 import { guideUrl, licenseUrl, privacyUrl, termsUrl } from "../lib/cloudFlarePages";
-import { exitApplication, isTauri, resolveAssetUrl } from "../features/desktop/api";
+import {
+  exitApplication,
+  isTauri,
+  openLegalDocument,
+  resolveAssetUrl,
+} from "../features/desktop/api";
+import type { LegalDocumentId } from "../features/desktop/api";
 import { Icon } from "../components/ui/Icon";
 
 // セーブデータがある場合に「続きから」ボタンが表示される
@@ -32,6 +38,42 @@ const GITHUB_ICON = (
     </defs>
   </svg>
 );
+
+/**
+ * Footer link to a legal page.
+ *
+ * Web builds use a plain anchor to the hosted page. Tauri builds ship the
+ * pages as bundled native resources (`tauri.conf.json` `resources`:
+ * `public/legal` -> `legal`) and open the local file in the system browser —
+ * deliberately a `button`, not an anchor: an anchor with `href` lets the
+ * WebView fire its own navigation alongside the local-file open (React
+ * `preventDefault()` does not reliably suppress it), opening both the
+ * `tauri.localhost` URL and the file.
+ */
+const LegalLink: React.FC<{
+  legalDocumentId: LegalDocumentId;
+  href: string;
+  rel: string;
+  label: string;
+  onOpenLegalDocument: (legalDocumentId: LegalDocumentId) => void;
+}> = ({ legalDocumentId, href, rel, label, onOpenLegalDocument }) => {
+  if (isTauri()) {
+    return (
+      <button
+        type="button"
+        onClick={() => onOpenLegalDocument(legalDocumentId)}
+        className="document-link"
+      >
+        {label}
+      </button>
+    );
+  }
+  return (
+    <a href={href} target="_blank" rel={rel} className="document-link">
+      {label}
+    </a>
+  );
+};
 
 /**
  * The main start screen of the application.
@@ -118,6 +160,16 @@ const TitleScreen: React.FC = () => {
 
   const hasSaves = games.length > 0;
 
+  // Tauri builds ship the legal pages as bundled native resources and open
+  // the local file in the system browser instead of the hosted page.
+  const handleOpenLegalDocument = async (legalDocumentId: LegalDocumentId) => {
+    try {
+      await openLegalDocument(legalDocumentId);
+    } catch {
+      toast.error(t("operationFailed"));
+    }
+  };
+
   return (
     <div className="relative isolate flex min-h-[85vh] w-full flex-col text-center">
       <div
@@ -182,34 +234,37 @@ const TitleScreen: React.FC = () => {
             </a>
           </div>
           <div>
-            <a
+            <LegalLink
+              legalDocumentId="privacy"
               href={privacyUrl}
-              target="_blank"
               rel="noopener noreferrer privacy-policy"
-              className="document-link"
-            >
-              {t("privacyLink", { defaultValue: "Privacy Policy" })}
-            </a>
+              label={t("privacyLink", { defaultValue: "Privacy Policy" })}
+              onOpenLegalDocument={(legalDocumentId) =>
+                void handleOpenLegalDocument(legalDocumentId)
+              }
+            />
           </div>
           <div>
-            <a
+            <LegalLink
+              legalDocumentId="terms"
               href={termsUrl}
-              target="_blank"
               rel="noopener noreferrer terms-of-service"
-              className="document-link"
-            >
-              {t("termsLink", { defaultValue: "Terms of Service" })}
-            </a>
+              label={t("termsLink", { defaultValue: "Terms of Service" })}
+              onOpenLegalDocument={(legalDocumentId) =>
+                void handleOpenLegalDocument(legalDocumentId)
+              }
+            />
           </div>
           <div>
-            <a
+            <LegalLink
+              legalDocumentId="license"
               href={licenseUrl}
-              target="_blank"
               rel="noopener noreferrer"
-              className="document-link"
-            >
-              {t("ossLicenseLink", { defaultValue: "OSS License" })}
-            </a>
+              label={t("ossLicenseLink", { defaultValue: "OSS License" })}
+              onOpenLegalDocument={(legalDocumentId) =>
+                void handleOpenLegalDocument(legalDocumentId)
+              }
+            />
           </div>
         </div>
         <div className="mt-2 flex justify-center">

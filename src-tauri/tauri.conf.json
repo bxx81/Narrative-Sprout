@@ -41,7 +41,8 @@
     ],
     "resources": {
       "../public/s": "s",
-      "../public/images": "images"
+      "../public/images": "images",
+      "../public/legal": "legal"
     },
     "windows": {
       "nsis": {

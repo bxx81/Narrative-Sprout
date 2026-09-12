@@ -25,6 +25,10 @@
         { "url": "https://openrouter.ai/**" }
       ]
     },
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [{ "path": "$RESOURCE/legal/*" }]
+    },
     "oauth:allow-start",
     "process:allow-exit",
     "fs:allow-read-file",
