@@ -29,14 +29,9 @@ describe("createCodeChallenge", () => {
     expect(challenge).not.toContain("+");
     expect(challenge).not.toContain("/");
     expect(challenge).not.toContain("=");
-    // Cross-checked against the independent implementation in pkceAuth.
-    const { createHash } = await import("node:crypto");
-    const expected = createHash("sha256")
-      .update("test-verifier")
-      .digest("base64")
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
+    // Cross-checked with Web Crypto + Buffer against the btoa-based implementation.
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("test-verifier"));
+    const expected = Buffer.from(digest).toString("base64url");
     expect(challenge).toBe(expected);
   });
 });

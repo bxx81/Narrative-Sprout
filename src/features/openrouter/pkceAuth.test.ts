@@ -84,14 +84,9 @@ describe("beginPkceRoundtrip", () => {
     expect(localStorage.getItem("nsOAuthState")).toEqual(state);
     const verifier = localStorage.getItem("nsOAuthCodeVerifier");
     expect(verifier).toBeTruthy();
-    // Recompute the S256 challenge independently (node:crypto).
-    const { createHash } = await import("node:crypto");
-    const expected = createHash("sha256")
-      .update(verifier!)
-      .digest("base64")
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
+    // Recompute the S256 challenge independently (Web Crypto + Buffer).
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier!));
+    const expected = Buffer.from(digest).toString("base64url");
     expect(codeChallenge).toBe(expected);
   });
 });
