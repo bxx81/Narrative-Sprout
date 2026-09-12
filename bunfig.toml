@@ -1,2 +1,3 @@
 [test]
 preload = ["./src/db/installFakeIndexedDb.ts"]
+pathIgnorePatterns = ["e2e/**"]
