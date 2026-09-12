@@ -9,10 +9,10 @@ import { Icon } from "./ui/Icon";
 import { DIALOG_EMBEDDED_TITLE_MAX_LENGTH, truncateText } from "../lib/truncateText";
 
 /**
- * Backup & restore section (REDESIGN §3.3, §8):
+ * Backup & restore section (knowledge/features/backup-restore.md):
  * encrypted local backup (.nsbak), ns-save import, Google Drive backup.
  * Every operation requires the passphrase; there is deliberately no
- * unencrypted path (§3.3).
+ * unencrypted path.
  */
 
 // Module scope: one formatter shared by all rows (matches LoadScreen).

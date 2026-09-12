@@ -13,7 +13,7 @@ Attachments are the PRIMARY source of truth for world-building. Text attachments
 
 # Scenario Files (YAML Front Matter)
 
-`parseScenarioFile(content)` (pure, never throws) implements REDESIGN §4.4:
+`parseScenarioFile(content)` (pure, never throws) implements the scenario format:
 
 ```markdown
 ---
@@ -43,6 +43,8 @@ Rules: front matter is recognized only when the file starts with `---` + newline
 4. Wrapped as `--- Attachment: <name> ---\n…\n--- End Attachment ---`.
 
 Conditional tags are NOT resolved here — raw texts persist on the game (`GameRecord.attachmentTexts`) and are resolved at prompt-build time against current memory. `ThemeSetupScreen` additionally previews a front-matter `theme` into the textarea before Start.
+
+**Gotcha (file inputs)**: never pass a live `FileList` into a `setState` updater closure — `input.value = ""` empties it before the updater evaluates, so nothing is added (a timing-dependent bug shipped once). Handlers must snapshot immediately (`Array.from(files)` / `dataTransfer.files`) before touching `value = ""`.
 
 # Prompt Injection
 

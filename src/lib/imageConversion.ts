@@ -1,5 +1,5 @@
 /**
- * Image data-url / blob helpers and WebP conversion (REDESIGN.md §5.3).
+ * Image data-url / blob helpers and WebP conversion (knowledge/services/storage-service.md).
  *
  * Legacy used `convertToWebpBlob` with canvas. We keep that approach but
  * make it safe for test environments where `document` / canvas may not exist.

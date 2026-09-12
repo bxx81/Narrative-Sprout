@@ -9,9 +9,9 @@ import { restoreRepository } from "../../db/restoreRepository";
 import type { RestoreSummary } from "./types";
 
 /**
- * Imports a single-save `ns-save` ZIP (REDESIGN.md §5.5).
+ * Imports a single-save `ns-save` ZIP (knowledge/features/story-export.md).
  *
- * Element-wise validation (§5.7): invalid node files are skipped with a
+ * Element-wise validation (AGENTS.md rule 4): invalid node files are skipped with a
  * warning. Nodes belonging to another game id than the manifest's are
  * skipped so a doctored archive cannot inject foreign subtrees.
  */

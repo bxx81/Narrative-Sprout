@@ -1,4 +1,4 @@
-/** Public surface of the export feature (REDESIGN.md §4.2 feature modules). */
+/** Public surface of the export feature (feature modules expose only api.ts — knowledge/overview/architecture.md). */
 export {
   NS_SAVE_FORMAT,
   NS_SAVE_VERSION,

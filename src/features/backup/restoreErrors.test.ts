@@ -41,7 +41,7 @@ async function createEnvelopeTextForSeededData(
   return serializeEnvelope(envelope);
 }
 
-describe("restore error handling (non-destructive, §5.6/§5.7)", () => {
+describe("restore error handling (non-destructive policy)", () => {
   test("wrong passphrase is rejected with a clear error", async () => {
     const envelopeText = await createEnvelopeTextForSeededData();
     expect(restoreBackupFromEnvelopeText(envelopeText, "wrong-passphrase")).rejects.toBeInstanceOf(

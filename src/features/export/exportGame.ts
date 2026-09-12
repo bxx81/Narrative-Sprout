@@ -7,7 +7,7 @@ import { createZipArchiveBlob } from "./zipArchive";
 
 /**
  * Orchestrates a full game export: loads the save from IndexedDB, builds the
- * ns-save bundle and returns a ready-to-download ZIP (REDESIGN.md §5.5).
+ * ns-save bundle and returns a ready-to-download ZIP (knowledge/features/story-export.md).
  */
 
 export interface ExportedSave {

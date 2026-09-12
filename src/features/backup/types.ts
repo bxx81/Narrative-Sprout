@@ -4,15 +4,15 @@ import { gameRecordSchema, storyNodeRecordSchema } from "../../types/game";
 import type { ImageMimeType } from "../../lib/imageFileExtensions";
 
 /**
- * `ns-backup` encrypted backup container (REDESIGN.md §3.3).
+ * `ns-backup` encrypted backup container (knowledge/features/backup-restore.md).
  *
  * The file that leaves the device (download or Google Drive upload) is ALWAYS
  * this envelope: a PBKDF2 + AES-GCM wrapper around an opaque encrypted blob.
- * Plaintext backups do not exist in this design (§3.3: no unencrypted path).
+ * Plaintext backups do not exist in this design (no unencrypted path).
  *
  * The envelope version is independent of the DB `schemaVersion`. Restore code
  * must refuse versions it does not know instead of guessing (non-destructive
- * policy, §5.6).
+ * policy).
  */
 
 /** Format identifier of the outer envelope (and the payload manifest). */

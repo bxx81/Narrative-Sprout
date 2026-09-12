@@ -1,5 +1,5 @@
 /**
- * Image asset format registry (REDESIGN.md §5.3).
+ * Image asset format registry (knowledge/services/storage-service.md).
  *
  * - `ImageMimeType` lists every supported image encoding. Add new formats
  *   (e.g. AVIF, JPEG XL) here and in `imageFileExtensions` — nowhere else.
@@ -27,7 +27,7 @@ const mimeTypeByFileExtension: Record<string, ImageMimeType> = Object.fromEntrie
 /**
  * Looks up the image mime type for a file extension (e.g. "webp").
  * Returns `undefined` for unknown extensions — callers must skip those
- * instead of guessing (§5.3: the extension table is the only mapping).
+ * instead of guessing (the extension table is the only mapping).
  */
 export function getImageMimeTypeFromExtension(extension: string): ImageMimeType | undefined {
   return mimeTypeByFileExtension[extension.toLowerCase()];

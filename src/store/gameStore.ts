@@ -121,7 +121,7 @@ interface GameState {
   driveConnected: boolean;
   driveBackups: DriveFileMetadata[];
 
-  // actions (the ONLY legal way to mutate; REDESIGN §4.3.1)
+  // actions (the ONLY legal way to mutate; knowledge/data-model/state-management.md)
   bootstrap: () => Promise<void>;
   saveApiKey: (key: string) => Promise<void>;
   saveCredential: (key: CredentialKey, value: string) => Promise<void>;
@@ -780,7 +780,7 @@ export const useGameStore = create<GameState>()(
             webpQualityForCompression(settings.webpCompression),
           );
           if (asset) {
-            // Regeneration overwrites the same key (REDESIGN §5.3)
+            // Regeneration overwrites the same key (AGENTS rule 7)
             await assetRepository.put(asset);
             set({
               assets: { ...get().assets, [nodeId]: asset },

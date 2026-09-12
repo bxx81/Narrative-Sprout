@@ -3,7 +3,7 @@ import type { ImageGenConfig } from "./types";
 import { FALLBACK_IMAGE_URL } from "./types";
 
 /**
- * High-level scene image generation (REDESIGN.md §5.3).
+ * High-level scene image generation (knowledge/features/image-generation.md).
  *
  * Wraps the generator factory with fallback handling and abort racing.
  * Returns a `data:` URL (the generator contract). Callers are responsible for

@@ -1,4 +1,4 @@
-/** Generic async operation state (REDESIGN §4.3). No ad-hoc *_PENDING flags. */
+/** Generic async operation state (knowledge/data-model/state-management.md). No ad-hoc *_PENDING flags. */
 export type AsyncOperation<TPayload, TResult> =
   | { phase: "idle" }
   | { phase: "running"; payload: TPayload; startedAt: string }

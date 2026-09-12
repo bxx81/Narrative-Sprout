@@ -4,7 +4,7 @@ title: Build & Deploy (v2)
 description: Production build and Cloudflare Pages deployment of Narrative Sprout v2.
 tags: [build, deploy, cloudflare]
 timestamp: 2026-09-02T00:00:00Z
-source: vite.config.ts, package.json, README, SESSION_HANDOFF.md
+source: vite.config.ts, package.json, README
 ---
 
 # Overview

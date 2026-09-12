@@ -3,8 +3,8 @@ type: Reference
 title: Narrative Sprout v2 — Project Overview
 description: An AI-driven interactive visual novel game that runs in the browser (v2 clean rebuild). Players input a theme and the AI generates branching narratives, images, and choices in real time.
 tags: [overview, visual-novel, ai-game]
-timestamp: 2026-09-02T00:00:00Z
-source: README, package.json, REDESIGN.md
+timestamp: 2026-09-12T00:00:00Z
+source: README, package.json
 ---
 
 Narrative Sprout v2 is a client-side, AI-powered interactive visual novel and a **clean rebuild** of the legacy v1 app. There is no server — everything runs in the user's browser. The game uses a minimal fetch-based `OpenAiCompatibleClient` to call LLM APIs (defaulting to [OpenRouter](https://openrouter.ai/)) for text generation, and supports multiple backends for image generation.
@@ -40,7 +40,11 @@ v2 keeps v1's features and look but redesigns internals: IndexedDB persistence i
 | Routing | [React Router](https://reactrouter.com/) v7 |
 | i18n | [i18next](https://www.i18next.com/) (bundled locales, no http-backend) |
 | Web (PWA) | [Cloudflare Pages](https://pages.cloudflare.com/) — also installable as offline-capable PWA. |
-| Desktop (Tauri) | Planned for Phase 7 (own branch, stronghold for credentials). Not started. |
+| Desktop (Tauri) | Tauri v2 (Windows NSIS installer; Stronghold Vault for credentials) — ships from the same `main` branch. |
+
+# Project History
+
+Narrative Sprout v2 is a **clean rebuild** of the legacy v1 app (`narrative-sprout-legacy`, now private and archived; a local copy may exist outside this repository). v1 could not be published — its git history contained leaked API keys — and its data formats (OPFS gzip, legacy ZIP) are intentionally not supported here. The rebuild kept v1's features and look but redesigned internals, executed as phases 0–7 (PRs #1–#20) between 2026-08 and 2026-09: types/DB → game loop → images/memory/attachments → saves/export → encrypted backup/Drive → UI port → i18n/autoplay/streaming/PWA → Tauri desktop. The rebuild is complete as of 2026-09; see [Architecture](architecture.md) for the problem→solution rationale and [Security](security.md) for the threat model.
 
 # Live Site
 

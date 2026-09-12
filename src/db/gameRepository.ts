@@ -4,9 +4,9 @@ import type { AssetRecord } from "../types/asset";
 import type { GameRecord, StoryNodeRecord } from "../types";
 
 /**
- * Repository for `games` / `nodes` stores (REDESIGN §5.1).
+ * Repository for `games` / `nodes` stores (knowledge/services/storage-service.md).
  * Store actions call these; components never touch the db directly.
- * Node/asset deletion is always transactional (REDESIGN §5.3 / AGENTS rule 7).
+ * Node/asset deletion is always transactional (AGENTS rule 7).
  */
 export const gameRepository = {
   async createGame(
@@ -86,7 +86,7 @@ export const gameRepository = {
   /**
    * Deletes a branch rooted at `endNodeId` (including its entire subtree)
    * and then walks upward while the parent would become childless.
-   * All deletions are transactional with assets (REDESIGN §5.3).
+   * All deletions are transactional with assets (AGENTS rule 7).
    * Returns the updated GameRecord or `null` if the entire game was deleted.
    */
   async deleteBranch(gameId: string, endNodeId: string): Promise<GameRecord | null> {

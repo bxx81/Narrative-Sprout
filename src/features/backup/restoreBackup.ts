@@ -6,7 +6,7 @@ import { parsePayloadZip } from "./backupPayload";
 import type { ParsedBackupPayload, RestoreSummary } from "./types";
 
 /**
- * Orchestrates restoring an encrypted backup (REDESIGN.md §3.3):
+ * Orchestrates restoring an encrypted backup (knowledge/features/backup-restore.md):
  * envelope text → schema validate → decrypt → parse payload ZIP → upsert.
  */
 

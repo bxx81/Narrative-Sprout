@@ -46,7 +46,7 @@ async function buildNsSaveZipBytes(
   });
 }
 
-describe("ns-save ZIP import (REDESIGN §5.5)", () => {
+describe("ns-save ZIP import", () => {
   test("imports the save, its nodes and mimeType-derived assets", async () => {
     const result = await importSaveFromZipBytes(await buildNsSaveZipBytes());
     expect(result.gameTitle).toBe("インポートされるセーブ");

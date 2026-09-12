@@ -1,5 +1,5 @@
 /**
- * Google Identity Services (GIS) token client for Drive backup (REDESIGN §3.2).
+ * Google Identity Services (GIS) token client for Drive backup (knowledge/services/google-drive.md).
  *
  * - No `gapi-script` dependency: only the OAuth token flow is needed, Drive
  *   REST calls use plain `fetch` with the bearer token (see `driveClient.ts`).

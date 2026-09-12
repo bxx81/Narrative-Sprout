@@ -3,7 +3,7 @@ import type { ImageMimeType } from "../lib/imageFileExtensions";
 import { storyNodeIdSchema } from "./ids";
 
 /**
- * Image asset for a story node (REDESIGN.md §5.3).
+ * Image asset for a story node (knowledge/services/storage-service.md).
  *
  * Keyed 1:1 by node id. Regeneration overwrites the same key. Node deletion
  * and asset deletion must happen in a single transaction.

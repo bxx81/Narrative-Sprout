@@ -5,14 +5,14 @@ import type { GameRecord, StoryNodeRecord } from "../types/game";
 import type { SettingsRecord } from "../types/settings";
 
 /**
- * IndexedDB layout (REDESIGN.md §5.1).
+ * IndexedDB layout (knowledge/services/storage-service.md).
  *
  * Design notes:
  * - `nodes` are individual records (not one giant JSON) for fault locality.
  * - `assets` is keyed 1:1 by nodeId; node/asset deletion must share a
- *   transaction (§5.3).
+ *   transaction (AGENTS.md rule 7).
  * - `credentials` is the ONLY place secrets live; export/backup code must
- *   never read from it (§5.4).
+ *   never read from it (knowledge/overview/security.md).
  */
 export class NarrativeSproutDatabase extends Dexie {
   games!: Table<GameRecord, string>;

@@ -12,7 +12,7 @@ import {
   wipeDatabaseForTest,
 } from "./testsupport/records";
 
-describe("encrypted backup roundtrip (REDESIGN §3.3)", () => {
+describe("encrypted backup roundtrip (ns-backup envelope)", () => {
   test("backup → wipe → restore brings back games, nodes, assets and settings", async () => {
     // Isolate from any data other test files may have left in the DB.
     await wipeDatabaseForTest();

@@ -18,7 +18,7 @@ v2 carries **no compatibility with legacy v1 formats** (no OPFS gzip / old ZIP i
 - `assertSupportedSchemaVersion` throws `UnsupportedSchemaVersionError` for records newer than the build supports. Newer data is reported as unplayable, **never modified or deleted** (non-destructive policy). Older data flows through the migration chain.
 - Container versions are independent: `ns-save` v1 (`NS_SAVE_VERSION`) and `ns-backup` v1 (`NS_BACKUP_VERSION`). Import/restore refuses unknown container versions instead of guessing.
 
-# Validation Policy (REDESIGN §5.7)
+# Validation Policy
 
 1. **No `.catch()` on record/array schemas as a whole** (ESLint-enforced). No wholesale `.default()` recovery either.
 2. Arrays/records validate **element-wise with `safeParse`**: bad elements are skipped with `console.warn` (`attachmentTexts`, `aiTranslations`, `aiLanguageMappings`, restored/imported nodes/assets).

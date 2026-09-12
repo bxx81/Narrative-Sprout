@@ -4,10 +4,10 @@ import { buildBackupFileName, createBackupEnvelopeText } from "./createBackup";
 import { restoreBackupFromEnvelopeText, type RestoreSummaryWithManifest } from "./restoreBackup";
 
 /**
- * Google Drive backup orchestration (REDESIGN §3.3, §8).
+ * Google Drive backup orchestration (knowledge/services/google-drive.md).
  *
  * Only the encrypted ns-backup envelope is ever uploaded — there is no code
- * path that sends unencrypted user data to Drive (§3.3: no plaintext path).
+ * path that sends unencrypted user data to Drive (knowledge/features/backup-restore.md).
  * The access token is acquired by the caller (store actions, from a user
  * gesture) and passed in; these functions never persist it. `fetchImpl` is
  * injectable for tests; production callers omit it.

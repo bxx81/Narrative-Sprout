@@ -61,7 +61,7 @@ describe("GameRecord schema", () => {
     expect(gameRecordSchema.safeParse(withoutAttachments).success).toBe(true);
   });
 
-  test("filters invalid attachmentTexts elements element-wise (REDESIGN §5.7)", () => {
+  test("filters invalid attachmentTexts elements element-wise (AGENTS rule 4)", () => {
     const withBad = {
       ...minimalGameRecord,
       attachmentTexts: ["valid", 123 as unknown as string, null as unknown as string, "also valid"],
@@ -71,7 +71,7 @@ describe("GameRecord schema", () => {
     if (result.success) expect(result.data.attachmentTexts).toEqual(["valid", "also valid"]);
   });
 
-  test("rejects settings-like leftovers (records carry no settings, REDESIGN §5.2)", () => {
+  test("rejects settings-like leftovers (records carry no settings)", () => {
     const result = gameRecordSchema.safeParse(minimalGameRecord);
     expect(result.success && result.data).not.toHaveProperty("imageSettings");
   });

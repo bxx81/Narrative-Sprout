@@ -7,8 +7,10 @@ timestamp: 2026-09-04T00:00:00Z
 
 # Overview
 
-* [Project Overview](overview/project-overview.md) — High-level project description and tech stack.
-* [Architecture](overview/architecture.md) — Application architecture, state flow, and design decisions.
+* [Project Overview](overview/project-overview.md) — High-level project description, tech stack, and rebuild history.
+* [Architecture](overview/architecture.md) — Application architecture, state flow, design decisions, and rationale.
+* [Security Model](overview/security.md) — Secret handling, encrypted backups, and the honest threat model.
+* [Domain Glossary & Naming Rules](overview/glossary.md) — Domain terms (Game/StoryNode/Scene/Memory/Asset/Credential) and naming principles.
 
 # Features
 

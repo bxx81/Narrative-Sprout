@@ -69,7 +69,7 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         registerType: "autoUpdate",
         disable: isTauriBuild,
-        // 再設計書 §7: 軽量な JS/CSS/HTML/json は precache、重い webp 背景やフォントは
+        // PWA キャッシュ方針 (knowledge/configuration/pwa-setup.md): 軽量な JS/CSS/HTML/json は precache、重い webp 背景やフォントは
         // runtimeCaching に回す（globPatterns に webp を入れると初回インストールが激重になる）
         // UI 効果音 (public/sounds/*.ogg, 計約 70KB) は完了/通知/エラーの即時再生に
         // 必要なため precache に含める。

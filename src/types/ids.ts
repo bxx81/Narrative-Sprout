@@ -1,5 +1,5 @@
 /**
- * Branded ID types (REDESIGN.md §6).
+ * Branded ID types (knowledge/overview/glossary.md).
  *
  * ID fields always name their target in full (`parentNodeId`, never
  * `parentId`). Branding prevents mixing up e.g. a GameId and a StoryNodeId.
