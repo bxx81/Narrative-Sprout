@@ -4,7 +4,8 @@ import type { GameRecord, StoryNodeRecord } from "../types";
 import type { SettingsRecord } from "../types/settings";
 
 /**
- * Transactional upsert of restored/imported records (REDESIGN §5.1, §5.7).
+ * Transactional upsert of restored/imported records (knowledge/services/storage-service.md,
+ * knowledge/operations/data-migration.md).
  *
  * Restore merges by primary key: existing games/nodes/assets with the same
  * ids are overwritten, everything else is added. Nothing pre-existing is

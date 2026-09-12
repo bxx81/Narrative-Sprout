@@ -1,7 +1,7 @@
 import { importSaveFromZipBytes, type SaveImportResult } from "./importSave";
 
 /**
- * Bundled sample saves (REDESIGN.md §5.5 ns-save format).
+ * Bundled sample saves (ns-save format — knowledge/features/story-export.md).
  *
  * The ZIP files live in `public/savedata/` and are served as plain static
  * assets. Because static hosting has no directory listing, the set of

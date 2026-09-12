@@ -1,5 +1,5 @@
 /**
- * Conditional text resolver for attachment contents (REDESIGN.md §4.4 / §6).
+ * Conditional text resolver for attachment contents (knowledge/features/conditional-text.md).
  *
  * Supports:
  * - `<flag:NAME>…</flag:NAME>`          flag truthy

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { getInitialUiLanguage } from "../features/i18n/api";
 
 /**
- * Global application settings (REDESIGN.md §5.4).
+ * Global application settings (knowledge/features/settings-system.md).
  *
  * Contains ONLY non-secret configuration. Anything machine-specific but
  * harmless (endpoints, model names) belongs here; anything secret belongs in
@@ -130,8 +130,8 @@ export const DEFAULT_NIM_CONFIG = JSON.stringify(
 );
 
 /**
- * AI-translated UI bundles are validated language-by-language (REDESIGN
- * §5.7): a corrupted language record is dropped with a warning instead of
+ * AI-translated UI bundles are validated language-by-language (AGENTS.md
+ * rule 4): a corrupted language record is dropped with a warning instead of
  * failing the whole settings record. Missing input (old records) normalizes
  * to an empty table.
  */

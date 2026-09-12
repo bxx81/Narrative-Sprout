@@ -1,6 +1,6 @@
 /**
  * Language identity helpers for the 5 built-in UI languages plus AI dynamic
- * translations (REDESIGN §4.2 `features/i18n`).
+ * translations (knowledge/configuration/localization.md).
  *
  * Languages are identified by their native display name ("English", "日本語",
  * "汉语", "한국어", "臺灣華語") in the settings record, and mapped to IETF

@@ -1,6 +1,6 @@
 /**
  * Minimal OpenAI-compatible chat completions client (OpenRouter default).
- * Supports both bulk and SSE streaming delivery (REDESIGN §8).
+ * Supports both bulk and SSE streaming delivery (knowledge/services/llm-service.md).
  */
 
 export interface ChatMessage {

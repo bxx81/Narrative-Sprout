@@ -1,11 +1,11 @@
 # Dependencies
 node_modules/
 
-# Build output — never commit (§7: Pages builds from source)
+# Build output — never commit (Cloudflare Pages builds from source)
 dist/
 dist-ssr/
 
-# Secrets — never commit (§3.1)
+# Secrets — never commit (gitleaks + Secret Scanning enforced)
 .env
 .env.*
 !.env.example
@@ -22,6 +22,6 @@ Thumbs.db
 playwright-report/
 test-results/
 
-# Tauri (src-tauri/ lives in main; see REDESIGN §3.4)
+# Tauri (src-tauri/ lives in main; see knowledge/operations/desktop-app.md)
 src-tauri/target/
 src-tauri/gen/

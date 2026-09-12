@@ -1,11 +1,11 @@
 import { z } from "zod";
 
 /**
- * Secrets the user entered in the app (REDESIGN.md §5.4).
+ * Secrets the user entered in the app (knowledge/overview/security.md).
  *
  * HARD RULE: values in this store must never be reachable from
  * export / backup / logging code paths in plaintext. Backups may only carry
- * them inside the encrypted layer (§3.3).
+ * them inside the encrypted layer (knowledge/features/backup-restore.md).
  */
 
 /** Known credential keys. Extend this list when adding a provider. */

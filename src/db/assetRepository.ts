@@ -4,11 +4,11 @@ import type { AssetRecord } from "../types/asset";
 import type { ImageMimeType } from "../lib/imageFileExtensions";
 
 /**
- * Repository for the `assets` store (REDESIGN.md §5.3).
+ * Repository for the `assets` store (knowledge/services/storage-service.md).
  *
  * - 1:1 by `nodeId`. Regeneration overwrites, deletion is always transactional
  *   with its node (see `gameRepository` helpers).
- * - Orphan garbage is collected on startup / after deletes (§5.3 GC).
+ * - Orphan garbage is collected on startup / after deletes (GC).
  */
 export const assetRepository = {
   async put(asset: AssetRecord): Promise<void> {
@@ -53,7 +53,7 @@ export const assetRepository = {
     return orphanIds.length;
   },
 
-  /** Derive a filename for ZIP export from an asset's mimeType (§5.3). */
+  /** Derive a filename for ZIP export from an asset's mimeType. */
   fileNameForAsset(nodeId: string, mimeType: ImageMimeType): string {
     return `${nodeId}.${getImageFileExtension(mimeType)}`;
   },

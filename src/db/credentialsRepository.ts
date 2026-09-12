@@ -3,7 +3,7 @@ import type { CredentialKey } from "../types";
 import { isTauri, vaultCredentialBackend, type CredentialBackend } from "../features/desktop/api";
 
 /**
- * The ONLY module allowed to read/write secrets (REDESIGN §5.4).
+ * The ONLY module allowed to read/write secrets (knowledge/overview/security.md).
  * Export/backup features must never import this module.
  *
  * Web reads/writes IndexedDB; Tauri reads/writes the Stronghold Vault

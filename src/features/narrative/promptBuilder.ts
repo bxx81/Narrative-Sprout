@@ -276,7 +276,7 @@ export function buildMemoryUpdatePrompt(params: {
 }
 
 /**
- * Builds the archivist prompt for storyLog compaction (REDESIGN §5.2).
+ * Builds the archivist prompt for storyLog compaction (knowledge/features/narrative-generation.md).
  */
 export function buildCompactionPrompt(params: {
   theme: string;

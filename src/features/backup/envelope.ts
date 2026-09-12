@@ -12,13 +12,13 @@ import {
 } from "./types";
 
 /**
- * Packs/unpacks the ns-backup envelope (REDESIGN.md §3.3).
+ * Packs/unpacks the ns-backup envelope (knowledge/features/backup-restore.md).
  *
  * The envelope is the ONLY shape that leaves the device. Restore refuses
- * future versions instead of guessing (non-destructive policy, §5.6).
+ * future versions instead of guessing (non-destructive policy).
  */
 
-/** Builds the §3.3 envelope around already-encrypted material. */
+/** Builds the ns-backup envelope around already-encrypted material. */
 export function buildEnvelope(
   encrypted: Awaited<ReturnType<typeof encryptWithPassphrase>>,
 ): NSBackupEnvelope {

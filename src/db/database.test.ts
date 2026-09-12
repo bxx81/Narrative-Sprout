@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { NarrativeSproutDatabase } from "./database";
 
 describe("database schema", () => {
-  test("declares the five stores from REDESIGN §5.1", () => {
+  test("declares the five stores", () => {
     const db = new NarrativeSproutDatabase();
     expect(db.tables.map((t) => t.name).sort()).toEqual([
       "assets",

@@ -1,12 +1,12 @@
 /**
- * WebCrypto helpers for encrypted backups (REDESIGN.md §3.3).
+ * WebCrypto helpers for encrypted backups (knowledge/features/backup-restore.md).
  *
  * WebCrypto only — no external crypto dependency. The passphrase is never
  * stored or logged anywhere; it is stretched into a key that lives in memory
  * for the duration of one encrypt/decrypt call.
  */
 
-/** KDF iterations required by §3.3. Never lower this silently. */
+/** KDF iterations of the ns-backup envelope. Never lower this silently. */
 export const PBKDF2_ITERATIONS = 600_000;
 
 /** Salt length in bytes for PBKDF2. */

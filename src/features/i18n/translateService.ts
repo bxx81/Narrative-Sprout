@@ -4,7 +4,7 @@ import { buildSamplingParams, parseTextModelOptions } from "../../lib/modelOptio
 import type { Translation } from "./index";
 
 /**
- * AI dynamic UI translation (REDESIGN §4.2): translates the bundled English
+ * AI dynamic UI translation (knowledge/configuration/localization.md): translates the bundled English
  * UI texts into an arbitrary user-typed language, chunk by chunk, and detects
  * the IETF tag for the DOM/i18next. Ported from the legacy translateService.
  */

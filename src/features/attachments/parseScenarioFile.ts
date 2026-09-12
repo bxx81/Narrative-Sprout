@@ -1,7 +1,7 @@
 import * as yaml from "yaml";
 
 /**
- * Parses a scenario file with optional YAML front matter (REDESIGN.md §4.4).
+ * Parses a scenario file with optional YAML front matter (knowledge/features/attachment-system.md).
  *
  * ```markdown
  * ---

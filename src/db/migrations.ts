@@ -2,7 +2,7 @@ import type { Transaction } from "dexie";
 import type { GameRecord } from "../types/game";
 
 /**
- * Application-data migration chain (REDESIGN.md §5.6).
+ * Application-data migration chain (knowledge/operations/data-migration.md).
  *
  * Rules:
  * - `CURRENT_SCHEMA_VERSION` is bumped whenever a GameRecord's shape changes.

@@ -1,4 +1,4 @@
-/** Public surface of the backup feature (REDESIGN.md §4.2 feature modules). */
+/** Public surface of the backup feature (feature modules expose only api.ts — knowledge/overview/architecture.md). */
 export {
   NS_BACKUP_FORMAT,
   NS_BACKUP_VERSION,

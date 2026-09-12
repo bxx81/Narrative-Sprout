@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Scene-related schemas and types (REDESIGN.md §5.2 / §6.2).
+ * Scene-related schemas and types (knowledge/data-model/scene.md).
  *
  * Glossary:
  * - `SceneContent`   : what the player sees and what image generation uses.

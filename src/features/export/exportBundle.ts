@@ -5,7 +5,7 @@ import type { ExportAssetFile, ExportBundle, ExportNodeFile, NSaveManifest } fro
 import { NS_SAVE_FORMAT, NS_SAVE_VERSION } from "./types";
 
 /**
- * Pure builders for the ns-save bundle (REDESIGN.md §5.5).
+ * Pure builders for the ns-save bundle (knowledge/features/story-export.md).
  *
  * The bundle receives only `GameRecord` / `StoryNodeRecord` / `AssetRecord` —
  * settings and credentials cannot structurally enter an export (AGENTS rule 3).

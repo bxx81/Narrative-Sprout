@@ -3,20 +3,20 @@ import { gameIdSchema, storyNodeIdSchema } from "./ids";
 import { memoryDeltaSchema, memoryStateSchema, sceneContentSchema } from "./scene";
 
 /**
- * Core persisted records (REDESIGN.md §5.2).
+ * Core persisted records (knowledge/data-model/game-state.md).
  *
  * - `GameRecord`      : one playthrough (save slot header). Holds NO secrets
- *                       and no other settings — those are global (§5.4) —
+ *                       and no other settings — those are global —
  *                       except `sceneTextLength`, snapshotted per save so
  *                       later generations keep the length the save was
  *                       created with (legacy per-save behavior).
  * - `StoryNodeRecord` : one turn of the story tree. Its image asset lives in
- *                       the `assets` store keyed by the same node id (§5.3);
+ *                       the `assets` store keyed by the same node id;
  *                       there is intentionally no asset reference field here.
  */
 
 /**
- * Attachment texts are validated element-wise (REDESIGN §5.7):
+ * Attachment texts are validated element-wise (AGENTS.md rule 4):
  * invalid elements are skipped with a warning, not failing the whole record.
  */
 const attachmentTextsSchema = z
@@ -35,7 +35,7 @@ const attachmentTextsSchema = z
 
 export const gameRecordSchema = z.object({
   id: gameIdSchema,
-  /** Integer schema version for the future migration chain (§5.6). */
+  /** Integer schema version for the migration chain (knowledge/operations/data-migration.md). */
   schemaVersion: z.number().int().positive(),
   /** The world theme text shown as the save's display title. */
   title: z.string(),
@@ -70,7 +70,7 @@ export const nodeMetadataSchema = z.object({
   /**
    * Autoplay player-AI reasoning memo that produced this turn's choice.
    * Optional (not `.default()`) so records saved before autoplay arrived
-   * still parse (REDESIGN §5.7); new nodes always set it explicitly.
+   * still parse (AGENTS.md rule 4); new nodes always set it explicitly.
    */
   autoplayReasoning: z.string().nullable().optional(),
 });
@@ -88,7 +88,7 @@ export const storyNodeRecordSchema = z.object({
   scene: sceneContentSchema,
   /**
    * The user message actually sent to the API for this turn. Required for
-   * rebuilding the pseudo-conversation history of past turns (§5.2) — do not
+   * rebuilding the pseudo-conversation history of past turns — do not
    * remove: it cannot be recomputed from `choiceText` alone.
    */
   promptSent: z.string(),

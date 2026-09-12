@@ -19,11 +19,11 @@ import {
 } from "./types";
 
 /**
- * Pure build/parse for the encrypted backup payload ZIP (REDESIGN.md §3.3).
+ * Pure build/parse for the encrypted backup payload ZIP (knowledge/features/backup-restore.md).
  *
  * These functions see the payload ONLY before encryption / after decryption —
  * nothing here ever touches the network or disk. The bundle receives records
- * and non-secret settings; credentials are structurally absent (§5.4).
+ * and non-secret settings; credentials are structurally absent.
  */
 
 /** Assembles every file the payload ZIP will contain. */
@@ -131,7 +131,7 @@ function unzipToEntries(bytes: Uint8Array): Promise<Record<string, Uint8Array>> 
 }
 
 /**
- * Parses + validates a decrypted payload ZIP element-wise (REDESIGN §5.7):
+ * Parses + validates a decrypted payload ZIP element-wise (AGENTS.md rule 4):
  * invalid records are skipped with a warning, never failing the whole restore.
  * Nodes without their game and assets without their node are skipped too,
  * so the restored database stays referentially consistent.

@@ -11,7 +11,7 @@ source: src/features/backup/createBackup.ts, backupPayload.ts, envelope.ts, rest
 
 Backup covers **everything**: all games + nodes + assets + non-secret settings, wrapped in an encrypted `ns-backup` envelope (version 1, `.nsbak` files). **There is deliberately no unencrypted backup path.** Restore merges records by id (upsert; nothing pre-existing deleted).
 
-# Envelope (REDESIGN §3.3, WebCrypto only)
+# Envelope (WebCrypto only)
 
 ```json
 {

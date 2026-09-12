@@ -15,10 +15,10 @@ import {
 } from "./testsupport/records";
 
 /**
- * Completion condition of Phase 5 (REDESIGN §9): PROVE by test that plaintext
+ * Security proof (knowledge/features/backup-restore.md): PROVE by test that plaintext
  * never leaves the app — neither through the local download nor the Google
  * Drive upload path. Only the ns-backup envelope (base64 ciphertext) may cross
- * the boundary, and credentials must not be reachable at all (§5.4).
+ * the boundary, and credentials must not be reachable at all.
  */
 
 const SECRET_CREDENTIAL = "sk-or-v1-SUPER-SECRET-KEY";

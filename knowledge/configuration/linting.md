@@ -13,7 +13,7 @@ CI (`ci.yml` `check` job) runs `bun run lint` → `bunx tsc --noEmit` → `bun t
 
 # ESLint
 
-Flat config (`eslint.config.js`): `js.configs.recommended` + `typescript-eslint` recommended, ignoring `dist/`, `node_modules/`, `playwright-report/`, and `test-results/`. Plus one project-specific rule (REDESIGN §5.7):
+Flat config (`eslint.config.js`): `js.configs.recommended` + `typescript-eslint` recommended, ignoring `dist/`, `node_modules/`, `playwright-report/`, and `test-results/`. Plus one project-specific rule (AGENTS.md rule 4):
 
 - `no-restricted-syntax`: **`.catch()` on `z.record(…)` / `z.array(…)` results is an error** — validate element-wise instead. (Selector targets `CallExpression[callee.property.name="catch"][callee.object.callee.property.name=/^(record|array)$/]`.)
 
@@ -33,3 +33,10 @@ One intentional exception: `ToggleSwitch.tsx` disables `no-conflicting-classes` 
 # Secrets
 
 gitleaks runs in CI over the whole git history (`--redact --verbose`), plus GitHub Secret Scanning / Push Protection on the repo. `.env*` (except `.env.example`) is gitignored; `dist/` is gitignored on every branch.
+
+# CodeQL (default setup)
+
+The repo uses CodeQL **default setup** (no `.github/workflows/codeql.yml`). Consequences:
+
+- `// codeql[...]` suppression comments do **not** apply under default setup (they need advanced setup with `AlertSuppression.ql` + a `dismiss-alerts` action). Don't add them; dismiss false positives through the GitHub API/UI instead, with a rationale comment left at the code site.
+- Example: `js/xss-through-dom` on `AttachmentPreview.tsx`'s `alt={file.name}` was dismissed — React escapes attributes, so the flow is harmless.

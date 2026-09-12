@@ -2,7 +2,7 @@ import { strToU8, zip, type Zippable } from "fflate";
 import type { ExportBundle } from "./types";
 
 /**
- * Archives an ns-save bundle into a ZIP Blob (REDESIGN.md §5.5).
+ * Archives an ns-save bundle into a ZIP Blob (knowledge/features/story-export.md).
  *
  * WebP assets are already compressed, so they are stored uncompressed
  * (level 0); JSON text files use the default deflate level.

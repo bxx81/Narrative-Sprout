@@ -22,7 +22,7 @@ Vite 7 + React plugin + Tailwind v4 plugin + `vite-plugin-pwa`. TypeScript is st
 | `zod` | zod v4 (full bundle) | 92 kB (gzip ~25 kB) |
 | `i18next` | i18next core | 43 kB |
 
-`chunkSizeWarningLimit: 600`. Zod mini migration was deliberately rejected: it needs a full function-style rewrite of every schema for ~10 kB gzip gain (see SESSION_HANDOFF Phase 6.9.5). `@gradio/client` (HF image backend) stays lazily imported so it never joins the startup graph.
+`chunkSizeWarningLimit: 600`. Zod mini migration was deliberately rejected: it needs a full function-style rewrite of every schema (the mini build exposes only a function-style API) for a ~10 kB gzip gain — poor cost/benefit; revisit only if startup load needs major optimization (locale JSON dynamic import is the more efficient candidate). `@gradio/client` (HF image backend) stays lazily imported so it never joins the startup graph.
 
 # Scripts
 

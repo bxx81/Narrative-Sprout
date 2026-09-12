@@ -7,8 +7,8 @@ import zhTw from "./locales/zh-tw.json";
 import ko from "./locales/ko.json";
 
 /**
- * i18next with the 5 built-in languages bundled at build time (REDESIGN
- * §4.2). Bundling instead of the legacy http-backend keeps every locale in
+ * i18next with the 5 built-in languages bundled at build time. Bundling
+ * instead of the legacy http-backend keeps every locale in
  * the PWA precache, so the UI keeps working offline. AI dynamic
  * translations are injected at runtime with `addResourceBundle`.
  */

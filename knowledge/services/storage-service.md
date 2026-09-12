@@ -35,13 +35,13 @@ No hand-rolled mutex: write serialization comes from Dexie transactions (`db.tra
 | `upsertRestoredData` | `restoreRepository` | Merge-by-id upsert for backup/save restores (never deletes). |
 | `wipeAllUserData` | `wipeRepository` | `db.delete()` — whole database incl. settings and credentials. |
 
-# Asset Rules (REDESIGN §5.3)
+# Asset Rules
 
 - **1:1 by `nodeId`**: regeneration overwrites the same key (`updatedAt` bumped); nodes carry no asset reference field by design.
 - **Co-deletion**: node deletion and asset deletion always share one transaction — orphan-by-delete is structurally impossible.
 - **Orphan GC**: `collectGarbage` compares `primaryKeys()` only (never deserializes Blobs) and removes assets without nodes; runs on startup / after deletes as a safety net.
 - **Extension registry**: `src/lib/imageFileExtensions.ts` (`imageFileExtensions`, `getImageFileExtension`, `getImageMimeTypeFromExtension`, `isKnownImageMimeType`) is the single mime↔extension mapping. Hardcoding `.webp` is forbidden.
 
-# Secrets Isolation (REDESIGN §5.4)
+# Secrets Isolation
 
 `credentialsRepository` is the only secrets reader/writer. Export/backup features must never import it — enforced by review, and proven by `plaintextLeak.test.ts` (see [Backup & Restore](/features/backup-restore.md)).

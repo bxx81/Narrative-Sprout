@@ -80,17 +80,18 @@ Notes:
 - **OAuth** (OpenRouter key setup, Google Drive) opens the OS browser and returns through a temporary localhost server; consent never happens inside the app window.
 - **Files**: OS-level drag & drop onto the window works for attachments and save imports; fonts/images ship as native resources instead of web assets.
 - **Single instance**: launching twice focuses the first window instead of starting a second process.
-- The honest threat model (what the Vault does and does not protect against) is documented in `REDESIGN.md` §3.4 — same-account processes are outside the protection boundary.
+- The honest threat model (what the Vault does and does not protect against) is documented in `knowledge/operations/desktop-app.md` — same-account processes are outside the protection boundary.
 
 ## Security
 
 - API keys you enter in the app are stored separately from game settings and are excluded from exports and backups by default. On the web they live in IndexedDB; on desktop in the encrypted Stronghold Vault (see above). Optional cloud backups are always encrypted with your passphrase (AES-GCM via WebCrypto).
 - The public site is built from this repository by Cloudflare Pages; build artifacts are never committed.
-- For the honest threat model of local data storage, see the design document (`REDESIGN.md` §3).
+- For the honest threat model of local data storage, see `knowledge/overview/security.md`.
 
 ## Documentation
 
-- Design decisions: `REDESIGN.md`
+- Architecture and design decisions: `knowledge/overview/architecture.md`
+- Security & threat model: `knowledge/overview/security.md`
 - Contributor rules: `CONTRIBUTING.md`
 - AI-agent conventions: `AGENTS.md`
 - Knowledge base (architecture, features, services, data models): `knowledge/` — start at `knowledge/index.md`

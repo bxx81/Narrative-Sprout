@@ -10,11 +10,11 @@ import { buildBackupPayloadBundle, createPayloadZipBlob } from "./backupPayload"
 import { createEncryptedEnvelope, serializeEnvelope } from "./envelope";
 
 /**
- * Orchestrates creating an encrypted backup (REDESIGN.md §3.3):
+ * Orchestrates creating an encrypted backup (knowledge/features/backup-restore.md):
  * collect records from IndexedDB → build payload ZIP → AES-GCM envelope.
  *
  * The `credentials` store is never read here: secrets are structurally
- * unreachable from this code path (§5.4 / AGENTS rule 3).
+ * unreachable from this code path (AGENTS rule 3).
  */
 
 /** e.g. `ns-backup_2026-09-01-12-30-45.nsbak` */

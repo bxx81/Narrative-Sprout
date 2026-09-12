@@ -1,7 +1,7 @@
 import type { MemoryState } from "../../types";
 
 /**
- * Hierarchical storyLog management (REDESIGN.md §5.2, legacy `storyLogCompaction.ts`).
+ * Hierarchical storyLog management (knowledge/features/narrative-generation.md, legacy `storyLogCompaction.ts`).
  *
  * - `storyLog` is an ever-growing array of per-turn summaries.
  * - When it exceeds `STORY_LOG_ARCHIVE_THRESHOLD`, the oldest entries are sent

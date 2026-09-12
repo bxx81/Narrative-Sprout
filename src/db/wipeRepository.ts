@@ -4,7 +4,7 @@ import { isTauri } from "../features/desktop/api";
 import { credentialsRepository } from "./credentialsRepository";
 
 /**
- * Full data wipe (REDESIGN.md §8 "データ全削除", Phase 4).
+ * Full data wipe ("Delete All Data" — knowledge/features/history-and-saves.md).
  *
  * Deletes the whole `narrative-sprout` database — including settings and
  * credentials — returning the app to its factory state. This is the only

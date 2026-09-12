@@ -2,12 +2,12 @@ import { z } from "zod";
 import { gameRecordSchema } from "../../types/game";
 
 /**
- * `ns-save` container (REDESIGN.md §5.5): a ZIP archive holding
+ * `ns-save` container (knowledge/features/story-export.md): a ZIP archive holding
  * `manifest.json` + `nodes/*.json` + `assets/<nodeId>.<extension>`.
  *
  * The container version is independent of the DB `schemaVersion` carried
- * inside the game record. Import code (future) must refuse versions it does
- * not know instead of guessing (non-destructive policy, §5.6).
+ * inside the game record. Import code must refuse versions it does
+ * not know instead of guessing (non-destructive policy).
  */
 
 /** Format identifier written to manifest.json. */
@@ -21,7 +21,7 @@ export const nsSaveManifestSchema = z.object({
   version: z.number().int().positive(),
   /** ISO 8601 timestamp of when the archive was created. */
   exportedAt: z.string(),
-  /** Save header. Settings and credentials are structurally absent (§5.4). */
+  /** Save header. Settings and credentials are structurally absent. */
   game: gameRecordSchema,
 });
 export type NSaveManifest = z.infer<typeof nsSaveManifestSchema>;
@@ -37,7 +37,7 @@ export interface ExportNodeFile {
 /** One image under `assets/`. */
 export interface ExportAssetFile {
   nodeId: string;
-  /** ZIP-internal path; extension derived from mimeType (§5.3). */
+  /** ZIP-internal path; extension derived from mimeType. */
   path: string;
   blob: Blob;
 }
