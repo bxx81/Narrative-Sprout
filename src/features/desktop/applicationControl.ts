@@ -2,7 +2,7 @@ import { isTauri } from "./detectEnvironment";
 
 /** Exits the desktop app (legacy StartScreen behavior). No-op on web. */
 export async function exitApplication(): Promise<void> {
-  if (!isTauri()) return;
+  if (!isTauri) return;
   const { exit } = await import("@tauri-apps/plugin-process");
   await exit(0);
 }

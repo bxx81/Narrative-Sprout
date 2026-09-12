@@ -72,7 +72,7 @@ export function useTauriFileDrop() {
   const [state, setState] = useState<TauriFileDropState>({ hovering: false, files: [] });
 
   useEffect(() => {
-    if (!isTauri()) return;
+    if (!isTauri) return;
     const unlistenFunctions: UnlistenFn[] = [];
     let cancelled = false;
 

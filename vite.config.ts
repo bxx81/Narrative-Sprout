@@ -19,6 +19,11 @@ export default defineConfig(({ mode }) => {
   return {
     define: {
       __APP_VERSION__: JSON.stringify(version),
+      // Compile-time platform gate: Vite replaces this with a literal, so in
+      // the web/PWA build `isTauri` (src/features/desktop/detectEnvironment.ts)
+      // folds to `false` and Rollup tree-shakes every `@tauri-apps/*` dynamic
+      // import out of the bundle. Tauri builds keep the runtime bridge probe.
+      __TAURI_BUILD__: JSON.stringify(isTauriBuild),
     },
     server: {
       // Tauri dev rebuilds Rust binaries under src-tauri/target while Vite

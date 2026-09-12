@@ -15,7 +15,7 @@ import { credentialsRepository } from "./credentialsRepository";
  */
 export const wipeRepository = {
   async wipeAllUserData(): Promise<void> {
-    if (isTauri()) {
+    if (isTauri) {
       for (const key of credentialKeys) {
         await credentialsRepository.delete(key);
       }

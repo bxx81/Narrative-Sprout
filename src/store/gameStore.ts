@@ -264,7 +264,7 @@ export const useGameStore = create<GameState>()(
         // Vault BEFORE any read below (reads go to the Vault when Tauri).
         // Retried every launch until the IndexedDB side is empty; a failure
         // leaves rows behind for the next attempt, never deletes blindly.
-        if (isTauri()) {
+        if (isTauri) {
           await migrateCredentialsToVault().catch((error: unknown) => {
             console.error("[vault] credential migration failed (will retry next launch)", error);
           });

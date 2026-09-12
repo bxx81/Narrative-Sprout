@@ -306,7 +306,7 @@ const SettingsScreen: React.FC = () => {
   const handleGetApiKey = () => {
     // Tauri: consent runs in the OS browser and returns through the
     // localhost server (the WebView itself cannot navigate to OpenRouter).
-    if (isTauri()) {
+    if (isTauri) {
       void startPkceAuthTauri()
         .then((newKey) => {
           void saveApiKey(newKey);

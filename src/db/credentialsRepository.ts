@@ -22,7 +22,7 @@ const indexedDbCredentialBackend: CredentialBackend = {
 };
 
 function activeCredentialBackend(): CredentialBackend {
-  return isTauri() ? vaultCredentialBackend : indexedDbCredentialBackend;
+  return isTauri ? vaultCredentialBackend : indexedDbCredentialBackend;
 }
 
 export const credentialsRepository = {

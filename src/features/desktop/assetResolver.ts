@@ -21,7 +21,7 @@ async function ensureResourceBase(): Promise<void> {
  * (Tauri dev server: identity — Vite serves `public/` directly.)
  */
 export async function resolveAssetUrl(path: string): Promise<string> {
-  if (!isTauri() || import.meta.env.DEV) return path;
+  if (!isTauri || import.meta.env.DEV) return path;
   const { convertFileSrc } = await import("@tauri-apps/api/core");
   await ensureResourceBase();
   const relative = path.startsWith("/") ? path.slice(1) : path;

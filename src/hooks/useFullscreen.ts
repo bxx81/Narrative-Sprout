@@ -15,7 +15,7 @@ export function useFullscreen() {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
-    if (!isTauri()) {
+    if (!isTauri) {
       setIsFullscreen(typeof document !== "undefined" && !!document.fullscreenElement);
       const handleChange = () => {
         setIsFullscreen(!!document.fullscreenElement);
@@ -47,7 +47,7 @@ export function useFullscreen() {
   }, []);
 
   const toggleFullscreen = useCallback(async () => {
-    if (isTauri()) {
+    if (isTauri) {
       const fullscreen = await getDesktopFullscreen();
       await setDesktopFullscreen(!fullscreen);
       setIsFullscreen(!fullscreen);

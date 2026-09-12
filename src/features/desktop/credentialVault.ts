@@ -22,7 +22,7 @@ async function invokeVault<T>(command: string, args: Record<string, unknown>): P
   return invoke<T>(command, args);
 }
 
-/** Stronghold Vault backend (Tauri only — callers guard with isTauri()). */
+/** Stronghold Vault backend (Tauri only — callers guard with isTauri). */
 export const vaultCredentialBackend: CredentialBackend = {
   // The Vault has no enumeration command; it is only ever a migration
   // target / live store, never a source.

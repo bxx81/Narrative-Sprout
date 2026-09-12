@@ -169,7 +169,7 @@ export function clearDriveAccessToken(): void {
  */
 export async function requestDriveAccessToken(): Promise<string> {
   if (isCachedTokenValid()) return cachedAccessToken!.token;
-  if (isTauri()) return requestDriveAccessTokenTauri();
+  if (isTauri) return requestDriveAccessTokenTauri();
 
   const clientId = getGoogleDriveClientId();
   const oauth2 = await loadGsiOauth2();
@@ -218,7 +218,7 @@ export async function revokeDriveAccessToken(): Promise<void> {
   const token = cachedAccessToken?.token;
   cachedAccessToken = null;
   if (!token) return;
-  if (isTauri()) {
+  if (isTauri) {
     await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(token)}`, {
       method: "POST",
     }).catch(() => undefined);

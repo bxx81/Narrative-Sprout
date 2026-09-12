@@ -21,7 +21,7 @@ export type LegalDocumentId = keyof typeof legalDocumentFileNames;
  * dynamic, so the web bundle never loads them.
  */
 export async function openLegalDocument(legalDocumentId: LegalDocumentId): Promise<void> {
-  if (!isTauri()) {
+  if (!isTauri) {
     throw new Error("openLegalDocument() is only available in the Tauri desktop app.");
   }
   const { resourceDir, join } = await import("@tauri-apps/api/path");

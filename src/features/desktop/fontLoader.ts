@@ -31,7 +31,7 @@ async function resolveResourceBase(): Promise<{ base: string; separator: string 
  * De-duplication is the caller's job (guard on `[data-lang-font="…"]`).
  */
 export async function loadDesktopFontCss(cssUrl: string, languageId: string): Promise<void> {
-  if (!isTauri() || import.meta.env.DEV) {
+  if (!isTauri || import.meta.env.DEV) {
     const link = document.createElement("link");
     link.rel = "stylesheet";
     link.href = cssUrl;
@@ -83,7 +83,7 @@ export async function loadDesktopFontCss(cssUrl: string, languageId: string): Pr
  * removed. On any failure the link is restored so the page still renders.
  */
 export function patchStaticFontStylesheetsForTauri(): Promise<void> {
-  if (!isTauri() || import.meta.env.DEV) return Promise.resolve();
+  if (!isTauri || import.meta.env.DEV) return Promise.resolve();
   const links = Array.from(
     document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"][href^="/s/"]'),
   );

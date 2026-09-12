@@ -57,7 +57,7 @@ const LegalLink: React.FC<{
   label: string;
   onOpenLegalDocument: (legalDocumentId: LegalDocumentId) => void;
 }> = ({ legalDocumentId, href, rel, label, onOpenLegalDocument }) => {
-  if (isTauri()) {
+  if (isTauri) {
     return (
       <button
         type="button"
@@ -287,7 +287,7 @@ const TitleScreen: React.FC = () => {
             Version: {__APP_VERSION__}
           </a>
         </div>
-        {isTauri() && (
+        {isTauri && (
           <Button
             onClick={() => void exitApplication()}
             intent="navigator"
