@@ -19,4 +19,4 @@ Git integration (no CLI/Workers knowledge needed): push to `main` → production
 
 - Current app version `2.0.0` (semver break from v1 by design).
 - PWA `autoUpdate`: new service worker activates on reload; chunk splitting keeps per-release re-downloads near the app chunk (~182 kB gzip + changed vendors).
-- Tauri desktop (Phase 7) is future work on its own branch (`src-tauri` branch, stronghold for credentials); `dist/` stays ignored everywhere so branch merges stay clean.
+- Tauri desktop (Phase 7) ships on `main` (real-machine verified); see `operations/desktop-app.md`.

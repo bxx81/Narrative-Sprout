@@ -41,16 +41,56 @@ export function buildPkceAuthUrl(params: {
   );
 }
 
-/** Step 1: store state+verifier and redirect to OpenRouter. */
-export async function startPkceAuth(): Promise<void> {
+/** Step 1 (shared): stores state+verifier, returns state+challenge. */
+export async function beginPkceRoundtrip(): Promise<{
+  state: string;
+  codeChallenge: string;
+}> {
   const state = crypto.randomUUID();
   localStorage.setItem(PKCE_STATE_KEY, state);
   const codeVerifier = crypto.randomUUID() + crypto.randomUUID();
   localStorage.setItem(PKCE_CODE_VERIFIER_KEY, codeVerifier);
-  const codeChallenge = await createSha256CodeChallenge(codeVerifier);
+  return { state, codeChallenge: await createSha256CodeChallenge(codeVerifier) };
+}
+
+/** Step 1 (web): store state+verifier and redirect to OpenRouter. */
+export async function startPkceAuth(): Promise<void> {
+  const { state, codeChallenge } = await beginPkceRoundtrip();
   // origin + pathname so the callback does not carry the previous code again
   const callbackUrl = window.location.origin + window.location.pathname;
   window.location.href = buildPkceAuthUrl({ callbackUrl, state, codeChallenge });
+}
+
+/**
+ * Step 1 (Tauri): the WebView cannot navigate to the provider, so consent
+ * runs in the OS default browser and OpenRouter redirects back to the
+ * one-shot localhost server. Returns the new user-owned API key (the caller
+ * saves it — cf. the web callback effect in SettingsScreen).
+ */
+export async function startPkceAuthTauri(): Promise<string> {
+  const {
+    openExternalUrl,
+    startLoopbackServer,
+    waitForLoopbackRedirect,
+    parseLoopbackCallbackUrl,
+  } = await import("../desktop/api");
+  const port = await startLoopbackServer();
+  const { state, codeChallenge } = await beginPkceRoundtrip();
+  const waiting = waitForLoopbackRedirect();
+  await openExternalUrl(
+    buildPkceAuthUrl({ callbackUrl: `http://127.0.0.1:${port}`, state, codeChallenge }),
+  );
+  const callback = parseLoopbackCallbackUrl(await waiting);
+  if (!callback) {
+    throw new Error("The browser sign-in did not return an authorization code.");
+  }
+  const consumed = consumePkceCallback(
+    new URLSearchParams({ code: callback.code, state: callback.state }),
+  );
+  if (!consumed) {
+    throw new Error("OAuth state mismatch (possible CSRF) — sign-in rejected.");
+  }
+  return exchangeCodeForApiKey(consumed.code);
 }
 
 /** Minimal fetch signature so tests can inject a stubbed implementation. */

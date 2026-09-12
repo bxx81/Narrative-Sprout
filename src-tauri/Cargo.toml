@@ -1,0 +1,51 @@
+[package]
+name = "narrative-sprout"
+version = "2.0.0"
+description = "An AI-powered interactive visual novel that runs entirely in your browser."
+authors = []
+license = "MIT"
+repository = "https://github.com/bxx81/Narrative-Sprout"
+edition = "2021"
+rust-version = "1.77.2"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.6.3", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.11.3", features = ["protocol-asset", "devtools"] }
+tauri-plugin-shell = "2"
+tauri-plugin-log = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v2" }
+tauri-plugin-window-state = "2.4.0"
+tauri-plugin-oauth = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-process = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-cors-fetch = "5.0.0"
+# Phase 7.3: API keys/tokens live in a Stronghold Vault (XChaCha20-Poly1305
+# snapshot). The Vault password is a random value kept in the OS credential
+# store (Windows Credential Manager) via `keyring` — never a file, never a
+# prompt. `getrandom` supplies the first-run entropy.
+#
+# The `windows-native` feature is REQUIRED: keyring v3 ships with no default
+# platform backends, and without it every Entry falls back to the in-process
+# mock store, which "succeeds" silently but persists nothing (this exact bug
+# blocked 7.3 for a session). The vault_password() guard fails fast if the
+# mock sneaks back in.
+tauri-plugin-stronghold = "2"
+iota_stronghold = "2"
+keyring = { version = "3", features = ["windows-native"] }
+getrandom = "0.2"
+hex = "0.4"
+# Phase 7.3 hardening: the Vault file + keyring entry + IndexedDB must never
+# be written by two processes at once (concurrent first launches can orphan
+# the snapshot with a clobbered password). Second instances focus the first.
+tauri-plugin-single-instance = "2"

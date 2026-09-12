@@ -288,6 +288,14 @@
   .document-link {
     @apply text-xs text-title-text-support underline drop-shadow-sm;
   }
+  /* Tauri builds render legal footer links as buttons (no navigation target):
+     strip the UA button chrome so they look identical to the web anchors. */
+  button.document-link {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
   .version-link {
     @apply mt-2 text-xs text-title-text-support drop-shadow-sm;
   }

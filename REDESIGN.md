@@ -89,11 +89,19 @@
 
 背景：現行版では WebView2（Windows）のユーザーデータフォルダに OPFS の中身が平文で展開されており、「キーを安全に保存している」という設計意図と実態が乖離していた。この乖離を解消する。
 
-#### クレデンシャル：`tauri-plugin-stronghold` を採用（確定）
+#### クレデンシャル：`tauri-plugin-stronghold` を採用（確定・実装済み）
 
 - API キー / トークン類（§5.4 の `credentials` 相当）は stronghold の Vault に保存
 - stronghold は少量・高機密データ向けの設計（XChaCha20-Poly1305 暗号化スナップショット）であり、認証情報の保管という本用途に合致
 - 「設定ファイルを開くだけでキーが読める」状態からの脱却を保証する。**平文ファイル保存は禁止**（lint/レビュー規約）
+- 実装方式（as-built）：
+  - v2 の stronghold プラグインに JS バインディングはないため、Rust 側の独自コマンド（`credential_get/set/delete`）+ `State` 管理で操作し、フロントは `features/desktop/credentialVault.ts` の薄ラッパー経由でのみ触る。Vault パスワードは Rust 内完結で JS に一切渡さない
+  - Vault パスワードは 32 バイト乱数（Stronghold の鍵ストアはちょうど `NC_DATA_SIZE` = 32 バイトしか受け付けず、他は setup 異常終了する）。OS 資格情報ストア（Windows 資格情報マネージャー）に hex で保持し、初回のみ生成・ユーザー prompt なし
+  - `keyring` v3 は **platform backend が feature ゲート**（`windows-native` 必須）。付け忘れるとエラーを出さずプロセス内 mock に落ち、起動ごとにパスワードが変わって全認証情報を失う（Phase 7.3 で実発生）。`credential_entry()` が mock を検出したら setup 拒否するガード + tripwire テストで再発防止
+  - スナップショット（`credentials.hold`）はマシン紐付けのため **LOCAL app data** に置く（Roaming させない）。ファイル暗号化（age/scrypt）の既定 work factor は save/load 各50秒超のため 0 にする — パスワードが 256bit 乱数のため stretching は無意味であり、ファイル自体の暗号化は残る
+  - `single-instance` プラグインで二重起動を禁止（Vault・keyring・IndexedDB への並行書き込み防止）
+  - 初回起動時に IndexedDB → Vault へ移行（冪等。Vault 既存値は stale 行で上書きしない）。移行後に IndexedDB 側は削除する。全削除（ワイプ）は Vault 先 purge → 後 `db.delete()` の順
+  - 誠実さの注記：同一 Windows アカウントのプロセスは資格情報マネージャー経由で Vault パスワードに到達できるため、stronghold は「ファイル検査・他マシン持ち出し」からの保護であり、同一アカウント内プロセスからの秘匿を保証しない。README でもこの表現を使う
 
 #### セーブデータ（物語本文・画像等の bulk データ）：暗号化しない（確定）
 
@@ -104,10 +112,19 @@
   - 「アプリ側で暗号化している」かのような誤解を招く表現を README / ドキュメントに書かないことを規約とする（誠実さの担保）
 - 念のための棄却記録：「アプリが暗号化するが鍵も同じマシンに置く」方式は難読化止まりで実利が薄いため採用しない。真の at-rest 暗号化（起動時パスフレーズ方式）は将来検討課題とするが、忘却 = 全データ喪失の UX コストをユーザーに課すため初版には入れない
 
-#### 運用
+#### デスクトップ OAuth（確定・実装済み）
 
-- `src-tauri/` は引き続き専用ブランチ運用。ブランチ名・管理方針を README に明文化
-- `dist/` は全ブランチで `.gitignore` 除外（§7）。ブランチ間マージの煩雑さを構造的に解消
+- WebView はプロバイダ同意に向かない（GIS ポップアップ不発・WebView 遷移はアプリ状態を破壊する）ため、認可は OS 標準ブラウザ + 一時 localhost サーバ（Rust `start_server` + `tauri-plugin-oauth`）へのリダイレクトで行う。OpenRouter PKCE と Google Drive の両方がこの方式
+- Google は **Desktop タイプのクライアントでもトークン交換に `client_secret` を要求する**（実機確認）。secret はビルド時 `.env.tauri` の `VITE_GOOGLE_CLIENT_SECRET_TAURI` からのみ供給し、リポジトリには絶対に入れない（`.env.example` は空値）。インストール型アプリに秘匿は不可能であり、その旨を README に明記する
+- Desktop タイプでないクライアント ID（Web タイプの流用）では交換が失敗するため、`VITE_GOOGLE_CLIENT_ID_TAURI` に Desktop タイプの ID を設定する。Drive アクセストークンは Web 版同様メモリのみ
+
+#### 運用（Phase 7 で方針変更：`main` 同居）
+
+- `src-tauri/` は **`main` に同居**させる。旧版は専用ブランチ運用だったが、マージ時の `dist/` 競合が原因であり、新設計では `dist/` を全ブランチで `.gitignore` 除外済み（§7）のため原因は消滅している。同居により PWA 版の更新は通常マージで Tauri 版に流れる
+- `src-tauri/target/`（+ CLI 生成物の `src-tauri/gen/`）のみ `.gitignore`（Rust ビルド成果物はコミットしない）
+- Tauri バイナリは当面手元ビルド（`bunx tauri build`）。タグ時の専用 CI ワークフロー化は将来課題。通常の PR CI（lint / tsc / test）は Web のみを対象とする（Rust ビルドは含めない）
+- ビルド運用の要点（詳細は README > Desktop app）：`--mode tauri` で PWA の SW を無効化（`virtual:pwa-register` は noop stub になるため `main.tsx` 無改修）、`separate-assets.mjs` がフォント/画像を `dist/` から抜いて native resources 化（`resourceDir` + `convertFileSrc` で解決）、D&D は window イベント経由、フルスクリーンは native window、全 Tauri import は動的（Web バンドルに混入させない）
+- ブランチ名・管理方針を README に明文化
 
 ---
 

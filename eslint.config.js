@@ -3,9 +3,16 @@ import betterTailwindcss from "eslint-plugin-better-tailwindcss";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist/", "node_modules/", "playwright-report/", "test-results/"] },
+  { ignores: ["dist/", "node_modules/", "playwright-report/", "test-results/", "src-tauri/"] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    // Node/Bun で実行するビルド補助スクリプト (Tauri の separate-assets 等)。
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: { console: "readonly", process: "readonly" },
+    },
+  },
   {
     plugins: {
       "better-tailwindcss": betterTailwindcss,

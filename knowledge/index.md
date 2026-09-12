@@ -60,6 +60,7 @@ timestamp: 2026-09-04T00:00:00Z
 * [Development Setup](operations/development.md) — Dev environment, workflow, and scripts.
 * [Testing Strategy](operations/testing.md) — Test framework, conventions, and CI.
 * [Build & Deploy](operations/build-and-deploy.md) — Production build and Cloudflare Pages deployment.
+* [Desktop App](operations/desktop-app.md) — Tauri build, credential Vault, desktop OAuth.
 * [Data Migration](operations/data-migration.md) — Schema versions, migration chain, validation policy.
 
 # References

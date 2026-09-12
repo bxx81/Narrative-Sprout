@@ -43,7 +43,7 @@
 | 6.9.3 | ✅ 完了（PR #18 merged） | sceneTextLength をセーブスロット毎に保持（Legacy 準拠・REDESIND §5.4 の例外規定追加）: `GameRecord.sceneTextLength`（optional、旧セーブはグローバル設定フォールバック）に作成時スナップショット、choose/refine/redo/rootRedo はスナップショット値で生成。実機確認済み（旧データフォールバック・新データの長さ保持） |
 | 6.9.4 | ✅ 完了（PR #19 merged） | JSON Schema クリーニング（Legacy cleanJsonSchemaForStructuredOutputs + removeUnsupported の移植）: zod v4 が出す `propertyNames`（z.record 由来・notes 等）と top-level `$schema` を response_format とプロンプト埋め込み schema から再帰除去。未対応モデルの 400 bad request 対策。実機確認済み（エラーを出していたモデルでの生成） |
 | 6.9.5 | ✅ 完了（PR #20 merged） | ビルドチャンク分割（vite.config manualChunks）: 単一 943 kB だったバンドルを index 555 / react 249 / zod 92 / i18next 43 kB に分離（PWA キャッシュ差分の軽減 + 500 kB 警告解消のため chunkSizeWarningLimit 600）。zod mini 化は「利得 gzip ~10 kB vs 全 schema の関数スタイル書き換えコスト」で見送り（§6.9.5 要点） |
-| 7     | 未着手（PWA 版完成後に着手の方針） | Tauri 版（`src-tauri` 専用ブランチ、stronghold 導入、dist は全ブランチ ignore 済み）                                                                      |
+| 7     | ✅ 完了（`feature/phase7-tauri`。7.0 基盤 / 7.1 デスクトップ統合 / 7.2 システムブラウザ OAuth / 7.3 Stronghold Vault / 7.4 実機確認 / 7.5 ドキュメント。実機確認済み：API キー保持・Drive 全バックアップ/全削除/リストア） | Tauri 版（`main` 同居・REDESIGN §3.4 更新、dist は全ブランチ ignore 済み） |
 
 ## Phase 2 の実機確認方法（自分で試すには）
 
@@ -196,3 +196,10 @@
 2. `REDESIGN.md` と `AGENTS.md` を再読
 3. 次のフェーズの作業ブランチを切る（例: `feature/phase7-tauri`）
 4. 着手
+
+## Phase 7 完了記録（2026-09-12）
+
+- 7.3 の keyring ブロッカー（`windows-native` feature 不足 → mock フォールバック）は別セッションで特定・修正・commit 済み。詳細は git log の `45396ff` を参照。
+- 実機確認済み（ユーザー実施）: API キーの再起動後保持、Drive への全バックアップ・全削除・リストア、OpenRouter PKCE、NIM/A1111/HF 画像生成、D&D、フルスクリーン、フォント、終了ボタン。
+- 7.5 ドキュメント整備済み: REDESIGN §3.4（as-built：Rust 独自コマンド・32B 制約・keyring gotcha・WF0 根拠・Desktop secret 必須）、README（Desktop 節＋Drive デスクトップ手順＋脅威モデル）、`knowledge/operations/desktop-app.md` 新設＋索引・ログ。
+- 次は `feature/phase7-tauri` → PR → squash merge（Cloudflare プレビューで確認後）。git 操作は毎回承認を得ること。

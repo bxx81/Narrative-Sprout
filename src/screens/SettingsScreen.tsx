@@ -12,8 +12,10 @@ import {
   consumePkceCallback,
   exchangeCodeForApiKey,
   startPkceAuth,
+  startPkceAuthTauri,
   stripPkceCallbackFromUrl,
 } from "../features/openrouter/api";
+import { isTauri } from "../features/desktop/api";
 import EndpointConnectionTest from "../components/settings/EndpointConnectionTest";
 import A1111ImageSettings from "../components/settings/A1111ImageSettings";
 import ComfyUIImageSettings from "../components/settings/ComfyUIImageSettings";
@@ -302,6 +304,20 @@ const SettingsScreen: React.FC = () => {
   };
 
   const handleGetApiKey = () => {
+    // Tauri: consent runs in the OS browser and returns through the
+    // localhost server (the WebView itself cannot navigate to OpenRouter).
+    if (isTauri) {
+      void startPkceAuthTauri()
+        .then((newKey) => {
+          void saveApiKey(newKey);
+          toast.success(t("apiKeyPkceSuccess"));
+        })
+        .catch((error) => {
+          console.error("[pkce] Tauri key authorization failed", error);
+          toast.error(t("apiKeyPkceFailed"));
+        });
+      return;
+    }
     void startPkceAuth();
   };
 
