@@ -7,6 +7,7 @@ import { ROUTES } from "../app/routes";
 import Button from "../components/ui/Button";
 import { guideUrl, licenseUrl, privacyUrl, termsUrl } from "../lib/cloudFlarePages";
 import { exitApplication, isTauri, resolveAssetUrl } from "../features/desktop/api";
+import { Icon } from "../components/ui/Icon";
 
 // セーブデータがある場合に「続きから」ボタンが表示される
 
@@ -232,11 +233,16 @@ const TitleScreen: React.FC = () => {
           </a>
         </div>
         {isTauri() && (
-          <div className="mt-2 flex justify-center">
-            <Button onClick={() => void exitApplication()} intent="tertiary" size="medium">
-              {t("exitAppButton")}
-            </Button>
-          </div>
+          <Button
+            onClick={() => void exitApplication()}
+            intent="navigator"
+            size="medium-circle"
+            className="fixed bottom-6 left-6 z-50"
+            aria-label={t("exitAppButton")}
+            title={t("exitAppButton")}
+          >
+            <Icon iconName="exit_to_app" />
+          </Button>
         )}
       </footer>
     </div>

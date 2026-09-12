@@ -45,7 +45,8 @@ export type IconName =
   | "unfold_less"
   | "unfold_more"
   | "downloading"
-  | "summarize";
+  | "summarize"
+  | "exit_to_app";
 
 interface IconProps {
   className?: string;
