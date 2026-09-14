@@ -3,13 +3,20 @@ type: Playbook
 title: Desktop App (Tauri)
 description: Windows desktop build of Narrative Sprout v2 — Stronghold credential Vault, system-browser OAuth, and Tauri-mode build notes.
 tags: [tauri, desktop, stronghold, oauth]
-timestamp: 2026-09-12T00:00:00Z
+timestamp: 2026-09-15T00:00:00Z
 source: src-tauri/src/lib.rs, src-tauri/tauri.conf.json, src/features/desktop/, src/db/credentialsRepository.ts, vite.config.ts, scripts/separate-assets.mjs
 ---
 
 # Overview
 
-The same `main` branch builds a Windows desktop app (`src-tauri/` lives alongside the web app; only `target/` and `gen/` are ignored). `bun run tauri:dev` runs Vite in `--mode tauri`; `bunx tauri build` produces the NSIS installer. Tauri mode disables the PWA service worker (`virtual:pwa-register` becomes a noop stub), and `scripts/separate-assets.mjs` strips fonts/images from `dist/` into native resources resolved at runtime via `resourceDir` + `convertFileSrc` (`features/desktop/assetResolver.ts`, `fontLoader.ts`). The bundled `legal/` pages (terms/privacy/OSS licenses, also native resources) are opened in the system browser via `openPath` (`features/desktop/legalDocuments.ts`, wired in `TitleScreen`). OS file drop, native fullscreen, and app exit are wired in `features/desktop/` with dynamic imports only (nothing Tauri enters the web bundle; verified by chunk split). Second launches focus the first window (single-instance plugin — concurrent writers must never touch the Vault, keyring entry, or IndexedDB).
+The same `main` branch builds a Windows desktop app (`src-tauri/` lives alongside the web app; only `target/` and `gen/` are ignored). `bun run tauri:dev` runs Vite in `--mode tauri`; `bunx tauri build` produces the NSIS installer. Tauri mode disables the PWA service worker (`virtual:pwa-register` becomes a noop stub), and `scripts/separate-assets.mjs` strips fonts/images from `dist/` into native resources resolved at runtime via `resourceDir` + `convertFileSrc` (`features/desktop/assetResolver.ts`, `fontLoader.ts`). The bundled `legal/` pages (terms/privacy + OSS licenses, native resources) are opened in the system browser via `openPath` (`features/desktop/legalDocuments.ts`, wired in `TitleScreen`). OS file drop, native fullscreen, and app exit are wired in `features/desktop/` with dynamic imports only (nothing Tauri enters the web bundle; verified by chunk split). Second launches focus the first window (single-instance plugin — concurrent writers must never touch the Vault, keyring entry, or IndexedDB).
+
+# OSS License Page (per-build generation)
+
+`rollup-plugin-license` (`vite.config.ts`) lists exactly the dependencies inside the **current bundle**, so the web build (tree-shaken `@tauri-apps/*`, includes workbox) and the Tauri build (`@tauri-apps/*` retained, no workbox) legitimately differ. Each mode writes its own flavor and they never share a file — both artifacts are gitignored build outputs:
+
+- **Web/PWA**: `public/legal/license.html` (dev server) + direct write to `dist/legal/license.html` (deploy artifact — `public/` is copied to `dist/` at build start, before the plugin runs, so the fresh file must land in `dist/legal` itself).
+- **Tauri**: `src-tauri/resources/legal/license.html`, mapped in `tauri.conf.json` `resources` into the install folder (`legal/license.html`). `public/legal/terms_of_service.html` / `privacy_policy.html` (hand-maintained) are mapped individually — the `../public/legal` directory mapping is gone so the web flavor can never leak into the installer.
 
 # Credential Vault
 

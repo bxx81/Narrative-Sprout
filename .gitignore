@@ -5,6 +5,13 @@ node_modules/
 dist/
 dist-ssr/
 
+# Generated at build time by rollup-plugin-license (vite.config.ts): each
+# build mode writes its own flavor — web -> public/legal, tauri ->
+# src-tauri/resources/legal — so the contents differ per target and the
+# files must never be committed.
+public/legal/license.html
+src-tauri/resources/legal/license.html
+
 # Secrets — never commit (gitleaks + Secret Scanning enforced)
 .env
 .env.*

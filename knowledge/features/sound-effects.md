@@ -3,7 +3,7 @@ type: Feature
 title: Sound Effects
 description: UI chimes for scene-generation completion, toasts, and the error dialog in v2.
 tags: [sound, audio, ux-feedback]
-timestamp: 2026-09-04T00:00:00Z
+timestamp: 2026-09-15T00:00:00Z
 source: src/features/sound/, src/store/gameStore.ts, src/components/ErrorDialog.tsx, src/app/App.tsx, public/sounds/
 ---
 
@@ -25,4 +25,4 @@ Three one-shot UI chimes ship as OGG files in `public/sounds/` and play on the a
 
 # Assets & Caching
 
-Files total ~70 KB and are PWA-precached (`globPatterns` includes `ogg`) so chimes work offline. Sources are Pixabay, attributed in the generated `public/legal/license.html` (see `vite.config.ts` `addLicense`). There is no user-facing mute/volume setting yet; the sounds always play (subject to browser autoplay policy).
+Files total ~70 KB and are PWA-precached (`globPatterns` includes `ogg`) so chimes work offline. Sources are Pixabay, attributed in the build-generated `public/legal/license.html` (gitignored build artifact — see [Desktop App / OSS License Page](/operations/desktop-app.md); also see `vite.config.ts` `addLicense`). There is no user-facing mute/volume setting yet; the sounds always play (subject to browser autoplay policy).

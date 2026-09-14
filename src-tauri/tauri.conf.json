@@ -42,7 +42,9 @@
     "resources": {
       "../public/s": "s",
       "../public/images": "images",
-      "../public/legal": "legal"
+      "../public/legal/terms_of_service.html": "legal/terms_of_service.html",
+      "../public/legal/privacy_policy.html": "legal/privacy_policy.html",
+      "resources/legal/license.html": "legal/license.html"
     },
     "windows": {
       "nsis": {

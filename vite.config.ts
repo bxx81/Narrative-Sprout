@@ -8,6 +8,8 @@ import path from "path";
 import fs from "fs-extra";
 
 const outDir = path.resolve(import.meta.dirname, "./dist");
+const publicLegalDir = path.resolve(import.meta.dirname, "./public/legal");
+const tauriLegalDir = path.resolve(import.meta.dirname, "./src-tauri/resources/legal");
 
 export default defineConfig(({ mode }) => {
   // Tauri builds (`vite --mode tauri`) must not bundle a service worker:
@@ -118,7 +120,14 @@ export default defineConfig(({ mode }) => {
           includePrivate: false,
           multipleVersions: true,
           output: {
-            file: path.join(path.resolve(import.meta.dirname, "./public/legal"), "license.html"),
+            // The plugin lists exactly the dependencies inside the current
+            // bundle, so the web build (tree-shaken @tauri-apps, workbox)
+            // and the Tauri build (@tauri-apps retained) legitimately differ.
+            // Each mode therefore writes its own flavor and the two never
+            // share a file: web -> public/legal (dev) + dist/legal (deploy),
+            // tauri -> src-tauri/resources/legal (bundled into the installer
+            // via `tauri.conf.json` `resources`).
+            file: path.join(isTauriBuild ? tauriLegalDir : publicLegalDir, "license.html"),
             encoding: "utf-8",
             template(dependencies) {
               const body = dependencies
@@ -166,14 +175,14 @@ ${addLicense}
 </main>
 </html>`;
 
-              // ビルド出力先へも直接書き込む
-              try {
-                if (!fs.existsSync(outDir)) {
-                  fs.ensureDirSync(outDir);
-                }
-                fs.writeFileSync(path.join(outDir, "license.html"), fullHtml, "utf-8");
-              } catch (e) {
-                console.error("Failed to write license.html to outDir:", e);
+              fs.ensureDirSync(isTauriBuild ? tauriLegalDir : publicLegalDir);
+              // public/ is copied into dist/ at build start, BEFORE this
+              // plugin writes (closeBundle), so the deploy artifact must be
+              // written into dist/legal directly — the public copy only
+              // serves `bun dev`.
+              if (!isTauriBuild) {
+                fs.ensureDirSync(path.join(outDir, "legal"));
+                fs.writeFileSync(path.join(outDir, "legal", "license.html"), fullHtml, "utf-8");
               }
 
               return fullHtml;
