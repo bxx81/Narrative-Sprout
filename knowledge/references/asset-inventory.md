@@ -3,7 +3,7 @@ type: Reference
 title: Asset Inventory (v2)
 description: Bundled images, fonts, icons, sounds, and locales shipped with Narrative Sprout v2.
 tags: [assets, images, fonts, sounds, locales]
-timestamp: 2026-09-04T00:00:00Z
+timestamp: 2026-09-15T00:00:00Z
 source: public/, src/features/i18n/locales/
 ---
 
@@ -25,7 +25,7 @@ All static files live in Vite-standard `public/` (served at root). Heavy media s
 
 # Sounds
 
-`public/sounds/`: `done.ogg`, `notification.ogg`, `error.ogg` (~20–28 KB each) — UI chimes for generation completion, toasts, and the error dialog (see [Sound Effects](/features/sound-effects.md)). Pixabay sources, attributed in the generated `public/legal/license.html`. Included in the PWA precache (`ogg` in `globPatterns`).
+`public/sounds/`: `done.ogg`, `notification.ogg`, `error.ogg` (~20–28 KB each) — UI chimes for generation completion, toasts, and the error dialog (see [Sound Effects](/features/sound-effects.md)). Pixabay sources, attributed in the build-generated `public/legal/license.html` (gitignored build artifact). Included in the PWA precache (`ogg` in `globPatterns`).
 
 # Fonts & Styles
 
