@@ -50,6 +50,9 @@ import {
 import { processAttachmentFiles } from "../features/attachments/api";
 import { playSound } from "../features/sound/api";
 
+/** Upper bound for the best-effort Drive token revoke inside wipeAllData. */
+const WIPE_REVOKE_TIMEOUT_MS = 3000;
+
 /**
  * Payload retained through the failed phase so the error dialog can retry
  * the exact action (legacy `lastActionForRetry`).
@@ -1137,6 +1140,17 @@ export const useGameStore = create<GameState>()(
       },
 
       wipeAllData: async () => {
+        // Revoke the Google grant first (best-effort, offline-safe): the
+        // in-memory token would die on reload anyway, but the server-side
+        // grant would otherwise survive the wipe. Capped by a timeout so a
+        // slow network cannot stall the wipe (revoke never throws here).
+        const revokePromise = revokeDriveAccessToken().catch((error) => {
+          console.warn("[wipe] drive token revoke failed", error);
+        });
+        await Promise.race([
+          revokePromise,
+          new Promise<void>((resolve) => setTimeout(resolve, WIPE_REVOKE_TIMEOUT_MS)),
+        ]);
         await wipeRepository.wipeAllUserData();
         localStorage.clear();
         sessionStorage.clear();

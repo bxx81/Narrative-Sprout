@@ -115,7 +115,7 @@
   "deleteAllDataButton": "全データを削除",
   "deleteAllDataWarning": "この操作はすべてのセーブデータ、設定、APIキーを完全に削除します。この操作は元に戻せません。",
   "deleteAllDataConfirmTitle": "全データの削除",
-  "deleteAllDataConfirm": "すべてのセーブデータと設定を削除してもよろしいですか？この操作は元に戻せません。",
+  "deleteAllDataConfirm": "すべてのセーブデータと設定を削除してもよろしいですか？この操作は元に戻せません。Google Driveにアップロード済みのバックアップは削除されません。",
   "dropFilesHere": "ここにファイルをドロップ",
   "guideLink": "ユーザーガイド",
   "termsLink": "利用規約",

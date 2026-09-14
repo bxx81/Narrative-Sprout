@@ -115,7 +115,7 @@
   "deleteAllDataButton": "모든 데이터 삭제",
   "deleteAllDataWarning": "이 작업은 모든 저장 데이터, 설정 및 API 키를 완전히 삭제합니다. 이 작업은 되돌릴 수 없습니다.",
   "deleteAllDataConfirmTitle": "모든 데이터 삭제",
-  "deleteAllDataConfirm": "모든 저장 데이터와 설정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+  "deleteAllDataConfirm": "모든 저장 데이터와 설정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다. Google Drive에 업로드한 백업은 삭제되지 않습니다.",
   "dropFilesHere": "파일을 여기에 드롭",
   "guideLink": "사용자 가이드",
   "termsLink": "서비스 약관",
