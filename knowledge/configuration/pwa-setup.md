@@ -3,8 +3,8 @@ type: Configuration
 title: PWA Setup (v2)
 description: Progressive Web App manifest, service worker, caching, and offline behavior of Narrative Sprout v2.
 tags: [pwa, service-worker, offline]
-timestamp: 2026-09-02T00:00:00Z
-source: vite.config.ts, src/main.tsx, index.html
+timestamp: 2026-09-14T00:00:00Z
+source: vite.config.ts, src/main.tsx, index.html, src/db/wipeRepository.ts, src/store/gameStore.ts
 ---
 
 # Overview
@@ -24,3 +24,6 @@ Installable standalone PWA with offline UI, via `vite-plugin-pwa` (`registerType
 # Offline & Wipe
 
 Loaded games remain viewable offline (IndexedDB); new generations need API access. Data wipe (`wipeRepository` + storage clearing + reload) returns to factory state and lands on `/deletion_complete` (flagged via `sessionStorage`).
+
+- **Wipe order** (`gameStore.wipeAllData` → `wipeRepository.wipeAllUserData`): `revokeDriveAccessToken()` (best-effort, capped at 3 s via `WIPE_REVOKE_TIMEOUT_MS`, so the Google-side grant does not survive) → SW unregister + Cache Storage deletion (`clearPwaTraces`: precache + `static-assets` + `sample-saves`) → `db.delete()` → other IndexedDB databases (`indexedDB.databases()`, defense in depth) → `localStorage`/`sessionStorage` clear → reload. PWA trace clearing never throws: each step settles independently and failures only `console.warn`, so they never block the IndexedDB wipe. `SettingsScreen` catches a wipe failure and shows an error toast instead of dying silently.
+- **Caveats**: after SW + cache removal the next load needs network (offline reload fails). Not removable from JS: the installed PWA icon/install state (manual uninstall only), browser history, permission-prompt history, `HttpOnly` cookies, and the Google-side consent-screen history. Backups already uploaded to Google Drive remain on Google's servers (deleting them is out of scope; the confirm dialog states this).

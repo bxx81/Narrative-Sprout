@@ -339,7 +339,12 @@ const SettingsScreen: React.FC = () => {
       icon: "delete_forever",
     });
     if (result !== true) return;
-    await wipeAllData();
+    try {
+      await wipeAllData();
+    } catch (error) {
+      console.error("[wipe] data wipe failed", error);
+      toast.error(error instanceof Error ? error.message : t("operationFailed"));
+    }
   };
 
   // Bundled sample saves (`public/savedata/`): loadable from here even

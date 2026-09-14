@@ -3,7 +3,7 @@ type: Service
 title: Storage Service (IndexedDB via Dexie)
 description: All persistent data storage in v2 — games, nodes, assets, settings, credentials — using IndexedDB via Dexie.
 tags: [storage, indexeddb, dexie, persistence]
-timestamp: 2026-09-02T00:00:00Z
+timestamp: 2026-09-14T00:00:00Z
 source: src/db/database.ts, gameRepository.ts, assetRepository.ts, settingsRepository.ts, credentialsRepository.ts, wipeRepository.ts, restoreRepository.ts
 ---
 
@@ -33,7 +33,7 @@ No hand-rolled mutex: write serialization comes from Dexie transactions (`db.tra
 | `get` / `put` | `settingsRepository` | Settings singleton (malformed row → defaults + warning). |
 | `get` / `set` / `delete` | `credentialsRepository` | The ONLY module allowed to touch secrets. |
 | `upsertRestoredData` | `restoreRepository` | Merge-by-id upsert for backup/save restores (never deletes). |
-| `wipeAllUserData` | `wipeRepository` | `db.delete()` — whole database incl. settings and credentials. |
+| `wipeAllUserData` | `wipeRepository` | `db.delete()` — whole database incl. settings and credentials — plus best-effort SW unregister, Cache Storage deletion, and other-IDB sweep (never throws). |
 
 # Asset Rules
 

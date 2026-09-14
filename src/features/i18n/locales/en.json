@@ -115,7 +115,7 @@
   "deleteAllDataButton": "Delete All Data",
   "deleteAllDataWarning": "This will completely delete all save data, settings, and API keys. This action cannot be undone.",
   "deleteAllDataConfirmTitle": "Delete All Data",
-  "deleteAllDataConfirm": "Are you sure you want to delete all save data and settings? This action cannot be undone.",
+  "deleteAllDataConfirm": "Are you sure you want to delete all save data and settings? This action cannot be undone. Backups already uploaded to Google Drive are not deleted.",
   "dropFilesHere": "Drop files here",
   "guideLink": "User Guide",
   "termsLink": "Terms of Service",

@@ -115,7 +115,7 @@
   "deleteAllDataButton": "删除所有数据",
   "deleteAllDataWarning": "这将彻底删除所有存档、设置和 API 密钥。此操作无法撤销。",
   "deleteAllDataConfirmTitle": "删除所有数据",
-  "deleteAllDataConfirm": "确定要删除所有存档和设置吗？此操作无法撤销。",
+  "deleteAllDataConfirm": "确定要删除所有存档和设置吗？此操作无法撤销。已上传到 Google Drive 的备份不会被删除。",
   "dropFilesHere": "将文件拖放到此处",
   "guideLink": "用户指南",
   "termsLink": "服务条款",

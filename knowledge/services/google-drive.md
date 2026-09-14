@@ -3,7 +3,7 @@ type: Service
 title: Google Drive Integration (Encrypted Backup)
 description: Cloud backup and restore of the encrypted ns-backup envelope via Google Drive in v2.
 tags: [drive, backup, oauth, gis]
-timestamp: 2026-09-02T00:00:00Z
+timestamp: 2026-09-14T00:00:00Z
 source: src/features/backup/googleAuth.ts, driveClient.ts, driveBackup.ts
 ---
 
@@ -13,7 +13,7 @@ Drive carries the **same encrypted envelope** as local `.nsbak` download — pla
 
 # Auth
 
-`googleAuth.ts` loads Google Identity Services dynamically (no `gapi-script` dependency) as an OAuth **token** flow. `getGoogleDriveClientId` reads `VITE_GOOGLE_CLIENT_ID`; `requestDriveAccessToken` acquires the token from a user gesture; `hasDriveAccessToken` / `clearDriveAccessToken` / `revokeDriveAccessToken` manage it. The **access token lives in memory only** — never persisted, so a reload simply reconnects. A 401 becomes `DriveUnauthorizedError`, and store actions clear the token so the UI re-prompts.
+`googleAuth.ts` loads Google Identity Services dynamically (no `gapi-script` dependency) as an OAuth **token** flow. `getGoogleDriveClientId` reads `VITE_GOOGLE_CLIENT_ID`; `requestDriveAccessToken` acquires the token from a user gesture; `hasDriveAccessToken` / `clearDriveAccessToken` / `revokeDriveAccessToken` manage it. The **access token lives in memory only** — never persisted, so a reload simply reconnects. A 401 becomes `DriveUnauthorizedError`, and store actions clear the token so the UI re-prompts. Full data wipe calls `revokeDriveAccessToken()` first (best-effort, 3 s cap), so the server-side grant does not survive factory reset; backup files already uploaded to Drive remain on Google's servers by design (stated in the wipe confirm dialog).
 
 # Client
 
