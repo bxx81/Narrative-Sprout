@@ -14,6 +14,7 @@ import i18n from "../features/i18n/config";
 import { getLanguageCode, applyLanguageDocumentEffects } from "../features/i18n/api";
 import { setWordCountLanguage } from "../features/narrative/api";
 import { applyColorScheme, resolveIsDark } from "../features/theme/api";
+import { isDataDeletionComplete } from "../features/wipe/api";
 import { playSound } from "../features/sound/api";
 import { useGameStore } from "../store/gameStore";
 import ErrorDialog from "../components/ErrorDialog";
@@ -62,7 +63,11 @@ export function App() {
   const colorScheme = useGameStore((s) => s.settings?.colorScheme ?? "system");
 
   useEffect(() => {
-    void bootstrap();
+    // The deletion-completion screen must not touch storage: bootstrap's
+    // reads would recreate the wiped IndexedDB database. Closing the tab
+    // there ends the session with nothing persisted; CompletedDataDeletion
+    // Screen bootstraps itself on "Return to Start".
+    if (!isDataDeletionComplete()) void bootstrap();
   }, [bootstrap]);
 
   // Dark mode follows the `colorScheme` setting (`system` = OS preference).
@@ -128,8 +133,8 @@ const AppLayout: React.FC = () => {
   }, [settings, uiLanguage, aiLanguageMappings, aiTranslationTexts]);
 
   // Full data wipe reloads the app with this flag set; show the completion
-  // screen instead of the routed screen.
-  if (sessionStorage.getItem("nsDataDeletionComplete") === "1") {
+  // screen instead of the routed screen (bootstrap stays skipped too).
+  if (isDataDeletionComplete()) {
     return <CompletedDataDeletionScreen />;
   }
 
