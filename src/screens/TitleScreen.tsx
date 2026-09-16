@@ -76,7 +76,7 @@ const LegalLink: React.FC<{
 };
 
 /**
- * The main start screen of the application.
+ * The main title screen of the application.
  */
 const TitleScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -140,7 +140,7 @@ const TitleScreen: React.FC = () => {
   };
 
   // Bundled sample saves (`public/savedata/`): shown instead of the
-  // disabled Load button while no saves exist (legacy StartScreen).
+  // disabled Load button while no saves exist (legacy TitleScreen).
   const handleLoadSample = async () => {
     if (isLoadingSample) return;
     setIsLoadingSample(true);

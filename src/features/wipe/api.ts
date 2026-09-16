@@ -24,7 +24,7 @@ export function clearDataDeletionCompleteFlag(): void {
  * the deletion-completion flag is set: the wipe already unregistered every
  * SW and deleted every cache, so a user closing the tab on the completion
  * screen exits with no worker, precache, or runtime cache left behind.
- * CompletedDataDeletionScreen re-registers on "Return to Start".
+ * CompletedDataDeletionScreen re-registers on "Return to Title".
  *
  * The Vite virtual module is imported dynamically so the store-reachable
  * module graph stays resolvable under `bun test` (no Vite pipeline there).
