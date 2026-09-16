@@ -4,7 +4,7 @@ title: Settings System
 description: All user-configurable settings and developer options in Narrative Sprout v2.
 tags: [settings, configuration]
 timestamp: 2026-09-09T00:00:00Z
-source: src/types/settings.ts, src/screens/SettingsScreen.tsx, src/screens/GameScreen.tsx, src/components/game/GameChoices.tsx, src/store/gameStore.ts, src/components/settings/EndpointConnectionTest.tsx, src/features/connectivity/, src/features/theme/colorScheme.ts, src/app/App.tsx
+source: src/types/settings.ts, src/screens/SettingsScreen.tsx, src/screens/ThemeSetupScreen.tsx, src/screens/GameScreen.tsx, src/components/game/GameChoices.tsx, src/store/gameStore.ts, src/components/settings/EndpointConnectionTest.tsx, src/features/connectivity/, src/features/theme/colorScheme.ts, src/app/App.tsx
 ---
 
 # Overview
@@ -29,7 +29,7 @@ Settings are a global singleton (`settings` table, `key: "app"`); the store's `u
 | `huggingFaceSpaceId` / `huggingFaceConfig` | `mrfakename/Z-Image-Turbo` + defaults | HF Space id + config JSON. |
 | `nimEndpoint` / `nimConfig` | Flux URL + defaults | NVIDIA NIM endpoint + config JSON. |
 | `webpCompression` | `"normal"` | WebP quality (`normal` 0.9 / `high` 1.0). |
-| `memoryStrategy` | `"single"` | `auto/single/split`; start screen offers per-run choice. |
+| `memoryStrategy` | `"single"` | `auto/single/split`; ThemeSetup screen offers per-run choice. |
 | `enableStoryLogCompaction` | `true` | Archivist compaction of old `storyLog`. |
 | `enableStreaming` | `true` | Live text streaming (ANDed with per-model `--stream`). See [Streaming](streaming.md). |
 | `autoRetrySeconds` | `0` | 429 auto-retry countdown seconds (`0` = manual only). See [Error Handling](/services/error-service.md). |

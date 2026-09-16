@@ -103,7 +103,7 @@ test.describe("full data wipe", () => {
     await expect(page.getByRole("heading", { name: "Data deletion complete" })).toBeVisible();
     expect(await countRecords(page)).toEqual({ games: 0, nodes: 0 });
 
-    await page.getByRole("button", { name: "Return to Start Screen" }).click();
+    await page.getByRole("button", { name: "Return to Title Screen" }).click();
     await expect(page.getByRole("heading", { name: "Narrative Sprout" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Load Sample", exact: true })).toBeVisible();
   });

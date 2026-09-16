@@ -66,7 +66,7 @@ export function App() {
     // The deletion-completion screen must not touch storage: bootstrap's
     // reads would recreate the wiped IndexedDB database. Closing the tab
     // there ends the session with nothing persisted; CompletedDataDeletion
-    // Screen bootstraps itself on "Return to Start".
+    // Screen bootstraps itself on "Return to Title".
     if (!isDataDeletionComplete()) void bootstrap();
   }, [bootstrap]);
 
