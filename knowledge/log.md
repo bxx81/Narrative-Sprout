@@ -1,5 +1,8 @@
 # Knowledge Bundle Update Log
 
+## 2026-09-20
+* **Change**: `settings.gameTextSize` now also scales the Chronicle screen. The size class map moved from `GameScreen.tsx` to a shared `src/lib/gameTextSize.ts` (`GAME_TEXT_SIZE_CLASSES` + `resolveGameTextSize` fallback); `ChronicleScreen` applies `sceneText` to node-card scene text / `storyClosingText` (`MainText` `className`) and `choices` to the next-turn choice quote. Documented in `features/settings-system.md` (Game Text Size section), `features/game-loop.md` (Text size bullet), and `features/history-and-saves.md` (Chronicle screen bullet).
+
 ## 2026-09-12
 * **Removal**: `REDESIGN.md` and `SESSION_HANDOFF.md` retired (the v2 rebuild is complete). Living content moved into the bundle: new `overview/security.md` (secret handling + honest threat model) and `overview/glossary.md` (naming rules); design rationale/problem→solution table added to `overview/architecture.md`; rebuild history added to `overview/project-overview.md`; CodeQL default-setup notes added to `configuration/linting.md`; the live-`FileList` snapshot gotcha added to `features/attachment-system.md`. `AGENTS.md` / `README.md` / `CONTRIBUTING.md` and source doc comments now point to knowledge pages instead.
 * **Note**: The per-phase progress log from the removed `SESSION_HANDOFF.md` (phases 0–7, PRs #1–#20) lives in git history and the `overview/project-overview.md` history section; the original phase-plan document is retired.

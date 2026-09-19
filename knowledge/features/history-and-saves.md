@@ -23,7 +23,7 @@ One playthrough = one `GameRecord` (header) + many `StoryNodeRecord`s (tree via 
 - **Ancestors** (`collectAncestors`, newest-first) power history building and autoplay log compilation.
 - **Rewind / Resume Here**: `resumeStoryAtNode(nodeId, branchEndNodeId)` sets the viewing position and playhead (History tree and Chronicle linear views). `setViewingNode` moves display only; `currentNodeId` (session-only playhead) is where Forward returns to.
 - **History screen**: renders leaf/ending node cards (not a literal tree diagram) with resume/rewind, delete, and the `ns-save` export ("Download Save Data").
-- **Chronicle screen**: linear path from root to a target node (`chronicleTargetNodeId`), with resume support.
+- **Chronicle screen**: linear path from root to a target node (`chronicleTargetNodeId`), with resume support. Node-card body text and the next-turn choice quote follow `settings.gameTextSize` via the shared `GAME_TEXT_SIZE_CLASSES` (`src/lib/gameTextSize.ts` — `sceneText` for scene text / `storyClosingText`, `choices` for the choice quote). See [Settings System](settings-system.md#game-text-size).
 
 # List Rendering (Incremental Window)
 
