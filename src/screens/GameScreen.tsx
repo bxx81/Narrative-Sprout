@@ -28,39 +28,7 @@ import { Divider } from "../components/ui/Divider";
 import Button from "../components/ui/Button";
 import { countWords } from "../features/narrative/api";
 import { IMAGE_ALT_MAX_LENGTH, truncateText } from "../lib/truncateText";
-import type { GameTextSize } from "../types/settings";
-
-/**
- * Game screen body text sizes. The baseline (`medium`) matches the legacy
- * fixed sizes (scene 18px / choices `text-base` / choice echo `text-sm`).
- * The choice echo (`displayChoiceText`) is always one step smaller than the
- * choices buttons.
- */
-const GAME_TEXT_SIZE_CLASSES: Record<
-  GameTextSize,
-  { displayChoiceText: string; sceneText: string; choices: string }
-> = {
-  small: {
-    displayChoiceText: "text-xs/relaxed",
-    sceneText: "text-[16px]",
-    choices: "text-sm",
-  },
-  medium: {
-    displayChoiceText: "text-sm/relaxed",
-    sceneText: "text-[18px]",
-    choices: "text-base",
-  },
-  large: {
-    displayChoiceText: "text-base/relaxed",
-    sceneText: "text-[20px]",
-    choices: "text-lg",
-  },
-  xlarge: {
-    displayChoiceText: "text-lg/relaxed",
-    sceneText: "text-[22px]",
-    choices: "text-xl",
-  },
-};
+import { GAME_TEXT_SIZE_CLASSES, resolveGameTextSize } from "../lib/gameTextSize";
 
 /**
  * Distance (px) the streaming tail anchor may sit off the viewport bottom
@@ -311,7 +279,7 @@ const GameScreen: React.FC = () => {
 
   const { scene, turnNumber, choiceText } = node;
   const isCurrentStoryOver = scene.isStoryOver;
-  const gameTextSize: GameTextSize = settings.gameTextSize ?? "medium";
+  const gameTextSize = resolveGameTextSize(settings.gameTextSize);
   const gameTextClasses = GAME_TEXT_SIZE_CLASSES[gameTextSize];
 
   // During streaming the final data does not exist yet: show the submitted

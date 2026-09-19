@@ -11,6 +11,7 @@ import BackButton from "../components/ui/BackButton";
 import { collectAncestors } from "../features/storytree/api";
 import type { StoryNodeRecord } from "../types";
 import { IMAGE_ALT_MAX_LENGTH, INLINE_QUOTE_MAX_LENGTH, truncateText } from "../lib/truncateText";
+import { GAME_TEXT_SIZE_CLASSES, resolveGameTextSize } from "../lib/gameTextSize";
 
 /**
  * A single node card in the branch chronicle view.
@@ -19,7 +20,9 @@ const ChronicleNode: React.FC<{
   node: StoryNodeRecord;
   choiceText: string | null;
   branchEndNodeId: string;
-}> = React.memo(({ node, choiceText, branchEndNodeId }) => {
+  sceneTextClass: string;
+  choicesClass: string;
+}> = React.memo(({ node, choiceText, branchEndNodeId, sceneTextClass, choicesClass }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const resumeStoryAtNode = useGameStore((s) => s.resumeStoryAtNode);
@@ -53,9 +56,12 @@ const ChronicleNode: React.FC<{
       </figure>
       <figcaption>
         <div className="font-serif-display mb-4 [line-break:strict]">
-          <MainText text={node.scene.sceneText} />
+          <MainText text={node.scene.sceneText} className={sceneTextClass} />
           {node.scene.isStoryOver && node.scene.storyClosingText && (
-            <MainText text={node.scene.storyClosingText} className="mt-4 font-bold" />
+            <MainText
+              text={node.scene.storyClosingText}
+              className={`${sceneTextClass} mt-4 font-bold`}
+            />
           )}
         </div>
         <Button onClick={handleRewind} intent="primary" size="medium">
@@ -64,7 +70,9 @@ const ChronicleNode: React.FC<{
         {choiceText && (
           <div className="mt-6 border-t border-dashed border-text-border pt-4 text-center">
             <p className="support-text-color text-sm">{t("historyChoicePrefix")}</p>
-            <p className="font-semibold wrap-anywhere">{`"${truncateText(choiceText, INLINE_QUOTE_MAX_LENGTH)}"`}</p>
+            <p className={`font-semibold wrap-anywhere ${choicesClass}`}>
+              {`"${truncateText(choiceText, INLINE_QUOTE_MAX_LENGTH)}"`}
+            </p>
           </div>
         )}
       </figcaption>
@@ -81,6 +89,10 @@ const ChronicleScreen: React.FC = () => {
   const { t } = useTranslation();
   const nodes = useGameStore((s) => s.nodes);
   const chronicleTargetNodeId = useGameStore((s) => s.chronicleTargetNodeId);
+  const settings = useGameStore((s) => s.settings);
+  const sceneTextClass =
+    GAME_TEXT_SIZE_CLASSES[resolveGameTextSize(settings?.gameTextSize)].sceneText;
+  const choicesClass = GAME_TEXT_SIZE_CLASSES[resolveGameTextSize(settings?.gameTextSize)].choices;
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -120,6 +132,8 @@ const ChronicleScreen: React.FC = () => {
               node={node}
               choiceText={nextNode?.choiceText ?? null}
               branchEndNodeId={chronicleTargetNodeId}
+              sceneTextClass={sceneTextClass}
+              choicesClass={choicesClass}
             />
           );
         })}

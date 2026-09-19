@@ -4,7 +4,7 @@ title: Settings System
 description: All user-configurable settings and developer options in Narrative Sprout v2.
 tags: [settings, configuration]
 timestamp: 2026-09-09T00:00:00Z
-source: src/types/settings.ts, src/screens/SettingsScreen.tsx, src/screens/ThemeSetupScreen.tsx, src/screens/GameScreen.tsx, src/components/game/GameChoices.tsx, src/store/gameStore.ts, src/components/settings/EndpointConnectionTest.tsx, src/features/connectivity/, src/features/theme/colorScheme.ts, src/app/App.tsx
+source: src/types/settings.ts, src/screens/SettingsScreen.tsx, src/screens/ThemeSetupScreen.tsx, src/screens/GameScreen.tsx, src/screens/ChronicleScreen.tsx, src/lib/gameTextSize.ts, src/components/game/GameChoices.tsx, src/store/gameStore.ts, src/components/settings/EndpointConnectionTest.tsx, src/features/connectivity/, src/features/theme/colorScheme.ts, src/app/App.tsx
 ---
 
 # Overview
@@ -34,7 +34,7 @@ Settings are a global singleton (`settings` table, `key: "app"`); the store's `u
 | `enableStreaming` | `true` | Live text streaming (ANDed with per-model `--stream`). See [Streaming](streaming.md). |
 | `autoRetrySeconds` | `0` | 429 auto-retry countdown seconds (`0` = manual only). See [Error Handling](/services/error-service.md). |
 | `showElapsedTime` | `false` | Elapsed-seconds display in the loading overlay. |
-| `gameTextSize` | `"medium"` | Game screen body text size (`small/medium/large/xlarge`). See [Game Text Size](#game-text-size) below. |
+| `gameTextSize` | `"medium"` | Game screen + Chronicle screen body text size (`small/medium/large/xlarge`). See [Game Text Size](#game-text-size) below. |
 | `colorScheme` | `"system"` | UI color scheme override (`system/light/dark`). See [Color Scheme](#color-scheme) below. |
 | `aiTranslations` / `aiLanguageMappings` | `{}` | AI-translated UI bundles + IETF tag table. See [Localization](/configuration/localization.md). |
 
@@ -42,7 +42,7 @@ Settings validate with `z.infer`-derived schemas; AI-translation tables validate
 
 # Game Text Size
 
-`gameTextSize` (`small` / `medium` / `large` / `xlarge`, default `"medium"`) scales the three Game screen body text areas together via `GAME_TEXT_SIZE_CLASSES` (`src/screens/GameScreen.tsx`); `medium` reproduces the legacy fixed sizes. The choice echo (`displayChoiceText`) is always one step smaller than the choice buttons:
+`gameTextSize` (`small` / `medium` / `large` / `xlarge`, default `"medium"`) scales the Game screen body text areas and the Chronicle screen body text together via `GAME_TEXT_SIZE_CLASSES` (shared in `src/lib/gameTextSize.ts`, with `resolveGameTextSize` providing the `"medium"` fallback); `medium` reproduces the legacy fixed sizes. The choice echo (`displayChoiceText`) is always one step smaller than the choice buttons:
 
 | `gameTextSize` | Scene text (`MainText`, incl. `storyClosingText`) | Choice buttons + custom input (`GameChoices`, skeleton placeholders) | Choice echo (`displayChoiceText`) |
 |---|---|---|---|
@@ -51,7 +51,7 @@ Settings validate with `z.infer`-derived schemas; AI-translation tables validate
 | `large` | 20px | `text-lg` (18px) | `text-base` (16px) |
 | `xlarge` | 22px | `text-xl` (20px) | `text-lg` (18px) |
 
-The scene size is passed as `MainText`'s `className` (per-`<p>`, overriding the `.main-text` 18px base); the choices size flows into `GameChoices` via a `choicesTextClass` prop (Tailwind utilities layer beats the `.choice-style` components-layer `text-base`). The selector lives in `Settings > Display` (above the fullscreen button); writes go through `updateSettings` like every other setting, so old records pick up the `"medium"` default with no migration.
+The scene size is passed as `MainText`'s `className` (per-`<p>`, overriding the `.main-text` 18px base); the choices size flows into `GameChoices` via a `choicesTextClass` prop (Tailwind utilities layer beats the `.choice-style` components-layer `text-base`). The Chronicle screen (`ChronicleScreen.tsx`) reuses the same map: the `sceneText` size applies to each node card's scene text / `storyClosingText` (`MainText` `className`), and the `choices` size applies to the next-turn choice quote. The selector lives in `Settings > Display` (above the fullscreen button); writes go through `updateSettings` like every other setting, so old records pick up the `"medium"` default with no migration.
 
 # Color Scheme
 
