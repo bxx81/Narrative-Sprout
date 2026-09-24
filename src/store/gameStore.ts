@@ -352,13 +352,11 @@ export const useGameStore = create<GameState>()(
         const streamingEnabled = isStreamingEnabledForSettings(settings);
         streamStore.begin(streamingEnabled);
         try {
-          let resolvedTheme = theme;
-          let attachmentTexts: string[] = [];
-          if (attachmentFiles && attachmentFiles.length > 0) {
-            const processed = await processAttachmentFiles(attachmentFiles, theme);
-            resolvedTheme = processed.theme;
-            attachmentTexts = processed.attachmentTexts;
-          }
+          // Always run through the attachment processor so theme `{a|b}`
+          // placeholders are fixed once here, even with no attachment files.
+          const processed = await processAttachmentFiles(attachmentFiles ?? [], theme);
+          const resolvedTheme = processed.theme;
+          const attachmentTexts = processed.attachmentTexts;
           const imageGenConfig = await buildImageConfigForSettings(settings);
           const { game, rootNode } = await startGame(
             {
