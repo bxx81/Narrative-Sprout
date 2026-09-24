@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { useGameStore } from "../store/gameStore";
-import { parseScenarioFile } from "../features/attachments/api";
+import { readScenarioFile } from "../features/attachments/api";
 import { useTauriFileDrop } from "../features/desktop/api";
 import { ROUTES } from "../app/routes";
 import A1111ImageSettings from "../components/settings/A1111ImageSettings";
@@ -73,15 +73,14 @@ const ThemeSetupScreen: React.FC = () => {
   // snapshot via Array.from in the event handler.
   const handleFiles = async (files: File[]) => {
     if (files.length === 0) return;
-    // Pre-fill the theme textarea from the first YAML front-matter `theme:`
-    // (legacy UX). processAttachmentFiles applies the same "first wins" rule
-    // at game start, and the file itself still becomes attached world text.
-    const isTextAttachment = (file: File) =>
-      file.type === "text/plain" || file.type === "text/markdown" || /\.(md|txt)$/i.test(file.name);
+    // Reading a file is the only moment an attachment can touch the theme:
+    // the first front-matter `theme:` found (`.txt`/`.md`, `.b64` decoded first)
+    // is copied into the textarea, where it stays editable. Game start sends the
+    // form value alone; the file only contributes its body as attached world text.
     for (const file of files) {
-      if (!isTextAttachment(file)) continue;
       try {
-        const parsed = parseScenarioFile(await file.text());
+        const parsed = await readScenarioFile(file);
+        if (parsed === null) continue;
         if (parsed.theme !== null) {
           setTheme(parsed.theme);
           break;

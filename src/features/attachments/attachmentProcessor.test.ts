@@ -1,28 +1,29 @@
 import { describe, expect, test } from "bun:test";
-import { processAttachmentContents } from "./attachmentProcessor";
+import { processAttachmentContents, readScenarioFile } from "./attachmentProcessor";
 
 describe("processAttachmentContents", () => {
-  test("extracts theme from first scenario file and keeps body as attachment", () => {
+  test("keeps the form theme while a scenario file only contributes its body", () => {
     const files = [
-      { name: "scenario.md", content: `---\ntheme: Custom Theme\n---\nAttachment body` },
+      { name: "scenario.md", content: `---\ntheme: File Theme\n---\nAttachment body` },
       { name: "note.txt", content: "plain note" },
     ];
     const result = processAttachmentContents(files, "baseTheme");
-    expect(result.theme).toBe("Custom Theme");
+    expect(result.theme).toBe("baseTheme");
     expect(result.attachmentTexts).toHaveLength(2);
     expect(result.attachmentTexts[0]).toContain("Attachment body");
+    expect(result.attachmentTexts[0]).not.toContain("File Theme");
     expect(result.attachmentTexts[1]).toContain("plain note");
   });
 
-  test("ignores second scenario file's theme, treats its body as attachment", () => {
+  test("never lets any front-matter theme reach the game theme", () => {
     const files = [
       { name: "a.md", content: `---\ntheme: First\n---\nbody1` },
       { name: "b.md", content: `---\ntheme: Second\n---\nbody2` },
     ];
     const result = processAttachmentContents(files, "base");
-    expect(result.theme).toBe("First");
+    expect(result.theme).toBe("base");
+    expect(result.attachmentTexts.join("")).toContain("body1");
     expect(result.attachmentTexts.join("")).toContain("body2");
-    expect(result.theme).not.toBe("Second");
   });
 
   test("falls back to baseTheme when no scenario file", () => {
@@ -69,10 +70,10 @@ describe("processAttachmentContents", () => {
     expect(result.attachmentTexts[0]).toContain("--- Attachment: a.txt ---");
   });
 
-  test("handles scenario file with empty body (theme only)", () => {
+  test("scenario file with empty body (theme only) adds no attachment text", () => {
     const files = [{ name: "scenario.md", content: `---\ntheme: OnlyTheme\n---\n` }];
     const result = processAttachmentContents(files, "base");
-    expect(result.theme).toBe("OnlyTheme");
+    expect(result.theme).toBe("base");
     expect(result.attachmentTexts).toHaveLength(0);
   });
 
@@ -86,14 +87,39 @@ describe("processAttachmentContents", () => {
     expect(seen).toEqual(new Set(["A cat tale", "A dog tale"]));
   });
 
-  test("applies random choice to front-matter theme", () => {
-    const files = [{ name: "scenario.md", content: `---\ntheme: The {red|blue} door\n---\n` }];
+  test("a front-matter theme with {a|b} never resolves into the game theme", () => {
+    const files = [{ name: "scenario.md", content: `---\ntheme: The {red|blue} door\n---\nbody` }];
     const seen = new Set<string>();
     for (let i = 0; i < 30; i++) {
-      const result = processAttachmentContents(files, "base");
-      expect(result.theme).not.toContain("{");
-      seen.add(result.theme);
+      seen.add(processAttachmentContents(files, "base").theme);
     }
-    expect(seen).toEqual(new Set(["The red door", "The blue door"]));
+    expect(seen).toEqual(new Set(["base"]));
+  });
+});
+
+describe("readScenarioFile", () => {
+  test("parses front matter from .txt/.md", async () => {
+    const parsed = await readScenarioFile(
+      new File([`---\ntheme: From File\n---\nbody`], "scenario.md"),
+    );
+    expect(parsed?.theme).toBe("From File");
+    expect(parsed?.body).toBe("body");
+  });
+
+  test("decodes .b64 first so it parses exactly like .txt/.md", async () => {
+    const raw = `---\ntheme: Encoded\n---\nbody`;
+    const parsed = await readScenarioFile(
+      new File([Buffer.from(raw).toString("base64")], "scenario.b64"),
+    );
+    expect(parsed?.theme).toBe("Encoded");
+    expect(parsed?.body).toBe("body");
+  });
+
+  test("returns null for non-text attachments", async () => {
+    expect(await readScenarioFile(new File(["binary"], "image.png"))).toBeNull();
+  });
+
+  test("returns null for undecodable .b64", async () => {
+    expect(await readScenarioFile(new File(["not base64 !!"], "broken.b64"))).toBeNull();
   });
 });
