@@ -7,7 +7,7 @@ import type { MemoryState } from "../../types";
  * Result of processing a batch of user-provided attachment files.
  */
 export interface ProcessedAttachments {
-  /** Resolved world theme (front-matter `theme` wins over the form input if present). */
+  /** Resolved world theme (front-matter `theme` wins over the form input if present; `{a|b}` applied). */
   theme: string;
   /** Text blocks to inject into the prompt (one per file, after processing). */
   attachmentTexts: string[];
@@ -29,7 +29,8 @@ function decodeBase64File(content: string): string | null {
  * Processes raw file contents (already read as text) into the final theme and
  * attachment texts, applying:
  * 1) YAML front-matter theme extraction (first file with a valid theme wins)
- * 2) `{a|b}` random choice resolution per file
+ * 2) `{a|b}` random choice resolution per file and on the winning theme
+ *    (applied once here so the save keeps a fixed resolution)
  * 3) Conditional text is NOT resolved here — it is resolved at prompt-build time
  *    against the current memory notes, so raw texts are kept.
  *
@@ -77,7 +78,7 @@ export function processAttachmentContents(
     }
   }
 
-  return { theme, attachmentTexts };
+  return { theme: processRandomChoice(theme), attachmentTexts };
 }
 
 /**

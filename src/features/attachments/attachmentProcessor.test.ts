@@ -75,4 +75,25 @@ describe("processAttachmentContents", () => {
     expect(result.theme).toBe("OnlyTheme");
     expect(result.attachmentTexts).toHaveLength(0);
   });
+
+  test("applies random choice to base theme", () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 30; i++) {
+      const result = processAttachmentContents([], "A {cat|dog} tale");
+      expect(result.theme).not.toContain("{");
+      seen.add(result.theme);
+    }
+    expect(seen).toEqual(new Set(["A cat tale", "A dog tale"]));
+  });
+
+  test("applies random choice to front-matter theme", () => {
+    const files = [{ name: "scenario.md", content: `---\ntheme: The {red|blue} door\n---\n` }];
+    const seen = new Set<string>();
+    for (let i = 0; i < 30; i++) {
+      const result = processAttachmentContents(files, "base");
+      expect(result.theme).not.toContain("{");
+      seen.add(result.theme);
+    }
+    expect(seen).toEqual(new Set(["The red door", "The blue door"]));
+  });
 });
