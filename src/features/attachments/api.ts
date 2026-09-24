@@ -4,6 +4,7 @@ export { resolveConditionalText, createFlagMap, type FlagMap, type Notes } from 
 export {
   processAttachmentContents,
   processAttachmentFiles,
+  readScenarioFile,
   resolveAttachmentTexts,
   type ProcessedAttachments,
 } from "./attachmentProcessor";

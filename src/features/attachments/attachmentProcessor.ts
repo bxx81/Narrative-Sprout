@@ -1,13 +1,16 @@
-import { parseScenarioFile } from "./parseScenarioFile";
+import { parseScenarioFile, type ParsedScenarioFile } from "./parseScenarioFile";
 import { processRandomChoice } from "./randomChoice";
 import { createFlagMap, resolveConditionalText } from "./conditionalText";
 import type { MemoryState } from "../../types";
+
+/** Extensions handled as text attachments; `.b64` is decoded before parsing. */
+const TEXT_ATTACHMENT_PATTERN = /\.(txt|md|b64)$/i;
 
 /**
  * Result of processing a batch of user-provided attachment files.
  */
 export interface ProcessedAttachments {
-  /** Resolved world theme (front-matter `theme` wins over the form input if present; `{a|b}` applied). */
+  /** World theme from the setup form (`{a|b}` applied; front matter never overrides it). */
   theme: string;
   /** Text blocks to inject into the prompt (one per file, after processing). */
   attachmentTexts: string[];
@@ -26,10 +29,25 @@ function decodeBase64File(content: string): string | null {
 }
 
 /**
- * Processes raw file contents (already read as text) into the final theme and
+ * Reads a text attachment file (`.txt`/`.md` as text, `.b64` base64-decoded
+ * first so it behaves exactly like `.txt`/`.md`) and parses its scenario
+ * front matter. Returns `null` for non-text attachments or undecodable `.b64`.
+ */
+export async function readScenarioFile(file: File): Promise<ParsedScenarioFile | null> {
+  if (!TEXT_ATTACHMENT_PATTERN.test(file.name)) return null;
+  const raw = await file.text();
+  const content = file.name.toLowerCase().endsWith(".b64") ? decodeBase64File(raw) : raw;
+  if (content === null) return null;
+  return parseScenarioFile(content);
+}
+
+/**
+ * Processes raw file contents (already read as text) into the theme and
  * attachment texts, applying:
- * 1) YAML front-matter theme extraction (first file with a valid theme wins)
- * 2) `{a|b}` random choice resolution per file and on the winning theme
+ * 1) YAML front-matter stripping (`theme` inside a file only pre-fills the
+ *    setup form at upload time; here the form input is the single source of
+ *    truth and the body becomes attachment text)
+ * 2) `{a|b}` random choice resolution per file and on the form theme
  *    (applied once here so the save keeps a fixed resolution)
  * 3) Conditional text is NOT resolved here — it is resolved at prompt-build time
  *    against the current memory notes, so raw texts are kept.
@@ -41,44 +59,27 @@ export function processAttachmentContents(
   files: { name: string; content: string }[],
   baseTheme: string,
 ): ProcessedAttachments {
-  let theme = baseTheme;
-  let themeSource: string | null = null;
   const attachmentTexts: string[] = [];
 
   for (const file of files) {
-    const lower = file.name.toLowerCase();
-    let textContent: string | null = null;
+    if (!TEXT_ATTACHMENT_PATTERN.test(file.name)) continue;
 
-    if (lower.endsWith(".b64")) {
+    let textContent = file.content;
+    if (file.name.toLowerCase().endsWith(".b64")) {
       const decoded = decodeBase64File(file.content);
       if (decoded === null) continue;
       textContent = decoded;
-    } else if (lower.endsWith(".txt") || lower.endsWith(".md")) {
-      textContent = file.content;
-    } else {
-      // Image / unsupported: skip for text attachment list
-      continue;
     }
 
     const parsed = parseScenarioFile(textContent);
-    if (parsed.theme !== null && themeSource === null) {
-      theme = parsed.theme;
-      themeSource = file.name;
-      if (parsed.body.trim().length > 0) {
-        const processed = processRandomChoice(parsed.body);
-        attachmentTexts.push(wrapAttachment(file.name, processed));
-      }
-    } else {
-      // No theme or theme already taken: treat as plain attachment
-      const effective = parsed.theme !== null ? parsed.body : textContent;
-      const finalText = processRandomChoice(effective);
-      if (finalText.trim().length > 0) {
-        attachmentTexts.push(wrapAttachment(file.name, finalText));
-      }
+    const effective = parsed.theme !== null ? parsed.body : textContent;
+    const finalText = processRandomChoice(effective);
+    if (finalText.trim().length > 0) {
+      attachmentTexts.push(wrapAttachment(file.name, finalText));
     }
   }
 
-  return { theme: processRandomChoice(theme), attachmentTexts };
+  return { theme: processRandomChoice(baseTheme), attachmentTexts };
 }
 
 /**
@@ -91,10 +92,8 @@ export async function processAttachmentFiles(
 ): Promise<ProcessedAttachments> {
   const entries: { name: string; content: string }[] = [];
   for (const file of files) {
-    const lower = file.name.toLowerCase();
-    if (lower.endsWith(".txt") || lower.endsWith(".md") || lower.endsWith(".b64")) {
-      entries.push({ name: file.name, content: await file.text() });
-    }
+    if (!TEXT_ATTACHMENT_PATTERN.test(file.name)) continue;
+    entries.push({ name: file.name, content: await file.text() });
   }
   return processAttachmentContents(entries, baseTheme);
 }
