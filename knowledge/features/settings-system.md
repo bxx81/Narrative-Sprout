@@ -61,7 +61,7 @@ Resolution is split for testability in `src/features/theme/colorScheme.ts` (re-e
 
 The initial `index.html` ships two `media=`-qualified `theme-color` metas for the OS-following default. A forced `light`/`dark` choice cannot rely on media evaluation, so the first `applyColorScheme` call collapses extras into a single media-less meta whose `content` (`#fbf9fa` / `#030712`, exported as `LIGHT_THEME_COLOR` / `DARK_THEME_COLOR`) tracks the effective theme; repeated application is idempotent.
 
-The selector lives in `Settings > Display` (below the game-text-size selector); writes go through `updateSettings` like every other setting, so old records pick up the `"system"` default with no migration. i18n keys `colorSchemeLabel/System/Light/Dark` exist in all 5 built-in locales (346 keys each).
+The selector lives in `Settings > Display` (below the game-text-size selector); writes go through `updateSettings` like every other setting, so old records pick up the `"system"` default with no migration. i18n keys `colorSchemeLabel/System/Light/Dark` exist in all 5 built-in locales (268 keys each).
 
 # Connectivity Test
 
