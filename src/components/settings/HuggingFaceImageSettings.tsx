@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useDebouncedExternalState } from "../../hooks/useDebouncedExternalState";
 import HelpTooltip from "../ui/HelpTooltip";
+import HuggingFaceZeroGpuQuotaTest from "./HuggingFaceZeroGpuQuotaTest";
 
 interface HuggingFaceImageSettingsProps {
   spaceId: string;
@@ -100,6 +101,7 @@ const HuggingFaceImageSettingsComponent: React.FC<HuggingFaceImageSettingsProps>
           <p className="mt-1 text-xs font-semibold text-red-500">{t("invalidJsonFormat")}</p>
         )}
       </div>
+      <HuggingFaceZeroGpuQuotaTest token={localToken} disabled={loading} />
     </div>
   );
 };

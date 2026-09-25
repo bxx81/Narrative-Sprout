@@ -20,7 +20,7 @@ export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>
 export const CONNECTION_TEST_TIMEOUT_MS = 15_000;
 
 /** Truncated HTTP error bodies never exceed this length. */
-const ERROR_BODY_SNIPPET_LENGTH = 200;
+export const ERROR_BODY_SNIPPET_LENGTH = 200;
 
 export type ConnectionTestResult =
   | { kind: "ok"; latencyMs: number }
@@ -98,7 +98,7 @@ function resolvePageProtocol(explicit?: string): string | null {
  * caller aborts propagate as `AbortError`; the internal timeout rejects
  * with `TimeoutError`.
  */
-async function fetchWithTimeout(
+export async function fetchWithTimeout(
   fetchImpl: FetchLike,
   url: string,
   init: RequestInit,

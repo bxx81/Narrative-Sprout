@@ -27,7 +27,7 @@ Per-generator timeouts abort with descriptive errors; any failure falls back to 
 
 # Connectivity Test
 
-The A1111 (`GET /` — the Gradio root always exists), ComfyUI (`GET /system_stats` — lightweight read-only JSON), and NIM (bare generation URL, probed with the Bearer token since `nimEndpoint` is POSTed to as-is) settings panels embed `EndpointConnectionTest` next to the endpoint input, testing the currently typed values. Hugging Face needs none (fixed Space URL). Result classes and the CORS-likelihood heuristic are shared with the LLM probe (see [Settings System](/features/settings-system.md#connectivity-test)).
+The A1111 (`GET /` — the Gradio root always exists), ComfyUI (`GET /system_stats` — lightweight read-only JSON), and NIM (bare generation URL, probed with the Bearer token since `nimEndpoint` is POSTed to as-is) settings panels embed `EndpointConnectionTest` next to the endpoint input, testing the currently typed values. Hugging Face has a fixed Space URL, so its panel embeds `HuggingFaceZeroGpuQuotaTest` instead: the same button shape fetches `GET /api/spaces/zero-gpu/quota` with the typed token (account-level, so it doubles as a token check) and shows the ZeroGPU quota — remaining GPU-seconds, reset time, run window, overquota use. Result classes and local-`AsyncOperation` discipline are shared with the LLM probe (see [Settings System](/features/settings-system.md#connectivity-test)).
 
 # Storage
 
