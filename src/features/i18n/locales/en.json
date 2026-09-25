@@ -275,5 +275,6 @@
   "autoRetryIntervalLabel": "Automatic retry interval if 429 error",
   "autoRetryNever": "Never",
   "generateThemeFailed": "Theme generation failed. Please try again.",
+  "imageGenerationFailedToast": "The scene image could not be generated.",
   "showMoreButton": "Show more"
 }

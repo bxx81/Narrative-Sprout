@@ -1,4 +1,5 @@
 export { generateSceneImage } from "./generateImage";
+export { notifyImageGenerationFailure } from "./notifications";
 export { buildImageGenConfig } from "./buildImageGenConfig";
 export { assetRecordFromDataUrl, webpQualityForCompression } from "./assetHelpers";
 export { ImageGeneratorFactory } from "./imageGeneratorFactory";

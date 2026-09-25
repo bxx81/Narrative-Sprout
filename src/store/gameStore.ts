@@ -45,6 +45,7 @@ import {
   assetRecordFromDataUrl,
   buildImageGenConfig,
   generateSceneImage,
+  notifyImageGenerationFailure,
   webpQualityForCompression,
 } from "../features/image/api";
 import { processAttachmentFiles } from "../features/attachments/api";
@@ -379,6 +380,7 @@ export const useGameStore = create<GameState>()(
               onTextGenerationStart: () => set({ generationStage: "scene" }),
               onImageGenerationStart: () => set({ generationStage: "image" }),
               onImageGenerationProgress: (progress) => set({ imageGenerationProgress: progress }),
+              onImageGenerationFailed: notifyImageGenerationFailure,
             },
           );
           const assets = await loadAssetsForNodes([rootNode.id]);
@@ -485,6 +487,7 @@ export const useGameStore = create<GameState>()(
               onTextGenerationStart: () => set({ generationStage: "scene" }),
               onImageGenerationStart: () => set({ generationStage: "image" }),
               onImageGenerationProgress: (progress) => set({ imageGenerationProgress: progress }),
+              onImageGenerationFailed: notifyImageGenerationFailure,
             },
           );
           const updatedNodes = [...get().nodes, node];
@@ -567,6 +570,7 @@ export const useGameStore = create<GameState>()(
               onTextGenerationStart: () => set({ generationStage: "scene" }),
               onImageGenerationStart: () => set({ generationStage: "image" }),
               onImageGenerationProgress: (progress) => set({ imageGenerationProgress: progress }),
+              onImageGenerationFailed: notifyImageGenerationFailure,
             },
           );
           const updatedNodes = [...get().nodes, node];
@@ -647,6 +651,7 @@ export const useGameStore = create<GameState>()(
                 onTextGenerationStart: () => set({ generationStage: "scene" }),
                 onImageGenerationStart: () => set({ generationStage: "image" }),
                 onImageGenerationProgress: (progress) => set({ imageGenerationProgress: progress }),
+                onImageGenerationFailed: notifyImageGenerationFailure,
               },
             );
             const assets = await loadAssetsForNodes([rootNode.id]);
@@ -724,6 +729,7 @@ export const useGameStore = create<GameState>()(
               onTextGenerationStart: () => set({ generationStage: "scene" }),
               onImageGenerationStart: () => set({ generationStage: "image" }),
               onImageGenerationProgress: (progress) => set({ imageGenerationProgress: progress }),
+              onImageGenerationFailed: notifyImageGenerationFailure,
             },
           );
           const updatedGame = {

@@ -3,6 +3,7 @@ import { Icon } from "./ui/Icon";
 import LoadingSpinner from "./ui/LoadingSpinner";
 import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { applyLoadScreenFallback } from "./game/imageFallbacks";
 import {
   CARD_PREVIEW_MAX_LENGTH,
   CARD_TITLE_MAX_LENGTH,
@@ -17,7 +18,6 @@ interface StoryCardProps {
   imageAlt: string;
   isLoadingImage: boolean;
   actions?: React.ReactNode;
-  onImageError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
   onImageClick?: () => void;
   onMenuClick?: () => void;
   menuText?: string;
@@ -31,7 +31,6 @@ const StoryCard: React.FC<StoryCardProps> = ({
   imageAlt,
   isLoadingImage,
   actions,
-  onImageError,
   onImageClick,
   onMenuClick,
   menuText,
@@ -67,7 +66,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
             loading="lazy"
             decoding="async"
             className={`aspect-video size-full object-cover ${!onImageClick ? "" : "cursor-pointer"}`}
-            onError={onImageError}
+            onError={applyLoadScreenFallback}
             onClick={onImageClick}
           />
         )}

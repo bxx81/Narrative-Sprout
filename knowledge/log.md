@@ -1,5 +1,9 @@
 # Knowledge Bundle Update Log
 
+## 2026-09-26
+* **Change**: Scene-image generation failures no longer return a "Image Generation Failed" SVG — `generateSceneImage` rethrows (non-abort), so the turn stores **no asset**, i.e. exactly the Disabled-backend state: transparent placeholder on the game screen, "Image Not Available" on the card screens. Reporting goes through the new `TurnServiceOptions.onImageGenerationFailed` → `notifyImageGenerationFailure` toast (`imageGenerationFailedToast` + classified reason, fixed id `image-generation-failed` so autoplay cannot stack toasts); user Stop stays silent. Image *regeneration* failures keep the retryable `ErrorDialog`. Documented in `features/image-generation.md` (new Failure handling section), `integrations/image-generators.md`, `services/error-service.md`, `features/game-loop.md`, `features/history-and-saves.md`.
+* **Change**: Card thumbnails unify on `LOAD_SCREEN_FALLBACK_URL`: the shared `applyLoadScreenFallback` (`<img onError>`) now lives in `imageFallbacks.ts` and is wired inside `StoryCard` (LoadScreen's private handler removed) and `ChronicleScreen`, so an asset that exists but fails to decode renders "Image Not Available" everywhere instead of a broken image.
+
 ## 2026-09-20
 * **Change**: `settings.gameTextSize` now also scales the Chronicle screen. The size class map moved from `GameScreen.tsx` to a shared `src/lib/gameTextSize.ts` (`GAME_TEXT_SIZE_CLASSES` + `resolveGameTextSize` fallback); `ChronicleScreen` applies `sceneText` to node-card scene text / `storyClosingText` (`MainText` `className`) and `choices` to the next-turn choice quote. Documented in `features/settings-system.md` (Game Text Size section), `features/game-loop.md` (Text size bullet), and `features/history-and-saves.md` (Chronicle screen bullet).
 

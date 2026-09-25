@@ -46,12 +46,6 @@ const GameLogCard: React.FC<{ game: GameRecord; latestNode: StoryNodeRecord | nu
       fallbackUrl: LOAD_SCREEN_FALLBACK_URL,
     });
 
-    const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-      if (e.currentTarget.src !== LOAD_SCREEN_FALLBACK_URL) {
-        e.currentTarget.src = LOAD_SCREEN_FALLBACK_URL;
-      }
-    };
-
     const handleLoadGame = async () => {
       await openGame(game.id);
       navigate(ROUTES.HISTORY, { viewTransition: true });
@@ -122,7 +116,6 @@ const GameLogCard: React.FC<{ game: GameRecord; latestNode: StoryNodeRecord | nu
           imageUrl={imageUrl}
           imageAlt={game.title}
           isLoadingImage={isLoadingImage}
-          onImageError={handleImageError}
           actions={cardActions}
           onImageClick={() => void handleLoadGame()}
           onMenuClick={() => void handleDelete()}

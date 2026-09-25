@@ -10,6 +10,8 @@ export const CARD_PREVIEW_MAX_LENGTH = 200;
 export const IMAGE_ALT_MAX_LENGTH = 200;
 export const DIALOG_EMBEDDED_TITLE_MAX_LENGTH = 100;
 export const INLINE_QUOTE_MAX_LENGTH = 200;
+/** Reason line appended to the image-failure toast (generator text, often English). */
+export const IMAGE_FAILURE_REASON_MAX_LENGTH = 200;
 
 const ELLIPSIS = "…";
 

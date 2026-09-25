@@ -275,5 +275,6 @@
   "autoRetryIntervalLabel": "429エラー時の自動リトライ間隔",
   "autoRetryNever": "自動リトライしない",
   "generateThemeFailed": "テーマの生成に失敗しました。もう一度お試しください。",
+  "imageGenerationFailedToast": "シーン画像を生成できませんでした。",
   "showMoreButton": "もっと見る"
 }
