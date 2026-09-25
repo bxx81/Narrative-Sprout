@@ -17,8 +17,8 @@ source: src/features/image/generators/, imageGeneratorFactory.ts, buildImageGenC
 | AUTOMATIC1111 (local) | Medium | Free | Local GPU | Endpoint + config JSON (`steps/sampler_name/cfg_scale/width/height`, `{prompt}` placeholders); progress callback. |
 | ComfyUI (local) | Medium | Free | Local GPU | Endpoint + workflow JSON (`##prompt##` placeholders); `/prompt` polling; progress callback. |
 | NVIDIA NIM (cloud) | Easy | Key required | None local | Endpoint + config JSON; Bearer token. |
-| Disabled | — | — | — | Transparent placeholder; no network. |
+| Disabled | — | — | — | Transparent placeholder; no network. A generation failure ends in the same state (no asset stored). |
 
 # Flow
 
-`generateSceneImage({ imagePrompt, negativeImagePrompt, config, onProgress, signal })` → backend data URL → `assetRecordFromDataUrl` (WebP) → stored under the node id. Failures yield the fallback SVG (turn still succeeds; image is regenerable). Per-generator timeouts abort with descriptive errors; user Stop aborts via the stream signal.
+`generateSceneImage({ imagePrompt, negativeImagePrompt, config, onProgress, signal })` → backend data URL → `assetRecordFromDataUrl` (WebP) → stored under the node id. Non-abort failures are rethrown instead of being swapped for a placeholder: the turn still succeeds but persists **no asset** — byte-for-byte the Disabled-backend state — and the caller reports it through `onImageGenerationFailed` → `notifyImageGenerationFailure` toast (reason included; see [Image Generation](/features/image-generation.md#failure-handling)). Per-generator timeouts abort with descriptive errors; user Stop aborts via the stream signal and is never reported as a failure.

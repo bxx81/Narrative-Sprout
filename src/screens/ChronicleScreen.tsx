@@ -7,6 +7,10 @@ import Button from "../components/ui/Button";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 import { ROUTES } from "../app/routes";
 import { useLazyNodeImage } from "../hooks/useLazyNodeImage";
+import {
+  LOAD_SCREEN_FALLBACK_URL,
+  applyLoadScreenFallback,
+} from "../components/game/imageFallbacks";
 import BackButton from "../components/ui/BackButton";
 import { collectAncestors } from "../features/storytree/api";
 import type { StoryNodeRecord } from "../types";
@@ -26,7 +30,12 @@ const ChronicleNode: React.FC<{
   const navigate = useNavigate();
   const { t } = useTranslation();
   const resumeStoryAtNode = useGameStore((s) => s.resumeStoryAtNode);
-  const { elementRef, imageUrl, isLoading } = useLazyNodeImage(node.id);
+  // No asset (generator disabled / generation failed / node has none) and a
+  // stored asset that fails to decode both land on the same placeholder the
+  // Load and History cards use.
+  const { elementRef, imageUrl, isLoading } = useLazyNodeImage(node.id, {
+    fallbackUrl: LOAD_SCREEN_FALLBACK_URL,
+  });
 
   // Legacy rewind semantics: the playhead stays at the branch end the
   // chronicle is showing, so Forward from here walks back toward it.
@@ -51,6 +60,7 @@ const ChronicleNode: React.FC<{
             alt={truncateText(node.scene.imagePrompt, IMAGE_ALT_MAX_LENGTH)}
             className="size-full cursor-pointer object-cover"
             onClick={handleRewind}
+            onError={applyLoadScreenFallback}
           />
         )}
       </figure>

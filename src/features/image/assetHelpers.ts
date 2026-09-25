@@ -10,8 +10,8 @@ import { convertToWebpBlob, dataUrlToBlob } from "../../lib/imageConversion";
  * - Converts to WebP at the configured quality (unless already a small WebP).
  * - Returns the record ready for `assetRepository.put`.
  *
- * If the data URL is an SVG fallback (disabled generator), it is returned as-is
- * with `image/svg+xml` mime; callers may choose to skip persisting that case.
+ * Returns `null` (no asset stored) for anything that is not a real raster
+ * image, so a failure degrades to the same state as the disabled backend.
  */
 export async function assetRecordFromDataUrl(
   nodeId: StoryNodeId,
@@ -19,10 +19,10 @@ export async function assetRecordFromDataUrl(
   quality: number,
 ): Promise<AssetRecord | null> {
   if (!dataUrl.startsWith("data:")) return null;
-  // SVG fallback from disabled generator: keep as-is but store as svg (not webp)
+  // Defensive: no code path produces an SVG data URL today (generation
+  // failures are rethrown by generateSceneImage, and the turn flow skips the
+  // disabled backend entirely), so an SVG must never be stored as an image.
   if (dataUrl.startsWith("data:image/svg+xml")) {
-    // For now, skip persisting SVG fallbacks — the UI can show the inline fallback.
-    // If we ever want to persist them, extend `ImageMimeType` to include svg.
     return null;
   }
   // Decode the data URL via fetch: the platform handles base64 and

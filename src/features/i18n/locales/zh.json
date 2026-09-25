@@ -275,5 +275,6 @@
   "autoRetryIntervalLabel": "429 错误时的自动重试间隔",
   "autoRetryNever": "不自动重试",
   "generateThemeFailed": "主题生成失败。请重试。",
+  "imageGenerationFailedToast": "无法生成场景图像。",
   "showMoreButton": "显示更多"
 }

@@ -37,3 +37,13 @@ void i18next.use(initReactI18next).init({
 });
 
 export default i18next;
+
+/**
+ * Translation for non-React call sites (toasts, logs, store helpers) that
+ * cannot use `useTranslation`. The `defaultValue` keeps the call usable when
+ * a key is missing from the active locale (the English bundle is the
+ * `fallbackLng`, so this only matters before init settles).
+ */
+export function translate(key: string, defaultValue?: string): string {
+  return i18next.t(key, { defaultValue: defaultValue ?? key });
+}

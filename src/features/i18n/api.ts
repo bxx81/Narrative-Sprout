@@ -6,3 +6,4 @@ export {
   applyLanguageDocumentEffects,
 } from "./index";
 export { englishUiTexts } from "./englishUiTexts";
+export { translate } from "./config";

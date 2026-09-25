@@ -275,5 +275,6 @@
   "autoRetryIntervalLabel": "429 오류 시 자동 재시도 간격",
   "autoRetryNever": "자동 재시도 안 함",
   "generateThemeFailed": "테마 생성에 실패했습니다. 다시 시도하세요.",
+  "imageGenerationFailedToast": "장면 이미지를 생성하지 못했습니다.",
   "showMoreButton": "더 보기"
 }

@@ -46,6 +46,18 @@ export interface TurnServiceOptions {
   onImageGenerationStart?: () => void;
   /** a1111/comfyui progress while the scene image generates (0..1). */
   onImageGenerationProgress?: (progress: number) => void;
+  /**
+   * Scene image generation failed (user Stop excluded — that stays silent).
+   * The turn itself still succeeds with no asset stored, so the caller only
+   * reports the failure; it never fails the turn.
+   */
+  onImageGenerationFailed?: (error: unknown) => void;
+}
+
+/** False for user-initiated cancellation (Stop), which is never a failure. */
+function shouldReportImageFailure(error: unknown, signal?: AbortSignal): boolean {
+  if (signal?.aborted) return false;
+  return !(error instanceof Error && error.name === "AbortError");
 }
 
 export interface StartGameParams {
@@ -251,6 +263,9 @@ export async function startGame(
       asset = await assetRecordFromDataUrl(nodeId, dataUrl, quality);
     } catch (error) {
       console.warn("[image] generation failed for root node:", error);
+      if (shouldReportImageFailure(error, options?.signal)) {
+        options?.onImageGenerationFailed?.(error);
+      }
     }
   }
 
@@ -425,6 +440,9 @@ export async function choosePath(
       asset = await assetRecordFromDataUrl(nodeId, dataUrl, quality);
     } catch (error) {
       console.warn("[image] generation failed:", error);
+      if (shouldReportImageFailure(error, options?.signal)) {
+        options?.onImageGenerationFailed?.(error);
+      }
     }
   }
 
@@ -641,6 +659,9 @@ export async function refineScene(
       asset = await assetRecordFromDataUrl(nodeId, dataUrl, quality);
     } catch (error) {
       console.warn("[image] generation failed for refine:", error);
+      if (shouldReportImageFailure(error, options?.signal)) {
+        options?.onImageGenerationFailed?.(error);
+      }
     }
   }
 
