@@ -141,6 +141,7 @@
   "aiTranslationInputLabel": "대상 언어 입력 (예: हिन्दी, Русский)",
   "aiTranslationButton": "번역",
   "aiTranslatingButton": "번역 중...",
+  "aiTranslationCancelButton": "번역 중지",
   "aiTranslationDeleteButton": "이 AI 번역 삭제",
   "aiTranslationOptgroupLabel": "AI 번역",
   "aiTranslationSuffix": "(AI)",

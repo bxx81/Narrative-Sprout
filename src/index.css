@@ -195,7 +195,7 @@
 
 @layer components {
   .form-style {
-    @apply w-full rounded-lg border-2 border-text-border bg-text-bg p-3 text-body-text placeholder-text-support transition duration-300;
+    @apply w-full rounded-lg border-2 border-text-border bg-text-bg p-3 text-body-text placeholder-text-support transition duration-300 disabled:text-text-disable;
     outline-style: solid;
     outline-offset: -1px;
     outline-width: thin;

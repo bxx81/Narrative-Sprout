@@ -17,7 +17,7 @@ import { englishUiTexts } from "../features/i18n/api";
 import { translateUIText } from "../features/i18n/translateService";
 import { streamStore } from "./streamStore";
 import { releaseWakeLock, acquireWakeLock, WakeLockGuard } from "../features/wakelock/api";
-import { isStreamingEnabledForSettings } from "../lib/modelOptions";
+import { isStreamingEnabledForSettings, parseTextModelOptions } from "../lib/modelOptions";
 import { downloadBlob, exportGameAsZip } from "../features/export/api";
 import {
   clearDriveAccessToken,
@@ -172,11 +172,13 @@ interface GameState {
   cancelGeneration: () => void;
   /** Re-runs the failed action from the retained payload (error dialog Retry). */
   retryGeneration: () => Promise<void>;
-  /** Clears the failed generation/image operation (error dialog Dismiss). */
+  /** Clears the failed generation/image/autoplay operation (error dialog Dismiss). */
   dismissError: () => void;
   setUiLanguage: (languageName: string) => Promise<void>;
   /** Rejects on failure (caller surfaces the toast); failed phase stays set. */
   translateUi: (languageName: string) => Promise<void>;
+  /** Aborts the in-flight UI translation (settings screen stop button). */
+  cancelUiTranslation: () => void;
   deleteAiTranslation: (languageName: string) => Promise<void>;
   downloadEncryptedBackup: (passphrase: string) => Promise<void>;
   restoreBackupFromFile: (file: File, passphrase: string) => Promise<RestoreSummaryWithManifest>;
@@ -219,6 +221,24 @@ function upsertGameSummary(games: GameRecord[], updated: GameRecord): GameRecord
   return [updated, ...games.filter((game) => game.id !== updated.id)];
 }
 
+/**
+ * Language fields a completed UI translation is allowed to write back. The
+ * fresh translation becomes the active UI + narrative language only when the
+ * user has not switched languages while it ran: an explicit choice made in
+ * the meantime must not be silently reverted. Null keeps the active languages
+ * untouched (the bundle is still stored for a later manual switch).
+ */
+export function translationLanguageActivation(
+  startedWith: Pick<SettingsRecord, "uiLanguage" | "language">,
+  current: SettingsRecord | null,
+  targetLanguage: string,
+): Pick<SettingsRecord, "uiLanguage" | "language"> | null {
+  if (!current) return null;
+  if (current.uiLanguage !== startedWith.uiLanguage) return null;
+  if (current.language !== startedWith.language) return null;
+  return { uiLanguage: targetLanguage, language: targetLanguage };
+}
+
 async function buildImageConfigForSettings(settings: SettingsRecord) {
   const [hfToken, nimToken] = await Promise.all([
     credentialsRepository.get("huggingFaceToken"),
@@ -233,6 +253,12 @@ async function buildImageConfigForSettings(settings: SettingsRecord) {
  * generation uses `streamStore`'s controller instead.
  */
 let autoplayAbortController: AbortController | null = null;
+
+/**
+ * AbortController for the in-flight UI translation. Same rationale as the
+ * autoplay controller: not serializable state, so it lives beside the store.
+ */
+let uiTranslationAbortController: AbortController | null = null;
 
 export const useGameStore = create<GameState>()(
   devtools(
@@ -317,7 +343,17 @@ export const useGameStore = create<GameState>()(
       updateSettings: async (partial) => {
         const current = get().settings;
         if (!current) return;
-        const updated: SettingsRecord = { ...current, ...partial };
+        const next: Partial<SettingsRecord> = { ...partial };
+        // Never persist an unparsable text model: every turn re-reads it, and
+        // an invalid value fails the next scene generation (silently in the
+        // autoplay decision phase). The settings input shows the invalid
+        // marker itself, so dropping the write loses nothing.
+        if (next.textModel !== undefined && !parseTextModelOptions(next.textModel).isValid) {
+          console.warn("[settings] rejected invalid textModel:", next.textModel);
+          delete next.textModel;
+          if (Object.keys(next).length === 0) return;
+        }
+        const updated: SettingsRecord = { ...current, ...next };
         await settingsRepository.put(updated);
         set({ settings: updated });
       },
@@ -1067,6 +1103,11 @@ export const useGameStore = create<GameState>()(
         if (get().imageRegeneration.phase === "failed") {
           set({ imageRegeneration: { phase: "idle" } });
         }
+        // The error dialog also watches the autoplay decision phase; without
+        // this the dialog would stay open after Dismiss.
+        if (get().autoplayTurn.phase === "failed") {
+          set({ autoplayTurn: { phase: "idle" } });
+        }
       },
 
       setUiLanguage: async (languageName) => {
@@ -1081,6 +1122,9 @@ export const useGameStore = create<GameState>()(
         if (!settings || !openrouterApiKey) throw new Error("Setup incomplete.");
         if (state.uiTranslation.phase === "running") return;
         const payload: UiTranslationPayload = { languageName };
+        uiTranslationAbortController?.abort();
+        const abortController = new AbortController();
+        uiTranslationAbortController = abortController;
         set({
           uiTranslation: { phase: "running", payload, startedAt: new Date().toISOString() },
           uiTranslationProgress: null,
@@ -1093,19 +1137,33 @@ export const useGameStore = create<GameState>()(
             targetLanguage: languageName,
             englishTexts: englishUiTexts,
             onProgress: (progress) => set({ uiTranslationProgress: progress }),
+            signal: abortController.signal,
           });
+          if (abortController.signal.aborted) {
+            // Cancelled after the last call (the language-code fallback can
+            // swallow an abort): drop the result; the canceller settled the
+            // phase already and may have started another run.
+            return;
+          }
+          const current = get().settings;
+          const languageActivation = translationLanguageActivation(settings, current, languageName);
           await get().updateSettings({
-            aiTranslations: { ...get().settings?.aiTranslations, [languageName]: translation },
-            aiLanguageMappings: {
-              ...get().settings?.aiLanguageMappings,
-              [languageName]: languageCode,
-            },
-            uiLanguage: languageName,
-            // A newly translated UI becomes the narrative language as well.
-            language: languageName,
+            aiTranslations: { ...current?.aiTranslations, [languageName]: translation },
+            aiLanguageMappings: { ...current?.aiLanguageMappings, [languageName]: languageCode },
+            // The translation only becomes the active UI/narrative language
+            // when the user has not switched languages while it ran.
+            ...(languageActivation ?? {}),
           });
           set({ uiTranslation: { phase: "idle" }, uiTranslationProgress: null });
         } catch (error) {
+          if (abortController.signal.aborted || (error as Error).name === "AbortError") {
+            // Cancelled (stop button) or superseded by a newer run: that path
+            // settled the phase already, so never clobber a later run.
+            if (uiTranslationAbortController === abortController) {
+              set({ uiTranslation: { phase: "idle" }, uiTranslationProgress: null });
+            }
+            return;
+          }
           set({
             uiTranslation: { phase: "failed", payload, error: error as Error },
             uiTranslationProgress: null,
@@ -1113,6 +1171,22 @@ export const useGameStore = create<GameState>()(
           // Rethrow so the caller can surface the failure exactly once (a
           // phase-watching effect would re-fire on every screen remount).
           throw error;
+        } finally {
+          if (uiTranslationAbortController === abortController) {
+            uiTranslationAbortController = null;
+          }
+        }
+      },
+
+      cancelUiTranslation: () => {
+        const controller = uiTranslationAbortController;
+        if (!controller) return;
+        controller.abort();
+        uiTranslationAbortController = null;
+        // Settle at once so the stop button reacts immediately; the aborted
+        // run's own catch then sees a foreign controller and stays out.
+        if (get().uiTranslation.phase === "running") {
+          set({ uiTranslation: { phase: "idle" }, uiTranslationProgress: null });
         }
       },
 

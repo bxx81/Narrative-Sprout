@@ -141,6 +141,7 @@
   "aiTranslationInputLabel": "Enter target language (e.g., हिन्दी, Русский)",
   "aiTranslationButton": "Translate",
   "aiTranslatingButton": "Translating...",
+  "aiTranslationCancelButton": "Stop translation",
   "aiTranslationDeleteButton": "Delete this AI Translation",
   "aiTranslationOptgroupLabel": "AI Translations",
   "aiTranslationSuffix": "(AI)",

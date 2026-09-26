@@ -214,6 +214,9 @@ const SettingsScreen: React.FC = () => {
   const huggingFaceToken = useGameStore((s) => s.huggingFaceToken);
   const nvidiaNimToken = useGameStore((s) => s.nvidiaNimToken);
   const activeGame = useGameStore((s) => s.activeGame);
+  const generation = useGameStore((s) => s.generation);
+  const imageRegeneration = useGameStore((s) => s.imageRegeneration);
+  const autoplayTurn = useGameStore((s) => s.autoplayTurn);
   const uiTranslation = useGameStore((s) => s.uiTranslation);
   const uiTranslationProgress = useGameStore((s) => s.uiTranslationProgress);
   const saveApiKey = useGameStore((s) => s.saveApiKey);
@@ -223,6 +226,7 @@ const SettingsScreen: React.FC = () => {
   const goToTitle = useGameStore((s) => s.goToTitle);
   const wipeAllData = useGameStore((s) => s.wipeAllData);
   const translateUi = useGameStore((s) => s.translateUi);
+  const cancelUiTranslation = useGameStore((s) => s.cancelUiTranslation);
   const deleteAiTranslation = useGameStore((s) => s.deleteAiTranslation);
   const importSampleSaves = useGameStore((s) => s.importSampleSaves);
 
@@ -260,7 +264,7 @@ const SettingsScreen: React.FC = () => {
   // of failure (never on screen remounts).
   const handleTranslateUi = () => {
     const trimmed = targetLanguage.trim();
-    if (!trimmed || isTranslating) return;
+    if (!trimmed || isBusy) return;
     setTargetLanguage("");
     translateUi(trimmed).catch(() => toast.error(t("aiTranslationError")));
   };
@@ -297,6 +301,15 @@ const SettingsScreen: React.FC = () => {
   );
   const isCurrentAiLanguage = aiLanguagesSet.has(uiLanguage);
   const isTranslating = uiTranslation.phase === "running";
+  // Generation settings are read back at the next turn boundary, so editing
+  // them mid-run would only take effect after the current turn: lock the
+  // image panels while any long-running operation is active (mirrors
+  // ThemeSetupScreen's `loading` guard during a game start).
+  const isGenerating =
+    generation.phase === "running" ||
+    imageRegeneration.phase === "running" ||
+    autoplayTurn.phase === "running";
+  const isBusy = isGenerating || isTranslating;
 
   const handleReturnToStartClick = async () => {
     navigate(ROUTES.HOME, { replace: true, viewTransition: true });
@@ -386,7 +399,7 @@ const SettingsScreen: React.FC = () => {
             setEndpoint={(endpoint) => void updateSettings({ a1111Endpoint: endpoint })}
             configJson={settings.a1111Config}
             setConfigJson={(json) => void updateSettings({ a1111Config: json })}
-            loading={false}
+            loading={isBusy}
           />
         );
       case "comfyui":
@@ -396,7 +409,7 @@ const SettingsScreen: React.FC = () => {
             setEndpoint={(endpoint) => void updateSettings({ comfyuiEndpoint: endpoint })}
             workflowJson={settings.comfyuiWorkflow}
             setWorkflowJson={(json) => void updateSettings({ comfyuiWorkflow: json })}
-            loading={false}
+            loading={isBusy}
           />
         );
       case "huggingface":
@@ -408,7 +421,7 @@ const SettingsScreen: React.FC = () => {
             setToken={(token) => void saveCredential("huggingFaceToken", token)}
             configJson={settings.huggingFaceConfig}
             setConfigJson={(json) => void updateSettings({ huggingFaceConfig: json })}
-            loading={false}
+            loading={isBusy}
           />
         );
       case "nvidia_nim":
@@ -420,7 +433,7 @@ const SettingsScreen: React.FC = () => {
             setToken={(token) => void saveCredential("nvidiaNimToken", token)}
             configJson={settings.nimConfig}
             setConfigJson={(json) => void updateSettings({ nimConfig: json })}
-            loading={false}
+            loading={isBusy}
           />
         );
       default:
@@ -471,6 +484,7 @@ const SettingsScreen: React.FC = () => {
                     imageGenerator: e.target.value as ImageGeneratorType,
                   })
                 }
+                disabled={isBusy}
                 className="form-style"
               >
                 <option value="huggingface">{t("huggingFaceOption")}</option>
@@ -533,7 +547,7 @@ const SettingsScreen: React.FC = () => {
               intent="secondary"
               size="medium"
               onClick={handleTranslateUi}
-              disabled={isTranslating || !targetLanguage.trim()}
+              disabled={isBusy || !targetLanguage.trim()}
               className="sm:w-50"
               isWorking={isTranslating}
             >
@@ -543,6 +557,19 @@ const SettingsScreen: React.FC = () => {
                   : t("aiTranslatingButton")
                 : t("aiTranslationButton")}
             </Button>
+            {isTranslating && (
+              <Button
+                type="button"
+                intent="danger"
+                size="medium"
+                onClick={cancelUiTranslation}
+                className="sm:w-50"
+                title={t("aiTranslationCancelButton")}
+                aria-label={t("aiTranslationCancelButton")}
+              >
+                <Icon iconName="stop_circle" />
+              </Button>
+            )}
           </div>
           {isCurrentAiLanguage && (
             <Button

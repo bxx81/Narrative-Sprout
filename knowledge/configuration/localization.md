@@ -13,7 +13,7 @@ UI language (`settings.uiLanguage`, stored as the **native display name**) drive
 
 # Built-in Languages
 
-Five languages bundled at build time (`src/features/i18n/locales/*.json`, 268 keys each) and precached for offline use — no http-backend, unlike legacy:
+Five languages bundled at build time (`src/features/i18n/locales/*.json`, 279 keys each) and precached for offline use — no http-backend, unlike legacy:
 
 | Display name | Code | File |
 |--------------|------|------|
@@ -28,6 +28,10 @@ Five languages bundled at build time (`src/features/i18n/locales/*.json`, 268 ke
 # AI Dynamic Translation
 
 `translateService.ts`: any user-typed language (e.g. Español) is translated from the English texts in 30-key sequential chunks (500 ms politeness delay, 0..1 progress). `getTranslateLanguageCode` resolves the IETF tag (built-in check → 30-language table → LLM call with validation, falling back to the raw name). Results persist in `settings.aiTranslations` (name → bundle) / `aiLanguageMappings` (name → tag), element-wise validated. The selector groups built-ins separately from `(AI)` languages; deleting the active AI language falls back to English. Translation failure toasts (`aiTranslationError`). RTL languages are supported at document level; narrative prose follows `settings.language`, which always mirrors the current display language (see [Settings System](/features/settings-system.md)).
+
+A running translation is cancellable: `Settings > Display` shows a stop button (`aiTranslationCancelButton`, all 5 locales) while `uiTranslation.phase === "running"`, bound to `cancelUiTranslation()`. It aborts the store-module `uiTranslationAbortController` (its `signal` reaches `translateService`), clears it, and settles the phase to `idle` immediately so the button reacts at once; the aborted run's own `AbortError` handler then sees a foreign controller and never clobbers a later run. A cancel persists nothing.
+
+Two guards govern what a finished run is allowed to write. First, a result whose own signal was aborted (the language-code fallback can swallow an `AbortError`) is dropped before any persistence. Second, `translationLanguageActivation(startedSettings, currentSettings, languageName)` returns `{ uiLanguage, language }` only when the settings still carry the exact language pair recorded when the run started — i.e. the user did not switch languages while it ran; otherwise it returns `null` and only `aiTranslations` / `aiLanguageMappings` are stored, so an explicit mid-run choice is never silently reverted.
 
 # Fonts
 

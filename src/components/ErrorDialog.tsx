@@ -11,16 +11,18 @@ const MAX_VISIBLE_LINES = 7;
 
 /**
  * Global error dialog (legacy ErrorDisplay, modal variant): shown whenever
- * the generation or image operation sits in the failed phase. Retryable
- * failures offer Retry (re-runs the retained payload) and Start Over; a 429
- * with `settings.autoRetrySeconds > 0` retries automatically on a countdown.
- * User aborts are informational and offer only Dismiss.
+ * the generation, image or autoplay-decision operation sits in the failed
+ * phase. Retryable failures offer Retry (re-runs the retained payload) and
+ * Start Over; a 429 with `settings.autoRetrySeconds > 0` retries automatically
+ * on a countdown. User aborts and autoplay-decision failures (no retained
+ * payload to re-run) offer only Dismiss.
  */
 const ErrorDialog: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const generation = useGameStore((s) => s.generation);
   const imageRegeneration = useGameStore((s) => s.imageRegeneration);
+  const autoplayTurn = useGameStore((s) => s.autoplayTurn);
   const autoRetrySeconds = useGameStore((s) => s.settings?.autoRetrySeconds ?? 0);
   const retryGeneration = useGameStore((s) => s.retryGeneration);
   const dismissError = useGameStore((s) => s.dismissError);
@@ -29,12 +31,21 @@ const ErrorDialog: React.FC = () => {
   const failedGeneration = generation.phase === "failed" ? generation : null;
   const failedImage =
     !failedGeneration && imageRegeneration.phase === "failed" ? imageRegeneration : null;
-  const failedPayload = failedGeneration?.payload ?? failedImage?.payload ?? null;
+  // The decision phase runs before `choose`, so a failure here has no
+  // generation payload behind it; it still stops autoplay and must be seen.
+  const failedAutoplay =
+    !failedGeneration && !failedImage && autoplayTurn.phase === "failed" ? autoplayTurn : null;
+  const failedPayload =
+    failedGeneration?.payload ?? failedImage?.payload ?? failedAutoplay?.payload ?? null;
   const classified = failedGeneration
     ? classifyError(failedGeneration.error)
     : failedImage
       ? classifyError(failedImage.error)
-      : null;
+      : failedAutoplay
+        ? // `retryGeneration` has no decision payload to re-run and autoplay is
+          // off again, so present the failure as dismiss-only.
+          { ...classifyError(failedAutoplay.error), isRetryable: false, onlyInformation: true }
+        : null;
 
   const isOpen = classified !== null;
 

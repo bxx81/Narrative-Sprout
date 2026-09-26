@@ -141,6 +141,7 @@
   "aiTranslationInputLabel": "输入目标语言（例如：हिन्दी, Русский）",
   "aiTranslationButton": "翻译",
   "aiTranslatingButton": "正在翻译...",
+  "aiTranslationCancelButton": "停止翻译",
   "aiTranslationDeleteButton": "删除此 AI 翻译",
   "aiTranslationOptgroupLabel": "AI 翻译",
   "aiTranslationSuffix": "(AI)",
