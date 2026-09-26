@@ -13,7 +13,7 @@ Settings are a global singleton (`settings` table, `key: "app"`); the store's `u
 
 # Narrative Language Sync
 
-`language` (injected into story prompts) always mirrors the display language (`uiLanguage`, native name — identity, no mapping table). Every display-language write path carries both values: the Settings selector (via `setUiLanguage`), `translateUi` (new AI language becomes the narrative language too), and `deleteAiTranslation` (falling back to English when the active AI language is deleted). On first run (no stored settings row), `settingsRepository.get()` seeds `language` from the detected display language (`getInitialUiLanguage`) instead of the `"Japanese"` default.
+`language` (injected into story prompts) always mirrors the display language (`uiLanguage`, native name — identity, no mapping table). Every display-language write path carries both values: the Settings selector (via `setUiLanguage`), `translateUi` (a new AI language becomes the narrative language too — but only when that translation runs to completion; a cancelled run keeps the previous `language`, see [Localization](/configuration/localization.md)), and `deleteAiTranslation` (falling back to English when the active AI language is deleted). On first run (no stored settings row), `settingsRepository.get()` seeds `language` from the detected display language (`getInitialUiLanguage`) instead of the `"Japanese"` default.
 
 # Settings Reference
 
@@ -40,6 +40,15 @@ Settings are a global singleton (`settings` table, `key: "app"`); the store's `u
 
 Settings validate with `z.infer`-derived schemas; AI-translation tables validate element-wise (corrupt languages/values skipped with warnings). A malformed settings row falls back to defaults with a warning instead of crashing startup.
 
+# Editing While Generating
+
+Every long operation (scene/autoplay/image generation, AI translation) reads its settings once at start, so a mid-run edit cannot change the running work — it is picked up at the next turn boundary instead. Two guards keep that from looking otherwise:
+
+- `SettingsScreen` computes `isGenerating` (`generation` / `imageRegeneration` / `autoplayTurn`) and `isBusy` (`isGenerating` + `uiTranslation`), locks the Image Generation section (the generator `<select>` and every backend panel) with `isBusy`, and disables the AI-translation start button (and its guard in `handleTranslateUi`) while `isGenerating` — a run cannot start a second long operation on top of a turn, while the text input stays typable. The pattern mirrors `ThemeSetupScreen`'s `loading` guard during a game start; `.form-style` in `index.css` carries the matching `disabled:` colors.
+- `updateSettings` validates `textModel` with `parseTextModelOptions()`: an unrecognized id is dropped (console warning) while the remaining fields still apply, so the debounced `TextModelInput` write (500 ms) can never persist a model the narrator cannot parse. The stored schema is plain `z.string()`, so an id already in a record is rejected at use time instead (`generateScene` / `translateService` / `autoplayService` / `generateThemes` throw on `!modelOptions.isValid`), and `SettingsScreen` marks the input invalid inline.
+
+A running AI translation additionally offers a stop button in `Settings > Display` (`aiTranslationCancelButton`, all 5 locales) bound to `cancelUiTranslation()` — see [Localization](/configuration/localization.md).
+
 # Game Text Size
 
 `gameTextSize` (`small` / `medium` / `large` / `xlarge`, default `"medium"`) scales the Game screen body text areas and the Chronicle screen body text together via `GAME_TEXT_SIZE_CLASSES` (shared in `src/lib/gameTextSize.ts`, with `resolveGameTextSize` providing the `"medium"` fallback); `medium` reproduces the legacy fixed sizes. The choice echo (`displayChoiceText`) is always one step smaller than the choice buttons:
@@ -61,7 +70,7 @@ Resolution is split for testability in `src/features/theme/colorScheme.ts` (re-e
 
 The initial `index.html` ships two `media=`-qualified `theme-color` metas for the OS-following default. A forced `light`/`dark` choice cannot rely on media evaluation, so the first `applyColorScheme` call collapses extras into a single media-less meta whose `content` (`#fbf9fa` / `#030712`, exported as `LIGHT_THEME_COLOR` / `DARK_THEME_COLOR`) tracks the effective theme; repeated application is idempotent.
 
-The selector lives in `Settings > Display` (below the game-text-size selector); writes go through `updateSettings` like every other setting, so old records pick up the `"system"` default with no migration. i18n keys `colorSchemeLabel/System/Light/Dark` exist in all 5 built-in locales (268 keys each).
+The selector lives in `Settings > Display` (below the game-text-size selector); writes go through `updateSettings` like every other setting, so old records pick up the `"system"` default with no migration. i18n keys `colorSchemeLabel/System/Light/Dark` exist in all 5 built-in locales (279 keys each).
 
 # Connectivity Test
 
