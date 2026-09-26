@@ -179,6 +179,7 @@
   "debugReloadConfirmMessage": "需要重新載入頁面才能生效。立即重新載入？",
   "debugReloadConfirmLabel": "立即重新載入",
   "submitCustomActionLabel": "提交自定義行動",
+  "toastChoiceCopied": "選項已複製到輸入框。",
   "exitAppButton": "退出應用程式",
   "dismissButton": "關閉",
   "toastDownloadSavedataSuccess": "存檔已下載。",

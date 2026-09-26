@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { mockChatCompletions } from "./helpers/mockLlm";
 import { seedApiKey } from "./helpers/seed";
+import { startStory } from "./helpers/story";
 
 /**
  * The core journey with a mocked narrator: title → theme setup →
@@ -26,16 +27,7 @@ test.describe("main playthrough", () => {
       { firstCallDelayMs: 500 },
     );
 
-    await page.goto("/");
-    await page.getByRole("button", { name: "New Story" }).click();
-    await expect(page).toHaveURL(/\/setup$/);
-
-    await page.getByLabel("Describe the theme of your story").fill("E2E lighthouse keeper");
-    await page.getByRole("button", { name: "Start Story" }).click();
-
-    // First generation passes through the starting screen.
-    await expect(page).toHaveURL(/\/setup\/starting$/);
-    await expect(page).toHaveURL(/\/play$/);
+    await startStory(page, "E2E lighthouse keeper");
     await expect(page.getByText("This 1st turn")).toBeVisible();
     await expect(page.getByText("E2E turn one")).toBeVisible();
     await expect(page.getByRole("button", { name: "Climb the lighthouse stairs" })).toBeVisible();

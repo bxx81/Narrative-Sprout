@@ -179,6 +179,7 @@
   "debugReloadConfirmMessage": "A page reload is required for this change to take effect. Reload now?",
   "debugReloadConfirmLabel": "Reload now",
   "submitCustomActionLabel": "Submit Custom Action",
+  "toastChoiceCopied": "Choice copied to the input.",
   "exitAppButton": "Exit App",
   "dismissButton": "Dismiss",
   "toastDownloadSavedataSuccess": "Save data downloaded.",
