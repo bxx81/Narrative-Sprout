@@ -11,9 +11,9 @@ source: bunfig.toml, src/db/installFakeIndexedDb.ts, src/features/backup/testsup
 
 Unit runner: `bun test` with happy-dom. `bunfig.toml` `[test] preload` loads `src/db/installFakeIndexedDb.ts`, so Dexie tests run against a fake IndexedDB (note: after `db.delete()`, tests must `db.open()` explicitly — Dexie won't auto-reopen inside transactions).
 
-49 unit files (263 tests) colocate with sources (`*.test.ts`, one `.test.tsx` for the navigation hook). `bun test` excludes `e2e/**` via `--path-ignore-patterns` (quoted in `package.json`, otherwise the shell glob-expands it) — bun's runner picks up `*.spec.ts`, which would collide with Playwright specs.
+64 unit files (336 tests) colocate with sources (`*.test.ts`, one `.test.tsx` for the navigation hook). `bun test` excludes `e2e/**` via `--path-ignore-patterns` (quoted in `package.json`, otherwise the shell glob-expands it) — bun's runner picks up `*.spec.ts`, which would collide with Playwright specs.
 
-E2E runner: Playwright (`bun run test:e2e`), 5 spec files × 2 browser projects (chromium + webkit) = 30 tests. CI has three jobs: `check` (lint → `tsc --noEmit` → `bun test` → prettier check), `e2e` (chromium/webkit matrix, browsers installed with `--with-deps`, HTML report uploaded per browser), `secret-scan` (gitleaks).
+E2E runner: Playwright (`bun run test:e2e`), 7 spec files × 2 browser projects (chromium + webkit) = 42 tests (3 are engine-gated skips: `sample.spec.ts` needs chromium-only Blob storage, the two touch long-press cases need CDP touch input). CI has three jobs: `check` (lint → `tsc --noEmit` → `bun test` → prettier check), `e2e` (chromium/webkit matrix, browsers installed with `--with-deps`, HTML report uploaded per browser), `secret-scan` (gitleaks).
 
 # Conventions
 
@@ -34,8 +34,12 @@ Config (`playwright.config.ts`): `testDir: ./e2e`, `baseURL http://127.0.0.1:517
 | `routing.spec.ts` | `/play`/`/history`/`/chronicle` guards → title, unknown path fallback |
 | `deletion.spec.ts` | Save-slot, branch (partial + last-branch-removes-game), full wipe incl. DB-empty + completion screen |
 | `playthrough.spec.ts` | Mocked-LLM two-turn journey: setup → starting → turn 1 → choice → turn 2 |
+| `longpress.spec.ts` | Long-press copy on a choice button and on the choice echo: copy → `toastChoiceCopied`, no submit, trailing/synthesized click suppressed, and the next ordinary click still submits (mouse, released-off-the-button, and touch; the touch holds are CDP-driven, so they run on chromium only — Playwright's `tap({ delay })` awaits the delay *before* the tap) |
+| `sample.spec.ts` | Load Sample imports the bundled saves into the load screen (chromium only: Playwright WebKit cannot persist a Blob in IndexedDB) |
 
 Helpers (`e2e/helpers/`):
+
+- `story.ts` — `startStory(page, theme)`: drives New Story → theme form → starting → game, asserting the transient `/setup/starting` URL (needs `mockChatCompletions({ firstCallDelayMs })`, otherwise the starting screen is skipped before it can be seen).
 
 - `seed.ts` — writes games/nodes/credentials straight into IndexedDB via `page.evaluate` + dynamic `import("/src/db/database.ts")` (Vite dev serves `/src/*.ts` as modules at runtime; static types come from `typeof import` with the relative file path), then `page.reload()` so `bootstrap()` picks the rows up. Repository reads are unvalidated, so seeds only need UI-visible fields (branded ids still cast). `seedApiKey` stores the dummy `sk-or-test` (same value as unit tests, gitleaks-safe).
 - `mockLlm.ts` — canned OpenRouter `chat/completions` endpoint returning a queued scene per call. Returns plain-JSON completions (not SSE): the streaming client accepts non-event-stream responses as JSON, so no SSE framing is needed. First call can be delayed to observe the starting screen.

@@ -179,6 +179,7 @@
   "debugReloadConfirmMessage": "需要重新加载页面才能生效。立即重新加载？",
   "debugReloadConfirmLabel": "立即重新加载",
   "submitCustomActionLabel": "提交自定义行动",
+  "toastChoiceCopied": "选项已复制到输入框。",
   "exitAppButton": "退出应用",
   "dismissButton": "关闭",
   "toastDownloadSavedataSuccess": "存档已下载。",

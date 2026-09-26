@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import toast from "react-hot-toast";
 import Button from "../ui/Button";
 import { Icon } from "../ui/Icon";
 
@@ -7,6 +8,9 @@ import { Icon } from "../ui/Icon";
  * 長押し判定秒（ms）
  */
 export const LongPressMs = 1000;
+
+/** How far a pointer may wander during a press before it counts as a drag, not a long press. */
+const LongPressMoveSlopPx = 10;
 
 interface GameChoicesProps {
   choices: string[];
@@ -41,14 +45,28 @@ const GameChoices: React.FC<GameChoicesProps> = ({
   const { t } = useTranslation();
   const [customChoice, setCustomChoice] = useState("");
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const longPressTriggered = useRef(false);
+  // Swallows the click the long press itself produces (or the synthesized one
+  // a touch gesture ends with). Cleared on the next pointerdown, so a long
+  // press that ends without a click reaching this button can never eat a
+  // later, ordinary click.
+  const suppressNextClickRef = useRef(false);
+  const activePointerIdRef = useRef<number | null>(null);
+  const pressOriginRef = useRef<{ x: number; y: number } | null>(null);
 
-  const startLongPress = useCallback((choice: string) => {
-    longPressTimer.current = setTimeout(() => {
-      longPressTriggered.current = true;
-      setCustomChoice(choice);
-    }, LongPressMs);
-  }, []);
+  const startLongPress = useCallback(
+    (choice: string) => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+      }
+      longPressTimer.current = setTimeout(() => {
+        longPressTimer.current = null;
+        suppressNextClickRef.current = true;
+        setCustomChoice(choice);
+        toast.success(t("toastChoiceCopied"));
+      }, LongPressMs);
+    },
+    [t],
+  );
 
   const cancelLongPress = useCallback(() => {
     if (longPressTimer.current) {
@@ -56,6 +74,20 @@ const GameChoices: React.FC<GameChoicesProps> = ({
       longPressTimer.current = null;
     }
   }, []);
+
+  /** Ends the active press: stops the timer and releases the pointer bookkeeping. */
+  const endPointerPress = useCallback(
+    (pointerId: number) => {
+      cancelLongPress();
+      if (activePointerIdRef.current === pointerId) {
+        activePointerIdRef.current = null;
+        pressOriginRef.current = null;
+      }
+    },
+    [cancelLongPress],
+  );
+
+  useEffect(() => cancelLongPress, [cancelLongPress]);
 
   useEffect(() => {
     if (choicePreset) {
@@ -88,18 +120,30 @@ const GameChoices: React.FC<GameChoicesProps> = ({
               <button
                 key={choice ? `${viewingNodeId}:${choice}` : `${viewingNodeId}:${index}`}
                 onClick={() => {
-                  if (longPressTriggered.current) {
-                    longPressTriggered.current = false;
+                  if (suppressNextClickRef.current) {
+                    suppressNextClickRef.current = false;
                     return;
                   }
                   if (choice != "") onChoiceSubmit(choice);
                 }}
-                onMouseDown={() => startLongPress(choice)}
-                onMouseUp={cancelLongPress}
-                onMouseLeave={cancelLongPress}
-                onTouchStart={() => startLongPress(choice)}
-                onTouchEnd={cancelLongPress}
-                onTouchMove={cancelLongPress}
+                onPointerDown={(e) => {
+                  if (e.button !== 0 || !e.isPrimary) return;
+                  suppressNextClickRef.current = false;
+                  activePointerIdRef.current = e.pointerId;
+                  pressOriginRef.current = { x: e.clientX, y: e.clientY };
+                  startLongPress(choice);
+                }}
+                onPointerMove={(e) => {
+                  if (activePointerIdRef.current !== e.pointerId || !pressOriginRef.current) return;
+                  const wanderX = e.clientX - pressOriginRef.current.x;
+                  const wanderY = e.clientY - pressOriginRef.current.y;
+                  if (Math.hypot(wanderX, wanderY) > LongPressMoveSlopPx) {
+                    endPointerPress(e.pointerId);
+                  }
+                }}
+                onPointerUp={(e) => endPointerPress(e.pointerId)}
+                onPointerCancel={(e) => endPointerPress(e.pointerId)}
+                onPointerLeave={(e) => endPointerPress(e.pointerId)}
                 disabled={loading}
                 className={`choice-style ${choicesTextClass} ${
                   choice != "" ? `cursor-pointer disabled:cursor-default` : "text-text-disable"

@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
+import toast from "react-hot-toast";
 import { useBreakpoint } from "../hooks/useBreakpoint";
 import { useConfirm } from "../hooks/useConfirm";
 import { useGameStore } from "../store/gameStore";
@@ -289,6 +290,14 @@ const GameScreen: React.FC = () => {
       ? (generation.payload.choiceText ?? null)
       : null;
   const displayChoiceText = streamingChoice ?? choiceText;
+  // Long press on the echoed choice copies it into the custom-choice input and
+  // announces that. Plain closure: every timer below is created on render and
+  // must capture the choice that is on screen at that moment.
+  const applyChoiceEchoPreset = () => {
+    if (!displayChoiceText) return;
+    setChoicePresetSignal({ choice: displayChoiceText });
+    toast.success(t("toastChoiceCopied"));
+  };
   const displayTurnNumber = (() => {
     if (!loading || stream.status === "idle") return turnNumber;
     switch (generation.payload.kind) {
@@ -331,9 +340,7 @@ const GameScreen: React.FC = () => {
         <p
           className={`font-serif-display text-center ${gameTextClasses.displayChoiceText} select-text [line-break:strict] selection:bg-lime-500/30`}
           onMouseDown={() => {
-            choicePresetTimer.current = setTimeout(() => {
-              setChoicePresetSignal({ choice: displayChoiceText });
-            }, LongPressMs);
+            choicePresetTimer.current = setTimeout(applyChoiceEchoPreset, LongPressMs);
           }}
           onMouseUp={() => {
             if (choicePresetTimer.current) {
@@ -348,9 +355,7 @@ const GameScreen: React.FC = () => {
             }
           }}
           onTouchStart={() => {
-            choicePresetTimer.current = setTimeout(() => {
-              setChoicePresetSignal({ choice: displayChoiceText });
-            }, 500);
+            choicePresetTimer.current = setTimeout(applyChoiceEchoPreset, 500);
           }}
           onTouchEnd={() => {
             if (choicePresetTimer.current) {

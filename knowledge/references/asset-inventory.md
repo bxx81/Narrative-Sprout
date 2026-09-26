@@ -33,4 +33,4 @@ All static files live in Vite-standard `public/` (served at root). Heavy media s
 
 # Locales
 
-`src/features/i18n/locales/`: `en.json` (23.7 KB, source of truth), `ja.json` (30.1 KB), `ko.json` (27.7 KB), `zh.json` (23.2 KB), `zh-tw.json` (23.3 KB) — 327 keys each, bundled into the JS precache for offline UI.
+`src/features/i18n/locales/`: `en.json` (19.4 KB, source of truth), `ja.json` (24.6 KB), `ko.json` (22.5 KB), `zh.json` (19.1 KB), `zh-tw.json` (19.1 KB) — 280 keys each, bundled into the JS precache for offline UI.
