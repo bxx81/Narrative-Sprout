@@ -29,8 +29,10 @@ const resultTextClass: Record<ZeroGpuQuotaResult["kind"], string> = {
  * Hugging Face's counterpart of `EndpointConnectionTest`: the panel has a
  * fixed Space URL, so instead of probing reachability the button fetches
  * `GET /api/spaces/zero-gpu/quota` — proving the token is accepted and
- * showing the account's ZeroGPU quota. Local `AsyncOperation` state only —
- * no store slice, no Zustand `set`.
+ * showing the account's ZeroGPU quota: GPU-seconds left, reset time, and
+ * the run counts Hugging Face enforces per window (a zero remainder fails
+ * generation even while GPU-seconds remain). Local `AsyncOperation` state
+ * only — no store slice, no Zustand `set`.
  */
 const HuggingFaceZeroGpuQuotaTest: React.FC<HuggingFaceZeroGpuQuotaTestProps> = ({
   token,
@@ -106,18 +108,22 @@ const HuggingFaceZeroGpuQuotaTest: React.FC<HuggingFaceZeroGpuQuotaTestProps> = 
           </p>
           <p className="support-text-color text-xs">
             {completed.quota.resetsAt === null
-              ? t("zeroGpuResetsNotUsed")
+              ? t("zeroGpuResetsUnused")
               : t("zeroGpuResetsAt", {
                   time: formatResetTime(completed.quota.resetsAt, i18n.language),
                 })}
           </p>
           {completed.quota.runs && (
             <p className="support-text-color text-xs">
-              {t("zeroGpuRunsRemaining", {
+              {t("zeroGpuRuns", {
+                used: completed.quota.runs.used,
                 remaining: completed.quota.runs.remaining,
                 limit: completed.quota.runs.limit,
               })}
             </p>
+          )}
+          {completed.quota.runs && completed.quota.runs.remaining <= 0 && (
+            <p className="text-xs font-semibold text-red-500">{t("zeroGpuRunsExhausted")}</p>
           )}
           {(completed.quota.overquotaUsed ?? 0) > 0 && (
             <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">
