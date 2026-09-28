@@ -20,7 +20,7 @@
   "comfyuiWorkflowLabel": "ComfyUI ワークフロー (JSON)",
   "comfyuiWorkflowHelp": "APIフォーマットのワークフローを貼り付けてください。##prompt##と##negative_prompt##は置き換えられます。数値1234567890はランダムなシードに置き換えられます。",
   "huggingFaceConfigLabel": "Hugging Face API パラメータ (JSON)",
-  "huggingFaceConfigHelp": "Spaceの`/infer` API用のJSONオブジェクトを指定します。'prompt'はAIが生成したプロンプトに追加されます。値が\"delete\"のキーは削除されます。無効なJSONは無視されます。",
+  "huggingFaceConfigHelp": "Spaceの`/infer` API用のJSONオブジェクトを指定します。任意の値中の`{prompt}`と`{negative_prompt}`はAIが生成したプロンプトで置換されます。プレースホルダがない場合は`prompt`/`negative_prompt`キーに追加されます。値が\"delete\"のキーは削除されます。無効なJSONは無視されます。",
   "huggingFaceSpaceIdLabel": "Hugging Face Space ID",
   "huggingFaceSpaceIdHelp": "画像生成用のHugging Face Space ID (例: 'black-forest-labs/FLUX.1-schnell')",
   "huggingFaceTokenLabel": "Hugging Face トークン",

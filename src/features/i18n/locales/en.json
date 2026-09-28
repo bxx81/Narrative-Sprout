@@ -20,7 +20,7 @@
   "comfyuiWorkflowLabel": "ComfyUI Workflow (JSON)",
   "comfyuiWorkflowHelp": "Paste your API-format workflow here. ##prompt## and ##negative_prompt## will be replaced. The number 1234567890 will be replaced with a random seed.",
   "huggingFaceConfigLabel": "Hugging Face API Parameters (JSON)",
-  "huggingFaceConfigHelp": "Specify the JSON object for the Space's `/infer` API. 'prompt' will be appended to the AI-generated prompt. Keys with value \"delete\" will be removed. Invalid JSON is ignored.",
+  "huggingFaceConfigHelp": "Specify the JSON object for the Space's `/infer` API. `{prompt}` and `{negative_prompt}` are replaced by the AI-generated prompts in any value; without a placeholder the prompts are appended to the `prompt` / `negative_prompt` keys. Keys with value \"delete\" will be removed. Invalid JSON is ignored.",
   "huggingFaceSpaceIdLabel": "Hugging Face Space ID",
   "huggingFaceSpaceIdHelp": "Hugging Face Space ID for image generation (e.g., 'black-forest-labs/FLUX.1-schnell')",
   "huggingFaceTokenLabel": "Hugging Face Token",

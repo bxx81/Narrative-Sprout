@@ -1,5 +1,5 @@
 import type { GenerateParams, IImageGenerator } from "../types";
-import { REPLACE_WORD } from "../types";
+import { REPLACE_WORD, NEGATIVE_REPLACE_WORD } from "../types";
 import { blobToDataUrl, escapePromptWeights, parseJsonConfig } from "./utils";
 
 const DEFAULT_API_NAME = "/infer";
@@ -18,13 +18,17 @@ const MAX_SIGNED_INT32 = 0x7fffffff;
 const GENERATION_TIMEOUT_MS = 600_000;
 const GRADIO_FILE_URL_PREFIX = "/gradio_api";
 const IMAGE_EXTENSION_PATTERN = /\.(png|jpe?g|webp|gif|bmp|avif)([?#]|$)/i;
+const PLACEHOLDER_PATTERN = new RegExp(
+  `${escapeRegExp(REPLACE_WORD)}|${escapeRegExp(NEGATIVE_REPLACE_WORD)}`,
+  "g",
+);
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 interface HuggingFacePayload {
   [key: string]: string | number | boolean | undefined;
-  prompt: string;
-  seed: number;
-  num_inference_steps: number;
-  negative_prompt?: string;
 }
 
 interface GradioParameterInfo {
@@ -171,17 +175,32 @@ export class HuggingFaceImageGenerator implements IImageGenerator {
       typeof DEFAULT_CONFIG;
     const escapedPrompt = escapePromptWeights(prompt ?? "");
     const escapedNegativePrompt = escapePromptWeights(negativePrompt ?? "");
-    const finalPrompt = (base.prompt as string).includes(REPLACE_WORD)
-      ? (base.prompt as string).replaceAll(REPLACE_WORD, escapedPrompt)
-      : [escapedPrompt, base.prompt].filter(Boolean).join(", ");
-    const finalNegativePrompt = (base.negative_prompt as string).includes(REPLACE_WORD)
-      ? (base.negative_prompt as string).replace(REPLACE_WORD, escapedNegativePrompt)
-      : [escapedNegativePrompt, base.negative_prompt].filter(Boolean).join(", ");
-    const payload: HuggingFacePayload = {
-      ...(base as unknown as HuggingFacePayload),
-      prompt: finalPrompt,
-      negative_prompt: finalNegativePrompt,
-    };
+    const payload: HuggingFacePayload = { ...(base as unknown as HuggingFacePayload) };
+    let promptInserted = false;
+    let negativePromptInserted = false;
+    for (const [key, value] of Object.entries(payload)) {
+      if (key === "apiname" || typeof value !== "string") continue;
+      if (!value.includes(REPLACE_WORD) && !value.includes(NEGATIVE_REPLACE_WORD)) continue;
+      payload[key] = value.replace(PLACEHOLDER_PATTERN, (placeholder) => {
+        if (placeholder === REPLACE_WORD) {
+          promptInserted = true;
+          return escapedPrompt;
+        }
+        negativePromptInserted = true;
+        return escapedNegativePrompt;
+      });
+    }
+    if (!promptInserted) {
+      const configuredPrompt = typeof base.prompt === "string" ? base.prompt : "";
+      payload.prompt = [escapedPrompt, configuredPrompt].filter(Boolean).join(", ");
+    }
+    if (!negativePromptInserted) {
+      const configuredNegativePrompt =
+        typeof base.negative_prompt === "string" ? base.negative_prompt : "";
+      payload.negative_prompt = [escapedNegativePrompt, configuredNegativePrompt]
+        .filter(Boolean)
+        .join(", ");
+    }
     if (payload.seed === 0) payload.seed = Math.floor(Math.random() * MAX_SIGNED_INT32);
     for (const [key, value] of Object.entries(userConfig)) {
       if (value === DELETE_SENTINEL) delete payload[key];

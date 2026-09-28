@@ -20,7 +20,7 @@
   "comfyuiWorkflowLabel": "ComfyUI 工作流程 (JSON)",
   "comfyuiWorkflowHelp": "在此貼上 API 格式的工作流程。##prompt## 和 ##negative_prompt## 將被替換。數字 1234567890 將被替換為隨機種子。",
   "huggingFaceConfigLabel": "Hugging Face API 參數 (JSON)",
-  "huggingFaceConfigHelp": "指定 Space 的 `/infer` API 的 JSON 物件。'prompt' 將被添加到 AI 生成的提示詞中。值為 \"delete\" 的鍵將被移除。無效的 JSON 將被忽略。",
+  "huggingFaceConfigHelp": "指定 Space 的 `/infer` API 的 JSON 物件。任意值中的 `{prompt}` 和 `{negative_prompt}` 將被 AI 生成的提示詞取代；若無佔位符，提示詞會附加到 `prompt` / `negative_prompt` 鍵。值為 \"delete\" 的鍵將被移除。無效的 JSON 將被忽略。",
   "huggingFaceSpaceIdLabel": "Hugging Face Space ID",
   "huggingFaceSpaceIdHelp": "用於圖像生成的 Hugging Face Space ID（例如：'black-forest-labs/FLUX.1-schnell'）",
   "huggingFaceTokenLabel": "Hugging Face 權杖",
