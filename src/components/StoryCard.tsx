@@ -65,7 +65,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
             alt={displayImageAlt}
             loading="lazy"
             decoding="async"
-            className={`aspect-video size-full object-cover ${!onImageClick ? "" : "cursor-pointer"}`}
+            className={`animate-fade-in aspect-video size-full object-cover ${!onImageClick ? "" : "cursor-pointer"}`}
             onError={applyLoadScreenFallback}
             onClick={onImageClick}
           />

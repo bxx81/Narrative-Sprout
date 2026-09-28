@@ -58,7 +58,7 @@ const ChronicleNode: React.FC<{
           <img
             src={imageUrl || undefined}
             alt={truncateText(node.scene.imagePrompt, IMAGE_ALT_MAX_LENGTH)}
-            className="size-full cursor-pointer object-cover"
+            className="animate-fade-in size-full cursor-pointer object-cover"
             onClick={handleRewind}
             onError={applyLoadScreenFallback}
           />
