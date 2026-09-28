@@ -59,12 +59,12 @@ const GameNavButtons: React.FC<{ onOpenRefine: () => void; onOpenEdit: () => voi
   }, []);
 
   const handleSwitchToHistory = useCallback(() => {
-    navigate(ROUTES.HISTORY, { viewTransition: true });
+    navigate(ROUTES.HISTORY);
   }, [navigate]);
 
   const handleHome = useCallback(async () => {
     await goToTitle();
-    navigate(ROUTES.HOME, { viewTransition: true });
+    navigate(ROUTES.HOME);
   }, [goToTitle, navigate]);
 
   const handleDeleteBranch = useCallback(async () => {
@@ -80,7 +80,7 @@ const GameNavButtons: React.FC<{ onOpenRefine: () => void; onOpenEdit: () => voi
     if (result !== true) return;
     const { gameDeleted } = await deleteBranch(viewingNodeId);
     if (gameDeleted) {
-      navigate(ROUTES.HOME, { replace: true, viewTransition: true });
+      navigate(ROUTES.HOME, { replace: true });
     }
   }, [viewingNodeId, activeGame, confirm, deleteBranch, navigate, t]);
 

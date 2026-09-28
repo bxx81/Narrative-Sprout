@@ -52,7 +52,7 @@ const StartingScreen: React.FC = () => {
   // Failures are handled by the global ErrorDialog (retry / back to setup).
   useEffect(() => {
     if (generation.phase === "idle" && activeGame) {
-      navigate(ROUTES.PLAY, { replace: true, viewTransition: true });
+      navigate(ROUTES.PLAY, { replace: true });
     }
   }, [generation.phase, activeGame, navigate]);
 

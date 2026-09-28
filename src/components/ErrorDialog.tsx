@@ -113,13 +113,13 @@ const ErrorDialog: React.FC = () => {
   const handleStartOver = async () => {
     dismissError();
     await goToTitle();
-    navigate(ROUTES.HOME, { viewTransition: true });
+    navigate(ROUTES.HOME);
   };
 
   const handleDismiss = () => {
     dismissError();
     if (isStartFailure) {
-      navigate(ROUTES.SETUP, { replace: true, viewTransition: true });
+      navigate(ROUTES.SETUP, { replace: true });
     }
   };
 

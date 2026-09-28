@@ -312,7 +312,7 @@ const SettingsScreen: React.FC = () => {
   const isBusy = isGenerating || isTranslating;
 
   const handleReturnToStartClick = async () => {
-    navigate(ROUTES.HOME, { replace: true, viewTransition: true });
+    navigate(ROUTES.HOME, { replace: true });
     await goToTitle();
   };
 

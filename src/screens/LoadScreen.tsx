@@ -48,7 +48,7 @@ const GameLogCard: React.FC<{ game: GameRecord; latestNode: StoryNodeRecord | nu
 
     const handleLoadGame = async () => {
       await openGame(game.id);
-      navigate(ROUTES.HISTORY, { viewTransition: true });
+      navigate(ROUTES.HISTORY);
     };
 
     const handleDelete = async () => {

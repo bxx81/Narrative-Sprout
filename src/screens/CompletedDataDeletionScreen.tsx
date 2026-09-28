@@ -25,7 +25,7 @@ const CompletedDataDeletionScreen: React.FC = () => {
     // state while the title screen shows.
     void registerServiceWorker();
     void bootstrap();
-    navigate(ROUTES.HOME, { replace: true, viewTransition: true });
+    navigate(ROUTES.HOME, { replace: true });
   };
 
   return (

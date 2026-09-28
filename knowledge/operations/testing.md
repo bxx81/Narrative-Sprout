@@ -25,7 +25,7 @@ E2E runner: Playwright (`bun run test:e2e`), 7 spec files × 2 browser projects 
 
 # End-to-End (Playwright)
 
-Config (`playwright.config.ts`): `testDir: ./e2e`, `baseURL http://127.0.0.1:5173`, `webServer` boots `bun run dev` (dev mode keeps `BrowserRouter` SPA fallback and disables the PWA service worker). Projects: chromium (Desktop Chrome — covers Chrome/Edge/Tauri WebView2) + webkit (Desktop Safari — engine-level Safari coverage for the PWA audience). Firefox is deliberately excluded: smallest share and the app's browser-dependent surface (view transitions with router fallback, no-op wake lock) leaves little engine-specific risk.
+Config (`playwright.config.ts`): `testDir: ./e2e`, `baseURL http://127.0.0.1:5173`, `webServer` boots `bun run dev` (dev mode keeps `BrowserRouter` SPA fallback and disables the PWA service worker). Projects: chromium (Desktop Chrome — covers Chrome/Edge/Tauri WebView2) + webkit (Desktop Safari — engine-level Safari coverage for the PWA audience). Firefox is deliberately excluded: smallest share, and the app's remaining browser-dependent surface (no-op wake lock) leaves little engine-specific risk.
 
 | Spec | Coverage |
 |------|----------|
