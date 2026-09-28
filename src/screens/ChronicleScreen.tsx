@@ -41,7 +41,7 @@ const ChronicleNode: React.FC<{
   // chronicle is showing, so Forward from here walks back toward it.
   const handleRewind = () => {
     resumeStoryAtNode(node.id, branchEndNodeId);
-    navigate(ROUTES.PLAY, { viewTransition: true });
+    navigate(ROUTES.PLAY);
   };
 
   return (

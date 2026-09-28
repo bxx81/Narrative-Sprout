@@ -136,7 +136,7 @@ const ThemeSetupScreen: React.FC = () => {
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
     void startNewGame(theme.trim(), attachmentFiles);
-    navigate(ROUTES.STARTING, { replace: true, viewTransition: true });
+    navigate(ROUTES.STARTING, { replace: true });
   };
 
   if (!settings) return null;

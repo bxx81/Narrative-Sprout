@@ -125,18 +125,18 @@ const TitleScreen: React.FC = () => {
       navigate(ROUTES.SETTINGS, { state: { from: ROUTES.HOME } });
       return;
     }
-    navigate(ROUTES.SETUP, { viewTransition: true });
+    navigate(ROUTES.SETUP);
   };
 
   const handleContinue = async () => {
     const latest = games[0];
     if (!latest) return;
     await openGame(latest.id);
-    navigate(ROUTES.PLAY, { viewTransition: true });
+    navigate(ROUTES.PLAY);
   };
 
   const handleLoad = () => {
-    navigate(ROUTES.LOAD, { viewTransition: true });
+    navigate(ROUTES.LOAD);
   };
 
   // Bundled sample saves (`public/savedata/`): shown instead of the
@@ -151,7 +151,7 @@ const TitleScreen: React.FC = () => {
         error: (error) => (error instanceof Error ? error.message : t("operationFailed")),
       });
       if (summary.importedGameCount > 0) {
-        navigate(ROUTES.LOAD, { viewTransition: true });
+        navigate(ROUTES.LOAD);
       }
     } finally {
       setIsLoadingSample(false);

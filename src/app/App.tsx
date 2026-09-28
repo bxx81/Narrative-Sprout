@@ -158,19 +158,21 @@ const AppLayout: React.FC = () => {
     <div
       className={`min-h-screen antialiased transition-colors duration-300 select-none ${padding ? "p-4" : ""}`}
     >
-      <Routes>
-        <Route path={ROUTES.HOME} element={<TitleScreen />} />
-        <Route path={ROUTES.SETUP} element={<ThemeSetupScreen />} />
-        <Route path={ROUTES.STARTING} element={<StartingScreen />} />
-        <Route path={ROUTES.LOAD} element={<LoadScreen />} />
-        <Route path={ROUTES.SETTINGS} element={<SettingsScreen />} />
-        <Route element={<RequireActiveGame />}>
-          <Route path={ROUTES.PLAY} element={<GameScreen />} />
-          <Route path={ROUTES.HISTORY} element={<HistoryScreen />} />
-          <Route path={ROUTES.CHRONICLE} element={<ChronicleScreen />} />
-        </Route>
-        <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
-      </Routes>
+      <div key={location.pathname} className="animate-fade-in motion-reduce:animate-none">
+        <Routes>
+          <Route path={ROUTES.HOME} element={<TitleScreen />} />
+          <Route path={ROUTES.SETUP} element={<ThemeSetupScreen />} />
+          <Route path={ROUTES.STARTING} element={<StartingScreen />} />
+          <Route path={ROUTES.LOAD} element={<LoadScreen />} />
+          <Route path={ROUTES.SETTINGS} element={<SettingsScreen />} />
+          <Route element={<RequireActiveGame />}>
+            <Route path={ROUTES.PLAY} element={<GameScreen />} />
+            <Route path={ROUTES.HISTORY} element={<HistoryScreen />} />
+            <Route path={ROUTES.CHRONICLE} element={<ChronicleScreen />} />
+          </Route>
+          <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
+        </Routes>
+      </div>
 
       <ErrorDialog />
 

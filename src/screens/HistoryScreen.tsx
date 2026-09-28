@@ -48,12 +48,12 @@ const EndNodeCard: React.FC<{
   // Back/Forward navigation walks its branch from the play screen.
   const handleRewind = () => {
     resumeStoryAtNode(node.id, node.id);
-    navigate(ROUTES.PLAY, { viewTransition: true });
+    navigate(ROUTES.PLAY);
   };
 
   const handleViewChronicle = () => {
     setChronicleTargetNode(node.id);
-    navigate(ROUTES.CHRONICLE, { viewTransition: true });
+    navigate(ROUTES.CHRONICLE);
   };
 
   const handleDelete = async () => {
@@ -68,7 +68,7 @@ const EndNodeCard: React.FC<{
     if (result !== true) return;
     const { gameDeleted } = await deleteBranch(node.id);
     if (gameDeleted) {
-      navigate(ROUTES.LOAD, { viewTransition: true });
+      navigate(ROUTES.LOAD);
     }
   };
 

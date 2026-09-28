@@ -230,7 +230,7 @@ const GameScreen: React.FC = () => {
 
   const handleRestart = async () => {
     await goToTitle();
-    navigate(ROUTES.HOME, { viewTransition: true });
+    navigate(ROUTES.HOME);
   };
 
   const handleRefineSubmit = (refinePrompt: string) => {

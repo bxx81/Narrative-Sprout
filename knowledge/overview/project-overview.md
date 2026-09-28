@@ -37,7 +37,7 @@ v2 keeps v1's features and look but redesigns internals: IndexedDB persistence i
 | Validation | [Zod](https://zod.dev/) v4 (full bundle, element-wise validation) |
 | Persistence | [Dexie.js](https://dexie.org/) (IndexedDB) |
 | State | [Zustand](https://zustand.docs.pmnd.rs/) v5 |
-| Routing | [React Router](https://reactrouter.com/) v7 |
+| Routing | [React Router](https://reactrouter.com/) v8 (declarative `BrowserRouter`; route-level page fade via a `pathname`-keyed wrapper) |
 | i18n | [i18next](https://www.i18next.com/) (bundled locales, no http-backend) |
 | Web (PWA) | [Cloudflare Pages](https://pages.cloudflare.com/) — also installable as offline-capable PWA. |
 | Desktop (Tauri) | Tauri v2 (Windows NSIS installer; Stronghold Vault for credentials) — ships from the same `main` branch. |
