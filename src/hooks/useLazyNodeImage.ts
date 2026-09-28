@@ -3,6 +3,19 @@ import { assetRepository } from "../db/assetRepository";
 import type { AssetRecord } from "../types/asset";
 
 /**
+ * Resolves once the browser has decoded `url` (or immediately on error), so a
+ * card can mount an already-painted image and fade it in over the spinner
+ * instead of popping it in mid-decode (ImageDisplay behavior).
+ */
+const preloadImage = (url: string): Promise<void> =>
+  new Promise((resolve) => {
+    const probe = new Image();
+    probe.onload = () => resolve();
+    probe.onerror = () => resolve();
+    probe.src = url;
+  });
+
+/**
  * Lazy-loads a node image (AssetRecord blob -> object URL) when the element
  * enters the viewport. v2 equivalent of the legacy useLazyNodeImage, reading
  * from the Dexie `assets` store instead of OPFS.
@@ -65,17 +78,27 @@ export const useLazyNodeImage = (
           : await assetRepository.get(nodeId);
         if (isCancelled) return;
 
+        let nextImageUrl: string | null = null;
         if (asset) {
           objectUrl = assetRepository.toObjectUrl(asset);
-          setImageUrl(objectUrl);
+          nextImageUrl = objectUrl;
         } else if (fallbackUrl) {
-          setImageUrl(fallbackUrl);
-        } else {
-          setImageUrl(null);
+          nextImageUrl = fallbackUrl;
         }
+
+        // Decode before flipping `isLoading` so the card fades the image in
+        // over the spinner rather than revealing it mid-decode.
+        if (nextImageUrl) {
+          await preloadImage(nextImageUrl);
+          if (isCancelled) return;
+        }
+        setImageUrl(nextImageUrl);
       } catch (err) {
         console.warn(`Could not load image for node ${nodeId}`, err);
-        if (fallbackUrl) setImageUrl(fallbackUrl);
+        if (fallbackUrl) {
+          await preloadImage(fallbackUrl);
+          if (!isCancelled) setImageUrl(fallbackUrl);
+        }
       } finally {
         if (!isCancelled) setIsLoading(false);
       }
