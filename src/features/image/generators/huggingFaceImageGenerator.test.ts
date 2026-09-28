@@ -221,6 +221,69 @@ describe("HuggingFaceImageGenerator", () => {
     );
   });
 
+  test("substitutes the prompt into an arbitrary parameter and skips the fallback", async () => {
+    mockState.apiInfo = {
+      named_endpoints: {
+        "/infer": {
+          parameters: [{ parameter_name: "image_description", parameter_has_default: false }],
+          returns: [{ label: "Result", component: "Image" }],
+        },
+      },
+    };
+    mockState.predictResult = { data: ["data:image/png;base64,AAAA"] };
+
+    const dataUrl = await generateWith({
+      apiname: "/infer",
+      image_description: "A photo of {prompt}",
+      negative_prompt: "delete",
+    });
+
+    expect(dataUrl).toBe("data:image/png;base64,AAAA");
+    expect(mockState.calls[0].payload).toEqual(["A photo of a cat"]);
+  });
+
+  test("substitutes prompt and negative prompt placeholders in one parameter", async () => {
+    mockState.apiInfo = {
+      named_endpoints: {
+        "/infer": {
+          parameters: [{ parameter_name: "text", parameter_has_default: false }],
+          returns: [{ label: "Result", component: "Image" }],
+        },
+      },
+    };
+    mockState.predictResult = { data: ["data:image/png;base64,AAAA"] };
+
+    const dataUrl = await generateWith(
+      { apiname: "/infer", text: "{prompt} --no {negative_prompt}", negative_prompt: "delete" },
+      "a cat",
+      "blurry",
+    );
+
+    expect(dataUrl).toBe("data:image/png;base64,AAAA");
+    expect(mockState.calls[0].payload).toEqual(["a cat --no blurry"]);
+  });
+
+  test("does not rescan the inserted prompt for placeholders", async () => {
+    mockState.apiInfo = {
+      named_endpoints: {
+        "/infer": {
+          parameters: [{ parameter_name: "prompt", parameter_has_default: false }],
+          returns: [{ label: "Result", component: "Image" }],
+        },
+      },
+    };
+    mockState.predictResult = { data: ["data:image/png;base64,AAAA"] };
+
+    const dataUrl = await generateWith(
+      { apiname: "/infer", prompt: "{prompt}", negative_prompt: "delete" },
+      "cat {negative_prompt} dog",
+      "nsfw",
+    );
+
+    expect(dataUrl).toBe("data:image/png;base64,AAAA");
+    expect(mockState.calls[0].payload).toEqual(["cat {negative_prompt} dog"]);
+  });
+
   test("uses the configured endpoint when it exists without warnings", async () => {
     mockState.apiInfo = {
       named_endpoints: {

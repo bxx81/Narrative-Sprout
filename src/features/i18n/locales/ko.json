@@ -20,7 +20,7 @@
   "comfyuiWorkflowLabel": "ComfyUI 워크플로우 (JSON)",
   "comfyuiWorkflowHelp": "여기에 API 형식의 워크플로우를 붙여넣으세요. ##prompt##와 ##negative_prompt##는 대체됩니다. 숫자 1234567890은 무작위 시드로 대체됩니다.",
   "huggingFaceConfigLabel": "Hugging Face API 파라미터 (JSON)",
-  "huggingFaceConfigHelp": "Space의 `/infer` API를 위한 JSON 객체를 지정합니다. 'prompt'는 AI가 생성한 프롬프트에 추가됩니다. 값이 \"delete\"인 키는 제거됩니다. 유효하지 않은 JSON은 무시됩니다.",
+  "huggingFaceConfigHelp": "Space의 `/infer` API를 위한 JSON 객체를 지정합니다. 모든 값의 `{prompt}`와 `{negative_prompt}`는 AI가 생성한 프롬프트로 대체됩니다. 플레이스홀더가 없으면 `prompt` / `negative_prompt` 키에 추가됩니다. 값이 \"delete\"인 키는 제거됩니다. 유효하지 않은 JSON은 무시됩니다.",
   "huggingFaceSpaceIdLabel": "Hugging Face Space ID",
   "huggingFaceSpaceIdHelp": "이미지 생성을 위한 Hugging Face Space ID (예: 'black-forest-labs/FLUX.1-schnell')",
   "huggingFaceTokenLabel": "Hugging Face 토큰",
