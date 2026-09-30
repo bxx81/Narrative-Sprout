@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useDebouncedExternalState } from "../../hooks/useDebouncedExternalState";
 import HelpTooltip from "../ui/HelpTooltip";
+import { documentationAnchor, documentationUrl } from "../../lib/documentation";
 import EndpointConnectionTest from "./EndpointConnectionTest";
 
 interface NvidiaNimImageSettingsProps {
@@ -23,7 +24,7 @@ const NvidiaNimImageSettingsComponent: React.FC<NvidiaNimImageSettingsProps> = (
   setConfigJson,
   loading,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [localEndpoint, setLocalEndpoint] = useDebouncedExternalState(endpoint, setEndpoint);
   const [localToken, setLocalToken] = useDebouncedExternalState(token ?? "", setToken);
   const [localConfigJson, setLocalConfigJson] = useDebouncedExternalState(
@@ -58,7 +59,10 @@ const NvidiaNimImageSettingsComponent: React.FC<NvidiaNimImageSettingsProps> = (
         />
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">
           {t("nimEndpointHelp")}
-          <HelpTooltip content={t("helpNimEndpoint")} />
+          <HelpTooltip
+            content={t("helpNimEndpoint")}
+            learnMoreUrl={documentationUrl(documentationAnchor.nvidiaNim, i18n.language)}
+          />
         </div>
       </div>
       <div>
@@ -77,7 +81,10 @@ const NvidiaNimImageSettingsComponent: React.FC<NvidiaNimImageSettingsProps> = (
         />
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">
           {t("nimTokenHelp")}
-          <HelpTooltip content={t("helpNimToken")} />
+          <HelpTooltip
+            content={t("helpNimToken")}
+            learnMoreUrl={documentationUrl(documentationAnchor.nvidiaNim, i18n.language)}
+          />
         </div>
       </div>
       {/*
@@ -104,7 +111,10 @@ const NvidiaNimImageSettingsComponent: React.FC<NvidiaNimImageSettingsProps> = (
         />
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">
           {t("nimConfigHelp")}
-          <HelpTooltip content={t("helpNimConfig")} />
+          <HelpTooltip
+            content={t("helpNimConfig")}
+            learnMoreUrl={documentationUrl(documentationAnchor.nvidiaNim, i18n.language)}
+          />
         </div>
         {!isJsonValid && (
           <p className="mt-1 text-xs font-semibold text-red-500">{t("invalidJsonFormat")}</p>

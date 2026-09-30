@@ -30,6 +30,7 @@ import Button from "../components/ui/Button";
 import { countWords } from "../features/narrative/api";
 import { IMAGE_ALT_MAX_LENGTH, truncateText } from "../lib/truncateText";
 import { GAME_TEXT_SIZE_CLASSES, resolveGameTextSize } from "../lib/gameTextSize";
+import { documentationAnchor, documentationUrl } from "../lib/documentation";
 
 /**
  * Distance (px) the streaming tail anchor may sit off the viewport bottom
@@ -53,7 +54,7 @@ const ordinal = (n: number): string => {
  */
 const GameScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const activeGame = useGameStore((s) => s.activeGame);
   const nodes = useGameStore((s) => s.nodes);
   const assets = useGameStore((s) => s.assets);
@@ -383,7 +384,10 @@ const GameScreen: React.FC = () => {
       <div className="font-serif-display select-text selection:bg-lime-500/30">
         {isEditingScene && !loading ? (
           <div>
-            <HelpTooltip content={t("helpEditSceneText")} />
+            <HelpTooltip
+              content={t("helpEditSceneText")}
+              learnMoreUrl={documentationUrl(documentationAnchor.edit, i18n.language)}
+            />
             <textarea
               ref={sceneEditRef}
               defaultValue={scene.sceneText}

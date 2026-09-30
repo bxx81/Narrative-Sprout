@@ -29,9 +29,11 @@ import SettingsSection from "../components/ui/SettingsSection";
 import ToggleSwitch from "../components/ui/ToggleSwitch";
 import { Icon } from "../components/ui/Icon";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
+import HelpTooltip from "../components/ui/HelpTooltip";
 import { BackupSection } from "../components/BackupSection";
 import { useFullscreen } from "../hooks/useFullscreen";
 import { useConfirm } from "../hooks/useConfirm";
+import { documentationAnchor, documentationUrl } from "../lib/documentation";
 
 interface OpenRouterModel {
   id: string;
@@ -45,7 +47,7 @@ interface OpenRouterModel {
  */
 const TextModelInput = React.memo(
   ({ value, onChange }: { value: string; onChange: (val: string) => void }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const confirm = useConfirm();
     const [localValue, setLocalValue] = useDebouncedExternalState(value, onChange);
     const parsed = parseTextModelOptions(localValue);
@@ -132,7 +134,13 @@ const TextModelInput = React.memo(
           {isInvalid && (
             <p className="mt-1 text-xs font-semibold text-red-500">{t("invalidModelOption")}</p>
           )}
-          <p className="support-text-color mt-2 text-xs">{t("modelOptionsHelp")}</p>
+          <div className="support-text-color mt-2 flex items-center gap-1 text-xs">
+            {t("modelOptionsHelp")}
+            <HelpTooltip
+              content={t("helpModelOptions")}
+              learnMoreUrl={documentationUrl(documentationAnchor.llmOptions, i18n.language)}
+            />
+          </div>
         </div>
 
         <div className="mt-2 text-sm">
@@ -205,7 +213,7 @@ TextModelInput.displayName = "TextModelInput";
 const SettingsScreen: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const confirm = useConfirm();
   const { isFullscreen, toggleFullscreen } = useFullscreen();
 
@@ -677,7 +685,13 @@ const SettingsScreen: React.FC = () => {
           header={t("storyLogCompactionSectionTitle")}
           icon={<Icon iconName="summarize" />}
         >
-          <p className="explanation-text-style">{t("storyLogCompactionDescription")}</p>
+          <div className="explanation-text-style flex items-center gap-1">
+            {t("storyLogCompactionDescription")}
+            <HelpTooltip
+              content={t("helpStoryLogCompaction")}
+              learnMoreUrl={documentationUrl(documentationAnchor.compaction, i18n.language)}
+            />
+          </div>
           <div className="flex items-center justify-between gap-4">
             <span className="explanation-text-style">{t("storyLogCompactionToggleLabel")}</span>
             <ToggleSwitch
@@ -693,7 +707,13 @@ const SettingsScreen: React.FC = () => {
           header={t("apiKeyPkceSectionTitle")}
           icon={<Icon iconName="login" />}
         >
-          <p className="explanation-text-style">{t("apiKeyPkceDescription")}</p>
+          <div className="explanation-text-style flex items-center gap-1">
+            {t("apiKeyPkceDescription")}
+            <HelpTooltip
+              content={t("helpApiKeyPkce")}
+              learnMoreUrl={documentationUrl(documentationAnchor.apiKeyPkce, i18n.language)}
+            />
+          </div>
           <Button
             type="button"
             intent="primary"
