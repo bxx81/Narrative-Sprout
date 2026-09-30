@@ -6,7 +6,9 @@ import { useGameStore } from "../store/gameStore";
 import type { DriveFileMetadata } from "../features/backup/api";
 import Button from "./ui/Button";
 import { Icon } from "./ui/Icon";
+import HelpTooltip from "./ui/HelpTooltip";
 import { DIALOG_EMBEDDED_TITLE_MAX_LENGTH, truncateText } from "../lib/truncateText";
+import { documentationAnchor, documentationUrl } from "../lib/documentation";
 
 /**
  * Backup & restore section (knowledge/features/backup-restore.md):
@@ -31,7 +33,7 @@ function formatDriveBackupMetadata(backup: DriveFileMetadata): string {
 }
 
 export function BackupSection() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const confirm = useConfirm();
   const downloadEncryptedBackup = useGameStore((s) => s.downloadEncryptedBackup);
   const restoreBackupFromFile = useGameStore((s) => s.restoreBackupFromFile);
@@ -115,7 +117,13 @@ export function BackupSection() {
           <Icon iconName="database" />
           {t("backupRestoreTitle")}
         </h3>
-        <p className="support-text-color mb-3 text-xs">{t("backupRestoreDescription")}</p>
+        <div className="support-text-color mb-3 flex items-center gap-1 text-xs">
+          {t("backupRestoreDescription")}
+          <HelpTooltip
+            content={t("helpBackupRestore")}
+            learnMoreUrl={documentationUrl(documentationAnchor.backupRestore, i18n.language)}
+          />
+        </div>
 
         <label className="support-text-color mb-3 block text-xs">
           {t("passphraseLabel")}

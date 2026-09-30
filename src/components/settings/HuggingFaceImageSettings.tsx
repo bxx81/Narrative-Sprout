@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useDebouncedExternalState } from "../../hooks/useDebouncedExternalState";
 import HelpTooltip from "../ui/HelpTooltip";
+import { documentationAnchor, documentationUrl } from "../../lib/documentation";
 import HuggingFaceZeroGpuQuotaTest from "./HuggingFaceZeroGpuQuotaTest";
 
 interface HuggingFaceImageSettingsProps {
@@ -23,7 +24,7 @@ const HuggingFaceImageSettingsComponent: React.FC<HuggingFaceImageSettingsProps>
   setConfigJson,
   loading,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [localSpaceId, setLocalSpaceId] = useDebouncedExternalState(spaceId, setSpaceId);
   const [localToken, setLocalToken] = useDebouncedExternalState(token ?? "", setToken);
   const [localConfigJson, setLocalConfigJson] = useDebouncedExternalState(
@@ -58,7 +59,10 @@ const HuggingFaceImageSettingsComponent: React.FC<HuggingFaceImageSettingsProps>
         />
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">
           {t("huggingFaceSpaceIdHelp")}
-          <HelpTooltip content={t("helpHuggingFaceSpaceId")} />
+          <HelpTooltip
+            content={t("helpHuggingFaceSpaceId")}
+            learnMoreUrl={documentationUrl(documentationAnchor.huggingFace, i18n.language)}
+          />
         </div>
       </div>
       <div>
@@ -77,7 +81,10 @@ const HuggingFaceImageSettingsComponent: React.FC<HuggingFaceImageSettingsProps>
         />
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">
           {t("huggingFaceTokenHelp")}
-          <HelpTooltip content={t("helpHuggingFaceToken")} />
+          <HelpTooltip
+            content={t("helpHuggingFaceToken")}
+            learnMoreUrl={documentationUrl(documentationAnchor.huggingFace, i18n.language)}
+          />
         </div>
       </div>
       <div>
@@ -95,7 +102,10 @@ const HuggingFaceImageSettingsComponent: React.FC<HuggingFaceImageSettingsProps>
         />
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">
           {t("huggingFaceConfigHelp")}
-          <HelpTooltip content={t("helpHuggingFaceConfig")} />
+          <HelpTooltip
+            content={t("helpHuggingFaceConfig")}
+            learnMoreUrl={documentationUrl(documentationAnchor.huggingFace, i18n.language)}
+          />
         </div>
         {!isJsonValid && (
           <p className="mt-1 text-xs font-semibold text-red-500">{t("invalidJsonFormat")}</p>

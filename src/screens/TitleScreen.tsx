@@ -5,7 +5,8 @@ import toast from "react-hot-toast";
 import { useGameStore } from "../store/gameStore";
 import { ROUTES } from "../app/routes";
 import Button from "../components/ui/Button";
-import { guideUrl, licenseUrl, privacyUrl, termsUrl } from "../lib/cloudFlarePages";
+import { licenseUrl, privacyUrl, termsUrl } from "../lib/cloudFlarePages";
+import { documentationBaseUrl } from "../lib/documentation";
 import {
   exitApplication,
   isTauri,
@@ -225,7 +226,7 @@ const TitleScreen: React.FC = () => {
         <div className="flex-col gap-x-4 sm:flex sm:flex-row sm:justify-center">
           <div>
             <a
-              href={guideUrl}
+              href={documentationBaseUrl}
               target="_blank"
               rel="noopener noreferrer help"
               className="document-link"

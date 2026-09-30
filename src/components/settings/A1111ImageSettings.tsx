@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useDebouncedExternalState } from "../../hooks/useDebouncedExternalState";
 import HelpTooltip from "../ui/HelpTooltip";
+import { documentationAnchor, documentationUrl } from "../../lib/documentation";
 import EndpointConnectionTest from "./EndpointConnectionTest";
 
 interface A1111ImageSettingsProps {
@@ -19,7 +20,7 @@ const A1111ImageSettingsComponent: React.FC<A1111ImageSettingsProps> = ({
   setConfigJson,
   loading,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [localEndpoint, setLocalEndpoint] = useDebouncedExternalState(endpoint, setEndpoint);
   const [localConfigJson, setLocalConfigJson] = useDebouncedExternalState(
     configJson,
@@ -72,7 +73,10 @@ const A1111ImageSettingsComponent: React.FC<A1111ImageSettingsProps> = ({
         />
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">
           {t("a1111ConfigHelp")}
-          <HelpTooltip content={t("helpA1111Config")} />
+          <HelpTooltip
+            content={t("helpA1111Config")}
+            learnMoreUrl={documentationUrl(documentationAnchor.automatic1111, i18n.language)}
+          />
         </div>
         {!isJsonValid && (
           <p className="mt-1 text-xs font-semibold text-red-500">{t("invalidJsonFormat")}</p>

@@ -16,13 +16,14 @@ import type { ImageGeneratorType, MemoryStrategy } from "../types/settings";
 import BackButton from "../components/ui/BackButton";
 import Button from "../components/ui/Button";
 import { Icon } from "../components/ui/Icon";
+import { documentationAnchor, documentationUrl } from "../lib/documentation";
 
 /**
  * A screen for setting up a new game theme.
  */
 const ThemeSetupScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const settings = useGameStore((s) => s.settings);
   const apiKey = useGameStore((s) => s.openrouterApiKey);
   const generation = useGameStore((s) => s.generation);
@@ -285,7 +286,13 @@ const ThemeSetupScreen: React.FC = () => {
             <fieldset className="rounded-lg border border-text-border p-4">
               <legend className="legend-text-style flex items-center gap-2 px-2">
                 {t("imageGeneratorLabel")}
-                <HelpTooltip content={t("helpImageGenerator")} />
+                <HelpTooltip
+                  content={t("helpImageGenerator")}
+                  learnMoreUrl={documentationUrl(
+                    documentationAnchor.imageGenerators,
+                    i18n.language,
+                  )}
+                />
               </legend>
               <select
                 id="image-generator"
@@ -310,7 +317,10 @@ const ThemeSetupScreen: React.FC = () => {
             <fieldset className="rounded-lg border border-text-border p-4">
               <legend className="legend-text-style flex items-center gap-2 px-2">
                 {t("sceneLengthLabel")}
-                <HelpTooltip content={t("sceneLengthHelp")} />
+                <HelpTooltip
+                  content={t("sceneLengthHelp")}
+                  learnMoreUrl={documentationUrl(documentationAnchor.gettingStarted, i18n.language)}
+                />
               </legend>
               <select
                 id="scene-length"
@@ -330,7 +340,10 @@ const ThemeSetupScreen: React.FC = () => {
             <fieldset className="rounded-lg border border-text-border p-4">
               <legend className="legend-text-style flex items-center gap-2 px-2">
                 {t("memoryStrategyLabel")}
-                <HelpTooltip content={t("memoryStrategyHelp")} />
+                <HelpTooltip
+                  content={t("memoryStrategyHelp")}
+                  learnMoreUrl={documentationUrl(documentationAnchor.gettingStarted, i18n.language)}
+                />
               </legend>
               <select
                 id="memory-strategy"

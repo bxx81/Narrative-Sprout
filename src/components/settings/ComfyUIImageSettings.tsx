@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useDebouncedExternalState } from "../../hooks/useDebouncedExternalState";
 import HelpTooltip from "../ui/HelpTooltip";
+import { documentationAnchor, documentationUrl } from "../../lib/documentation";
 import EndpointConnectionTest from "./EndpointConnectionTest";
 
 interface ComfyUIImageSettingsProps {
@@ -19,7 +20,7 @@ const ComfyUIImageSettingsComponent: React.FC<ComfyUIImageSettingsProps> = ({
   setWorkflowJson,
   loading,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [localEndpoint, setLocalEndpoint] = useDebouncedExternalState(endpoint, setEndpoint);
   const [localWorkflowJson, setLocalWorkflowJson] = useDebouncedExternalState(
     workflowJson,
@@ -53,7 +54,10 @@ const ComfyUIImageSettingsComponent: React.FC<ComfyUIImageSettingsProps> = ({
         />
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">
           {t("comfyuiEndpointHelp")}
-          <HelpTooltip content={t("helpComfyUIEndpoint")} />
+          <HelpTooltip
+            content={t("helpComfyUIEndpoint")}
+            learnMoreUrl={documentationUrl(documentationAnchor.comfyUI, i18n.language)}
+          />
         </div>
         {/* /system_stats is a lightweight read-only JSON endpoint. */}
         <EndpointConnectionTest endpointUrl={localEndpoint} probePath="/system_stats" />
@@ -73,7 +77,10 @@ const ComfyUIImageSettingsComponent: React.FC<ComfyUIImageSettingsProps> = ({
         />
         <div className="support-text-color mt-2 flex items-center gap-1 text-xs">
           {t("comfyuiWorkflowHelp")}
-          <HelpTooltip content={t("helpComfyUIWorkflow")} />
+          <HelpTooltip
+            content={t("helpComfyUIWorkflow")}
+            learnMoreUrl={documentationUrl(documentationAnchor.comfyUI, i18n.language)}
+          />
         </div>
         {!isJsonValid && (
           <p className="mt-1 text-xs font-semibold text-red-500">{t("invalidJsonFormat")}</p>
