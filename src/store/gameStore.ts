@@ -284,6 +284,38 @@ async function buildImageConfigForSettings(settings: SettingsRecord) {
 }
 
 /**
+ * Shared narrative-service request fields common to every turn (start /
+ * choice / refine / redo). The delta callback presence decides the API
+ * delivery mode (legacy beginStream): only set when streaming is actually
+ * enabled, otherwise the request goes out non-streamed.
+ */
+function baseNarrativeRequest(settings: SettingsRecord, apiKey: string) {
+  const streamingEnabled = isStreamingEnabledForSettings(settings);
+  return {
+    apiKey,
+    model: settings.textModel,
+    language: settings.language,
+    webpCompression: settings.webpCompression,
+    memoryStrategy: settings.memoryStrategy,
+    enableStoryLogCompaction: settings.enableStoryLogCompaction,
+    onSceneTextDelta: streamingEnabled
+      ? (accumulatedText: string) => streamStore.pushDelta(accumulatedText)
+      : undefined,
+  };
+}
+
+/**
+ * Per-save snapshot fields (legacy behavior): old saves fall back to the
+ * current global setting.
+ */
+function saveNarrativeFields(game: GameRecord, settings: SettingsRecord) {
+  return {
+    sceneTextLength: game.sceneTextLength ?? settings.sceneTextLength,
+    attachmentTexts: game.attachmentTexts ?? [],
+  };
+}
+
+/**
  * Runs one narrative generation turn (start / choice / refine / redo) with
  * the skeleton every turn action shares: running/failed phase bookkeeping,
  * streaming setup, image-gen config, and the identical turn-service
@@ -484,7 +516,6 @@ export const useGameStore = create<GameState>()(
         const { settings, openrouterApiKey } = get();
         if (!settings || !openrouterApiKey) throw new Error("Setup incomplete.");
         const payload: GenerationPayload = { kind: "start", theme, attachmentFiles };
-        const streamingEnabled = isStreamingEnabledForSettings(settings);
         await runNarrativeTurn(
           { set },
           {
@@ -497,19 +528,11 @@ export const useGameStore = create<GameState>()(
               const processed = await processAttachmentFiles(attachmentFiles ?? [], theme);
               return startGame(
                 {
-                  apiKey: openrouterApiKey,
-                  model: settings.textModel,
+                  ...baseNarrativeRequest(settings, openrouterApiKey),
                   theme: processed.theme,
-                  language: settings.language,
                   sceneTextLength: settings.sceneTextLength,
                   attachmentTexts: processed.attachmentTexts,
                   imageGenConfig,
-                  webpCompression: settings.webpCompression,
-                  memoryStrategy: settings.memoryStrategy,
-                  enableStoryLogCompaction: settings.enableStoryLogCompaction,
-                  onSceneTextDelta: streamingEnabled
-                    ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
-                    : undefined,
                 },
                 serviceOptions,
               );
@@ -574,7 +597,6 @@ export const useGameStore = create<GameState>()(
           autoplayReasoning: options?.autoplayReasoning,
           autoplayCost: options?.autoplayCost,
         };
-        const streamingEnabled = isStreamingEnabledForSettings(settings);
         await runNarrativeTurn(
           { set },
           {
@@ -584,26 +606,15 @@ export const useGameStore = create<GameState>()(
             run: (serviceOptions, imageGenConfig) =>
               choosePath(
                 {
-                  apiKey: openrouterApiKey,
-                  model: settings.textModel,
+                  ...baseNarrativeRequest(settings, openrouterApiKey),
+                  ...saveNarrativeFields(activeGame, settings),
                   game: activeGame,
                   parentNode,
                   ancestors,
                   choiceText,
-                  language: settings.language,
-                  // Per-save snapshot (legacy behavior); old saves fall back to
-                  // the current global setting.
-                  sceneTextLength: activeGame.sceneTextLength ?? settings.sceneTextLength,
-                  attachmentTexts: activeGame.attachmentTexts ?? [],
                   imageGenConfig,
-                  webpCompression: settings.webpCompression,
-                  memoryStrategy: settings.memoryStrategy,
-                  enableStoryLogCompaction: settings.enableStoryLogCompaction,
                   autoplayReasoning: options?.autoplayReasoning,
                   autoplayCost: options?.autoplayCost,
-                  onSceneTextDelta: streamingEnabled
-                    ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
-                    : undefined,
                 },
                 serviceOptions,
               ),
@@ -628,7 +639,6 @@ export const useGameStore = create<GameState>()(
           ? applyHistoryContextCut(collectAncestors(byId, parentNode.id, true))
           : [];
         const payload: GenerationPayload = { kind: "refine", nodeId, refinePrompt };
-        const streamingEnabled = isStreamingEnabledForSettings(settings);
         await runNarrativeTurn(
           { set },
           {
@@ -638,25 +648,14 @@ export const useGameStore = create<GameState>()(
             run: (serviceOptions, imageGenConfig) =>
               refineScene(
                 {
-                  apiKey: openrouterApiKey,
-                  model: settings.textModel,
+                  ...baseNarrativeRequest(settings, openrouterApiKey),
+                  ...saveNarrativeFields(activeGame, settings),
                   game: activeGame,
                   targetNode,
                   parentNode,
                   ancestors,
                   refinePrompt,
-                  language: settings.language,
-                  // Per-save snapshot (legacy behavior); old saves fall back to
-                  // the current global setting.
-                  sceneTextLength: activeGame.sceneTextLength ?? settings.sceneTextLength,
-                  attachmentTexts: activeGame.attachmentTexts ?? [],
                   imageGenConfig,
-                  webpCompression: settings.webpCompression,
-                  memoryStrategy: settings.memoryStrategy,
-                  enableStoryLogCompaction: settings.enableStoryLogCompaction,
-                  onSceneTextDelta: streamingEnabled
-                    ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
-                    : undefined,
                 },
                 serviceOptions,
               ),
@@ -684,7 +683,6 @@ export const useGameStore = create<GameState>()(
             gameId: sourceGame.id,
             rootId: nodeId,
           };
-          const streamingEnabled = isStreamingEnabledForSettings(settings);
           await runNarrativeTurn(
             { set },
             {
@@ -694,21 +692,10 @@ export const useGameStore = create<GameState>()(
               run: (serviceOptions, imageGenConfig) =>
                 startGame(
                   {
-                    apiKey: openrouterApiKey,
-                    model: settings.textModel,
+                    ...baseNarrativeRequest(settings, openrouterApiKey),
+                    ...saveNarrativeFields(sourceGame, settings),
                     theme: sourceGame.title,
-                    language: settings.language,
-                    // Root redo keeps the save's own length order (legacy
-                    // performRootRegenerate), falling back to the global setting.
-                    sceneTextLength: sourceGame.sceneTextLength ?? settings.sceneTextLength,
-                    attachmentTexts: sourceGame.attachmentTexts ?? [],
                     imageGenConfig,
-                    webpCompression: settings.webpCompression,
-                    memoryStrategy: settings.memoryStrategy,
-                    enableStoryLogCompaction: settings.enableStoryLogCompaction,
-                    onSceneTextDelta: streamingEnabled
-                      ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
-                      : undefined,
                   },
                   serviceOptions,
                 ),
@@ -746,7 +733,6 @@ export const useGameStore = create<GameState>()(
           nodeId,
           discardHistoryContext,
         };
-        const streamingEnabled = isStreamingEnabledForSettings(settings);
         await runNarrativeTurn(
           { set },
           {
@@ -756,25 +742,14 @@ export const useGameStore = create<GameState>()(
             run: (serviceOptions, imageGenConfig) =>
               choosePath(
                 {
-                  apiKey: openrouterApiKey,
-                  model: settings.textModel,
+                  ...baseNarrativeRequest(settings, openrouterApiKey),
+                  ...saveNarrativeFields(activeGame, settings),
                   game: activeGame,
                   parentNode,
                   ancestors,
                   choiceText,
-                  language: settings.language,
-                  // Per-save snapshot (legacy behavior); old saves fall back to
-                  // the current global setting.
-                  sceneTextLength: activeGame.sceneTextLength ?? settings.sceneTextLength,
-                  attachmentTexts: activeGame.attachmentTexts ?? [],
                   imageGenConfig,
-                  webpCompression: settings.webpCompression,
-                  memoryStrategy: settings.memoryStrategy,
-                  enableStoryLogCompaction: settings.enableStoryLogCompaction,
                   discardHistoryContext,
-                  onSceneTextDelta: streamingEnabled
-                    ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
-                    : undefined,
                 },
                 serviceOptions,
               ),
