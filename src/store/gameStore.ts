@@ -228,9 +228,7 @@ async function loadAssetsForNodes(nodeIds: string[]): Promise<Record<string, Ass
  * generation phase is NOT reset here — only actions that own the generation
  * lifecycle touch it.
  */
-async function clearActiveGameState(
-  set: (partial: Partial<GameState>) => void,
-): Promise<void> {
+async function clearActiveGameState(set: (partial: Partial<GameState>) => void): Promise<void> {
   const games = await gameRepository.listGames();
   releaseWakeLock("autoplay");
   set({
@@ -276,10 +274,7 @@ function upsertGameSummary(games: GameRecord[], updated: GameRecord): GameRecord
  * sibling redo, which otherwise repeat the identical update.
  */
 async function applyAppendedNode(
-  {
-    set,
-    get,
-  }: { set: (partial: Partial<GameState>) => void; get: () => GameState },
+  { set, get }: { set: (partial: Partial<GameState>) => void; get: () => GameState },
   activeGame: GameRecord,
   node: StoryNodeRecord,
 ): Promise<void> {
@@ -368,9 +363,7 @@ function saveNarrativeFields(game: GameRecord, settings: SettingsRecord) {
  * generation failed with the retained payload.
  */
 async function runNarrativeTurn<T>(
-  {
-    set,
-  }: { set: (partial: Partial<GameState>) => void },
+  { set }: { set: (partial: Partial<GameState>) => void },
   {
     settings,
     payload,
@@ -922,9 +915,7 @@ export const useGameStore = create<GameState>()(
         await gameRepository.updateNodeSceneText(nodeId, sceneText, sceneWordCount);
         set({
           nodes: get().nodes.map((n) =>
-            n.id === nodeId
-              ? { ...n, scene: { ...n.scene, sceneText, sceneWordCount } }
-              : n,
+            n.id === nodeId ? { ...n, scene: { ...n.scene, sceneText, sceneWordCount } } : n,
           ),
         });
       },
