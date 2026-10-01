@@ -49,3 +49,5 @@ The A1111 (`GET /` — the Gradio root always exists), ComfyUI (`GET /system_sta
 # Regeneration
 
 `regenerateImage(nodeId)` re-renders the same scene's `imagePrompt` and overwrites the same asset key (`updatedAt` bumped), tracked as `imageRegeneration: AsyncOperation`. A1111/ComfyUI report progress % into `imageGenerationProgress`. The loading overlay follows `generationStage === "image"`.
+
+Regeneration is user-cancellable: `regenerateImage` passes a store-module `imageRegenerationAbortController.signal` to `generateSceneImage` (which races the abort against the generator call), and the shared Stop button (`cancelGeneration`) aborts it, returns `imageRegeneration` to `idle` immediately, and clears progress. The aborted run settles silently (no `ErrorDialog`); its own `AbortError` handler verifies controller identity first, so a cancel-and-restart never clobbers the newer run. A cancelled regeneration writes nothing.

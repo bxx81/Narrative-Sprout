@@ -260,6 +260,14 @@ let autoplayAbortController: AbortController | null = null;
  */
 let uiTranslationAbortController: AbortController | null = null;
 
+/**
+ * AbortController for the in-flight standalone image regeneration. Same
+ * rationale as the autoplay/translation controllers. Image generation inside a
+ * turn aborts via `streamStore`'s controller instead; this one covers the
+ * `regenerateImage` path, whose button-driven cancel has no stream.
+ */
+let imageRegenerationAbortController: AbortController | null = null;
+
 export const useGameStore = create<GameState>()(
   devtools(
     subscribeWithSelector((set, get) => ({
@@ -805,6 +813,9 @@ export const useGameStore = create<GameState>()(
         if (!node) return;
 
         const payload: ImageRegenerationPayload = { nodeId };
+        imageRegenerationAbortController?.abort();
+        const abortController = new AbortController();
+        imageRegenerationAbortController = abortController;
         set({
           imageRegeneration: { phase: "running", payload, startedAt: new Date().toISOString() },
           imageGenerationProgress: null,
@@ -816,6 +827,7 @@ export const useGameStore = create<GameState>()(
             imagePrompt: node.scene.imagePrompt,
             negativeImagePrompt: node.scene.negativeImagePrompt,
             imageGenConfig,
+            signal: abortController.signal,
             onProgress: (progress) => set({ imageGenerationProgress: progress }),
           });
           const asset = await assetRecordFromDataUrl(
@@ -842,14 +854,22 @@ export const useGameStore = create<GameState>()(
             });
           }
         } catch (error) {
-          if ((error as Error).name === "AbortError") {
-            set({ imageRegeneration: { phase: "idle" }, imageGenerationProgress: null });
+          if (abortController.signal.aborted || (error as Error).name === "AbortError") {
+            // Cancelled (stop button) or superseded by a newer run: that path
+            // settled the phase already, so never clobber a later run.
+            if (imageRegenerationAbortController === abortController) {
+              set({ imageRegeneration: { phase: "idle" }, imageGenerationProgress: null });
+            }
             return;
           }
           set({
             imageRegeneration: { phase: "failed", payload, error: error as Error },
             imageGenerationProgress: null,
           });
+        } finally {
+          if (imageRegenerationAbortController === abortController) {
+            imageRegenerationAbortController = null;
+          }
         }
       },
 
@@ -1059,6 +1079,13 @@ export const useGameStore = create<GameState>()(
           if (get().autoplayTurn.phase === "running") {
             set({ autoplayTurn: { phase: "idle" } });
           }
+        }
+        // Standalone image regeneration has no stream; abort it via its own
+        // controller and settle at once for instant spinner feedback.
+        imageRegenerationAbortController?.abort();
+        imageRegenerationAbortController = null;
+        if (get().imageRegeneration.phase === "running") {
+          set({ imageRegeneration: { phase: "idle" }, imageGenerationProgress: null });
         }
         streamStore.cancel();
       },

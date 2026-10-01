@@ -499,7 +499,7 @@ const GameScreen: React.FC = () => {
         generationStartedAt={generationStartedAt}
       />
 
-      {((loading && stream.status !== "idle") || isAutoplayDeciding) && (
+      {((loading && stream.status !== "idle") || isAutoplayDeciding || isImageRegenerating) && (
         <Button
           intent="navigator"
           size="medium-circle"

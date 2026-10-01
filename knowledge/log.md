@@ -1,5 +1,8 @@
 # Knowledge Bundle Update Log
 
+## 2026-10-01
+* **Addition**: Standalone image regeneration is now user-cancellable via the shared Stop button. `regenerateImage` passes a store-module `imageRegenerationAbortController.signal` to `generateSceneImage` (which races the abort against the generator call); `cancelGeneration` aborts it, returns `imageRegeneration` to `idle`, and clears `imageGenerationProgress`, while the aborted run's own `AbortError` handler verifies controller identity so a cancel-and-restart never clobbers the newer run. `GameScreen`'s Stop button condition gains `|| isImageRegenerating`. A cancelled regeneration writes nothing. Documented in `features/image-generation.md` (Regeneration), `features/streaming.md` (Stop button condition), `data-model/state-management.md` (`cancelGeneration` wiring).
+
 ## 2026-09-28
 * **Change**: Route-level page fade-in added, and the dead `viewTransition` option removed. The declarative `BrowserRouter` never calls `document.startViewTransition` — `useNavigate` only invokes the history navigator, and only data routers (`createBrowserRouter` + `RouterProvider`) honor `viewTransition` — so all 19 `navigate(..., { viewTransition: true })` sites were no-ops and the earlier `::view-transition-*` CSS never matched. `AppLayout` now wraps `<Routes>` in `<div key={location.pathname} className="animate-fade-in motion-reduce:animate-none">`, replaying the existing `fadeIn` keyframe on every path change (the key forces a remount per path; reduced-motion is honored). Corrected `operations/testing.md` (dropped the false "view transitions with router fallback" claim from the Firefox-exclusion rationale) and `overview/project-overview.md` (Routing row: React Router v7 → v8, with the page fade noted).
 
