@@ -8,7 +8,12 @@ import { settingsRepository } from "../db/settingsRepository";
 import { assetRepository } from "../db/assetRepository";
 import { wipeRepository } from "../db/wipeRepository";
 import { db } from "../db/database";
-import { choosePath, refineScene, startGame } from "../features/gameplay/turnService";
+import {
+  choosePath,
+  refineScene,
+  startGame,
+  type TurnServiceOptions,
+} from "../features/gameplay/turnService";
 import { collectAncestors, applyHistoryContextCut } from "../features/storytree/api";
 import { countWords } from "../features/narrative/api";
 import { decideAutoplayTurn } from "../features/autoplay/api";
@@ -47,10 +52,11 @@ import {
   generateSceneImage,
   notifyImageGenerationFailure,
   webpQualityForCompression,
+  type ImageGenConfig,
 } from "../features/image/api";
 import { processAttachmentFiles } from "../features/attachments/api";
 import { playSound } from "../features/sound/api";
-import { markDataDeletionComplete } from "../features/wipe/api";
+import { finalizeDataWipe } from "../features/wipe/api";
 
 /** Upper bound for the best-effort Drive token revoke inside wipeAllData. */
 const WIPE_REVOKE_TIMEOUT_MS = 3000;
@@ -83,11 +89,16 @@ interface ImageRegenerationPayload {
   nodeId: string;
 }
 
+/**
+ * In-memory credential values mirrored from the credentials store for UI
+ * display + turn requests. Keyed 1:1 by CredentialKey; the Drive access
+ * token is excluded — it lives only in googleAuth (never persisted here).
+ */
+type StoredCredentials = Record<Exclude<CredentialKey, "googleOAuthToken">, string | null>;
+
 interface GameState {
   settings: SettingsRecord | null;
-  openrouterApiKey: string | null;
-  huggingFaceToken: string | null;
-  nvidiaNimToken: string | null;
+  credentials: StoredCredentials;
   games: GameRecord[];
   activeGame: GameRecord | null;
   nodes: StoryNodeRecord[]; // all nodes of the active game
@@ -211,6 +222,41 @@ async function loadAssetsForNodes(nodeIds: string[]): Promise<Record<string, Ass
 }
 
 /**
+ * Store reset for leaving the active game entirely (title screen or a fully
+ * deleted save): reloads the save list, clears the active game + session
+ * state, and stops the autoplay chain (legacy REWIND behavior). The
+ * generation phase is NOT reset here — only actions that own the generation
+ * lifecycle touch it.
+ */
+async function clearActiveGameState(set: (partial: Partial<GameState>) => void): Promise<void> {
+  const games = await gameRepository.listGames();
+  releaseWakeLock("autoplay");
+  set({
+    games,
+    activeGame: null,
+    nodes: [],
+    assets: {},
+    viewingNodeId: null,
+    currentNodeId: null,
+    chronicleTargetNodeId: null,
+    autoplay: false,
+  });
+}
+
+/**
+ * Playhead after (re)loading a game: the end node of the remembered
+ * root->end route on the record, falling back to the first node.
+ */
+function playheadForGame(game: GameRecord, nodes: StoryNodeRecord[]): string | null {
+  return game.latestNodeId ?? nodes[0]?.id ?? null;
+}
+
+/** Reloads the in-memory save list from the DB after a save-level change. */
+async function refreshGames(set: (partial: Partial<GameState>) => void): Promise<void> {
+  set({ games: await gameRepository.listGames() });
+}
+
+/**
  * Keeps the in-memory save list (`games`) in sync when a game record is
  * created or advanced. DB writes alone leave `games` stale, so LoadScreen
  * (which sorts/fetches thumbnails from `games`) would show the old order
@@ -219,6 +265,33 @@ async function loadAssetsForNodes(nodeIds: string[]): Promise<Record<string, Ass
  */
 function upsertGameSummary(games: GameRecord[], updated: GameRecord): GameRecord[] {
   return [updated, ...games.filter((game) => game.id !== updated.id)];
+}
+
+/**
+ * Applies a freshly generated branch node to the store: appends it to the
+ * active game's node list, merges its asset, advances the save summary, and
+ * moves the playhead to the produced node. Shared by choose / refine /
+ * sibling redo, which otherwise repeat the identical update.
+ */
+async function applyAppendedNode(
+  { set, get }: { set: (partial: Partial<GameState>) => void; get: () => GameState },
+  activeGame: GameRecord,
+  node: StoryNodeRecord,
+): Promise<void> {
+  const updatedGame = {
+    ...activeGame,
+    latestNodeId: node.id,
+    lastPlayedAt: node.createdAt,
+  };
+  const newAssets = await loadAssetsForNodes([node.id]);
+  set({
+    nodes: [...get().nodes, node],
+    assets: { ...get().assets, ...newAssets },
+    games: upsertGameSummary(get().games, updatedGame),
+    activeGame: updatedGame,
+    viewingNodeId: node.id,
+    currentNodeId: node.id,
+  });
 }
 
 /**
@@ -248,6 +321,98 @@ async function buildImageConfigForSettings(settings: SettingsRecord) {
 }
 
 /**
+ * Shared narrative-service request fields common to every turn (start /
+ * choice / refine / redo). The delta callback presence decides the API
+ * delivery mode (legacy beginStream): only set when streaming is actually
+ * enabled, otherwise the request goes out non-streamed.
+ */
+function baseNarrativeRequest(settings: SettingsRecord, apiKey: string) {
+  const streamingEnabled = isStreamingEnabledForSettings(settings);
+  return {
+    apiKey,
+    model: settings.textModel,
+    language: settings.language,
+    webpCompression: settings.webpCompression,
+    memoryStrategy: settings.memoryStrategy,
+    enableStoryLogCompaction: settings.enableStoryLogCompaction,
+    onSceneTextDelta: streamingEnabled
+      ? (accumulatedText: string) => streamStore.pushDelta(accumulatedText)
+      : undefined,
+  };
+}
+
+/**
+ * Per-save snapshot fields (legacy behavior): old saves fall back to the
+ * current global setting.
+ */
+function saveNarrativeFields(game: GameRecord, settings: SettingsRecord) {
+  return {
+    sceneTextLength: game.sceneTextLength ?? settings.sceneTextLength,
+    attachmentTexts: game.attachmentTexts ?? [],
+  };
+}
+
+/**
+ * Runs one narrative generation turn (start / choice / refine / redo) with
+ * the skeleton every turn action shares: running/failed phase bookkeeping,
+ * streaming setup, image-gen config, and the identical turn-service
+ * callbacks. `run` receives the signal + image config and resolves with the
+ * service result; `onSuccess` applies it to the store (node/game/asset
+ * updates — the phase reset stays with the runner). A failure anywhere
+ * inside `run` (config build, service call, store application) marks the
+ * generation failed with the retained payload.
+ */
+async function runNarrativeTurn<T>(
+  { set }: { set: (partial: Partial<GameState>) => void },
+  {
+    settings,
+    payload,
+    stage,
+    run,
+    onSuccess,
+  }: {
+    settings: SettingsRecord;
+    payload: GenerationPayload;
+    stage: "choice" | "scene";
+    run: (serviceOptions: TurnServiceOptions, imageGenConfig: ImageGenConfig) => Promise<T>;
+    onSuccess: (result: T) => void | Promise<void>;
+  },
+): Promise<void> {
+  set({
+    generation: { phase: "running", payload, startedAt: new Date().toISOString() },
+    generationStage: stage,
+    imageGenerationProgress: null,
+  });
+  // The delta callback presence decides the API delivery mode (legacy
+  // beginStream): pass it to begin only when streaming is actually enabled,
+  // otherwise the request goes out non-streamed.
+  const streamingEnabled = isStreamingEnabledForSettings(settings);
+  streamStore.begin(streamingEnabled);
+  try {
+    const imageGenConfig = await buildImageConfigForSettings(settings);
+    const result = await run(
+      {
+        signal: streamStore.getSignal() ?? undefined,
+        onTextGenerationStart: () => set({ generationStage: "scene" }),
+        onImageGenerationStart: () => set({ generationStage: "image" }),
+        onImageGenerationProgress: (progress) => set({ imageGenerationProgress: progress }),
+        onImageGenerationFailed: notifyImageGenerationFailure,
+      },
+      imageGenConfig,
+    );
+    await onSuccess(result);
+    set({ generation: { phase: "idle" }, imageGenerationProgress: null });
+  } catch (error) {
+    set({
+      generation: { phase: "failed", payload, error: error as Error },
+      imageGenerationProgress: null,
+    });
+  } finally {
+    streamStore.end();
+  }
+}
+
+/**
  * AbortController for the in-flight autoplay decision (`decideAutoplayTurn`).
  * Kept outside the store because it is not serializable state; the narrative
  * generation uses `streamStore`'s controller instead.
@@ -268,13 +433,40 @@ let uiTranslationAbortController: AbortController | null = null;
  */
 let imageRegenerationAbortController: AbortController | null = null;
 
+/**
+ * Runs one Google Drive operation with the skeleton every Drive action
+ * shares: wake-lock guard, fresh token request (GIS needs the user gesture),
+ * and the unauthorized handling that drops the stale in-memory token. A
+ * DriveUnauthorizedError clears the token, marks the store disconnected, and
+ * rethrows; any other error rethrows untouched. The operation is awaited
+ * inside the guard so the wake lock lives through it.
+ */
+async function withDriveConnection<T>(
+  set: (partial: Partial<GameState>) => void,
+  run: (accessToken: string) => Promise<T>,
+): Promise<T> {
+  using _guard = new WakeLockGuard("backup");
+  try {
+    const accessToken = await requestDriveAccessToken();
+    return await run(accessToken);
+  } catch (error) {
+    if (error instanceof DriveUnauthorizedError) {
+      clearDriveAccessToken();
+      set({ driveConnected: false });
+    }
+    throw error;
+  }
+}
+
 export const useGameStore = create<GameState>()(
   devtools(
     subscribeWithSelector((set, get) => ({
       settings: null,
-      openrouterApiKey: null,
-      huggingFaceToken: null,
-      nvidiaNimToken: null,
+      credentials: {
+        openrouterApiKey: null,
+        huggingFaceToken: null,
+        nvidiaNimToken: null,
+      },
       games: [],
       activeGame: null,
       nodes: [],
@@ -319,33 +511,27 @@ export const useGameStore = create<GameState>()(
         void assetRepository.collectGarbage().catch(() => {});
         set({
           settings,
-          openrouterApiKey: apiKey,
-          huggingFaceToken: hfToken,
-          nvidiaNimToken: nimToken,
+          credentials: {
+            openrouterApiKey: apiKey,
+            huggingFaceToken: hfToken,
+            nvidiaNimToken: nimToken,
+          },
           games,
         });
       },
 
       saveApiKey: async (key) => {
         await credentialsRepository.set("openrouterApiKey", key);
-        set({ openrouterApiKey: key });
+        set({ credentials: { ...get().credentials, openrouterApiKey: key } });
       },
 
       saveCredential: async (key, value) => {
         await credentialsRepository.set(key, value);
-        switch (key) {
-          case "openrouterApiKey":
-            set({ openrouterApiKey: value });
-            break;
-          case "huggingFaceToken":
-            set({ huggingFaceToken: value });
-            break;
-          case "nvidiaNimToken":
-            set({ nvidiaNimToken: value });
-            break;
-          default:
-            break;
-        }
+        // googleOAuthToken never enters this record: it lives only in
+        // googleAuth, and Exclude<CredentialKey, "googleOAuthToken"> enforces
+        // that at the type level.
+        if (key === "googleOAuthToken") return;
+        set({ credentials: { ...get().credentials, [key]: value } });
       },
 
       updateSettings: async (partial) => {
@@ -367,85 +553,49 @@ export const useGameStore = create<GameState>()(
       },
 
       goToTitle: async () => {
-        const games = await gameRepository.listGames();
-        releaseWakeLock("autoplay");
-        set({
-          games,
-          activeGame: null,
-          nodes: [],
-          assets: {},
-          viewingNodeId: null,
-          currentNodeId: null,
-          chronicleTargetNodeId: null,
-          generation: { phase: "idle" },
-          autoplay: false,
-        });
+        await clearActiveGameState(set);
+        set({ generation: { phase: "idle" } });
       },
 
       startNewGame: async (theme, attachmentFiles) => {
-        const { settings, openrouterApiKey } = get();
+        const { settings, credentials } = get();
+        const openrouterApiKey = credentials.openrouterApiKey;
         if (!settings || !openrouterApiKey) throw new Error("Setup incomplete.");
         const payload: GenerationPayload = { kind: "start", theme, attachmentFiles };
-        set({
-          generation: { phase: "running", payload, startedAt: new Date().toISOString() },
-          generationStage: "scene",
-          imageGenerationProgress: null,
-        });
-        // The delta callback decides the API delivery mode (legacy
-        // beginStream): pass it only when streaming is actually enabled,
-        // otherwise the request goes out non-streamed.
-        const streamingEnabled = isStreamingEnabledForSettings(settings);
-        streamStore.begin(streamingEnabled);
-        try {
-          // Always run through the attachment processor so theme `{a|b}`
-          // placeholders are fixed once here, even with no attachment files.
-          const processed = await processAttachmentFiles(attachmentFiles ?? [], theme);
-          const resolvedTheme = processed.theme;
-          const attachmentTexts = processed.attachmentTexts;
-          const imageGenConfig = await buildImageConfigForSettings(settings);
-          const { game, rootNode } = await startGame(
-            {
-              apiKey: openrouterApiKey,
-              model: settings.textModel,
-              theme: resolvedTheme,
-              language: settings.language,
-              sceneTextLength: settings.sceneTextLength,
-              attachmentTexts,
-              imageGenConfig,
-              webpCompression: settings.webpCompression,
-              memoryStrategy: settings.memoryStrategy,
-              enableStoryLogCompaction: settings.enableStoryLogCompaction,
-              onSceneTextDelta: streamingEnabled
-                ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
-                : undefined,
+        await runNarrativeTurn(
+          { set },
+          {
+            settings,
+            payload,
+            stage: "scene",
+            run: async (serviceOptions, imageGenConfig) => {
+              // Always run through the attachment processor so theme `{a|b}`
+              // placeholders are fixed once here, even with no attachment files.
+              const processed = await processAttachmentFiles(attachmentFiles ?? [], theme);
+              return startGame(
+                {
+                  ...baseNarrativeRequest(settings, openrouterApiKey),
+                  theme: processed.theme,
+                  sceneTextLength: settings.sceneTextLength,
+                  attachmentTexts: processed.attachmentTexts,
+                  imageGenConfig,
+                },
+                serviceOptions,
+              );
             },
-            {
-              signal: streamStore.getSignal() ?? undefined,
-              onTextGenerationStart: () => set({ generationStage: "scene" }),
-              onImageGenerationStart: () => set({ generationStage: "image" }),
-              onImageGenerationProgress: (progress) => set({ imageGenerationProgress: progress }),
-              onImageGenerationFailed: notifyImageGenerationFailure,
+            onSuccess: async ({ game, rootNode }) => {
+              const assets = await loadAssetsForNodes([rootNode.id]);
+              set({
+                games: upsertGameSummary(get().games, game),
+                activeGame: game,
+                nodes: [rootNode],
+                assets,
+                viewingNodeId: rootNode.id,
+                currentNodeId: rootNode.id,
+              });
             },
-          );
-          const assets = await loadAssetsForNodes([rootNode.id]);
-          set({
-            games: upsertGameSummary(get().games, game),
-            activeGame: game,
-            nodes: [rootNode],
-            assets,
-            viewingNodeId: rootNode.id,
-            currentNodeId: rootNode.id,
-            generation: { phase: "idle" },
-            imageGenerationProgress: null,
-          });
-        } catch (error) {
-          set({
-            generation: { phase: "failed", payload, error: error as Error },
-            imageGenerationProgress: null,
-          });
-        } finally {
-          streamStore.end();
-        }
+          },
+        );
       },
 
       openGame: async (gameId) => {
@@ -455,7 +605,7 @@ export const useGameStore = create<GameState>()(
         ]);
         if (!game) return;
         const assets = await loadAssetsForNodes(nodes.map((n) => n.id));
-        const playhead = game.latestNodeId ?? nodes[0]?.id ?? null;
+        const playhead = playheadForGame(game, nodes);
         releaseWakeLock("autoplay");
         set({
           activeGame: game,
@@ -469,7 +619,8 @@ export const useGameStore = create<GameState>()(
 
       choose: async (choiceText, options) => {
         const state = get();
-        const { settings, openrouterApiKey, activeGame, viewingNodeId } = state;
+        const { settings, credentials, activeGame, viewingNodeId } = state;
+        const openrouterApiKey = credentials.openrouterApiKey;
         if (!settings || !openrouterApiKey || !activeGame || !viewingNodeId) return;
         const isAutoplayChain = options?.autoplayReasoning !== undefined;
         // Autoplay was toggled off while the player AI was deciding: discard
@@ -493,77 +644,36 @@ export const useGameStore = create<GameState>()(
           autoplayReasoning: options?.autoplayReasoning,
           autoplayCost: options?.autoplayCost,
         };
-        set({
-          generation: { phase: "running", payload, startedAt: new Date().toISOString() },
-          generationStage: "choice",
-          imageGenerationProgress: null,
-        });
-        // See startNewGame: the delta callback presence selects the API mode.
-        const streamingEnabled = isStreamingEnabledForSettings(settings);
-        streamStore.begin(streamingEnabled);
-        try {
-          const imageGenConfig = await buildImageConfigForSettings(settings);
-          const node = await choosePath(
-            {
-              apiKey: openrouterApiKey,
-              model: settings.textModel,
-              game: activeGame,
-              parentNode,
-              ancestors,
-              choiceText,
-              language: settings.language,
-              // Per-save snapshot (legacy behavior); old saves fall back to
-              // the current global setting.
-              sceneTextLength: activeGame.sceneTextLength ?? settings.sceneTextLength,
-              attachmentTexts: activeGame.attachmentTexts ?? [],
-              imageGenConfig,
-              webpCompression: settings.webpCompression,
-              memoryStrategy: settings.memoryStrategy,
-              enableStoryLogCompaction: settings.enableStoryLogCompaction,
-              autoplayReasoning: options?.autoplayReasoning,
-              autoplayCost: options?.autoplayCost,
-              onSceneTextDelta: streamingEnabled
-                ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
-                : undefined,
-            },
-            {
-              signal: streamStore.getSignal() ?? undefined,
-              onTextGenerationStart: () => set({ generationStage: "scene" }),
-              onImageGenerationStart: () => set({ generationStage: "image" }),
-              onImageGenerationProgress: (progress) => set({ imageGenerationProgress: progress }),
-              onImageGenerationFailed: notifyImageGenerationFailure,
-            },
-          );
-          const updatedNodes = [...get().nodes, node];
-          const updatedGame = {
-            ...activeGame,
-            latestNodeId: node.id,
-            lastPlayedAt: node.createdAt,
-          };
-          const newAssets = await loadAssetsForNodes([node.id]);
-          set({
-            nodes: updatedNodes,
-            assets: { ...get().assets, ...newAssets },
-            games: upsertGameSummary(get().games, updatedGame),
-            activeGame: updatedGame,
-            viewingNodeId: node.id,
-            currentNodeId: node.id,
-            generation: { phase: "idle" },
-            imageGenerationProgress: null,
-          });
-        } catch (error) {
-          set({
-            generation: { phase: "failed", payload, error: error as Error },
-            imageGenerationProgress: null,
-          });
-        } finally {
-          streamStore.end();
-        }
+        await runNarrativeTurn(
+          { set },
+          {
+            settings,
+            payload,
+            stage: "choice",
+            run: (serviceOptions, imageGenConfig) =>
+              choosePath(
+                {
+                  ...baseNarrativeRequest(settings, openrouterApiKey),
+                  ...saveNarrativeFields(activeGame, settings),
+                  game: activeGame,
+                  parentNode,
+                  ancestors,
+                  choiceText,
+                  imageGenConfig,
+                  autoplayReasoning: options?.autoplayReasoning,
+                  autoplayCost: options?.autoplayCost,
+                },
+                serviceOptions,
+              ),
+            onSuccess: (node) => applyAppendedNode({ set, get }, activeGame, node),
+          },
+        );
       },
 
       refine: async (nodeId, refinePrompt) => {
         const state = get();
-        const { settings, openrouterApiKey, activeGame } = state;
+        const { settings, credentials, activeGame } = state;
+        const openrouterApiKey = credentials.openrouterApiKey;
         if (!settings || !openrouterApiKey || !activeGame) return;
         if (state.generation.phase === "running") return;
         const targetNode = state.nodes.find((n) => n.id === nodeId);
@@ -577,76 +687,35 @@ export const useGameStore = create<GameState>()(
           ? applyHistoryContextCut(collectAncestors(byId, parentNode.id, true))
           : [];
         const payload: GenerationPayload = { kind: "refine", nodeId, refinePrompt };
-        set({
-          generation: { phase: "running", payload, startedAt: new Date().toISOString() },
-          generationStage: "scene",
-          imageGenerationProgress: null,
-        });
-        // See startNewGame: the delta callback presence selects the API mode.
-        const streamingEnabled = isStreamingEnabledForSettings(settings);
-        streamStore.begin(streamingEnabled);
-        try {
-          const imageGenConfig = await buildImageConfigForSettings(settings);
-          const node = await refineScene(
-            {
-              apiKey: openrouterApiKey,
-              model: settings.textModel,
-              game: activeGame,
-              targetNode,
-              parentNode,
-              ancestors,
-              refinePrompt,
-              language: settings.language,
-              // Per-save snapshot (legacy behavior); old saves fall back to
-              // the current global setting.
-              sceneTextLength: activeGame.sceneTextLength ?? settings.sceneTextLength,
-              attachmentTexts: activeGame.attachmentTexts ?? [],
-              imageGenConfig,
-              webpCompression: settings.webpCompression,
-              memoryStrategy: settings.memoryStrategy,
-              enableStoryLogCompaction: settings.enableStoryLogCompaction,
-              onSceneTextDelta: streamingEnabled
-                ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
-                : undefined,
-            },
-            {
-              signal: streamStore.getSignal() ?? undefined,
-              onTextGenerationStart: () => set({ generationStage: "scene" }),
-              onImageGenerationStart: () => set({ generationStage: "image" }),
-              onImageGenerationProgress: (progress) => set({ imageGenerationProgress: progress }),
-              onImageGenerationFailed: notifyImageGenerationFailure,
-            },
-          );
-          const updatedNodes = [...get().nodes, node];
-          const updatedGame = {
-            ...activeGame,
-            latestNodeId: node.id,
-            lastPlayedAt: node.createdAt,
-          };
-          const newAssets = await loadAssetsForNodes([node.id]);
-          set({
-            nodes: updatedNodes,
-            assets: { ...get().assets, ...newAssets },
-            games: upsertGameSummary(get().games, updatedGame),
-            activeGame: updatedGame,
-            viewingNodeId: node.id,
-            currentNodeId: node.id,
-            generation: { phase: "idle" },
-            imageGenerationProgress: null,
-          });
-        } catch (error) {
-          set({
-            generation: { phase: "failed", payload, error: error as Error },
-            imageGenerationProgress: null,
-          });
-        } finally {
-          streamStore.end();
-        }
+        await runNarrativeTurn(
+          { set },
+          {
+            settings,
+            payload,
+            stage: "scene",
+            run: (serviceOptions, imageGenConfig) =>
+              refineScene(
+                {
+                  ...baseNarrativeRequest(settings, openrouterApiKey),
+                  ...saveNarrativeFields(activeGame, settings),
+                  game: activeGame,
+                  targetNode,
+                  parentNode,
+                  ancestors,
+                  refinePrompt,
+                  imageGenConfig,
+                },
+                serviceOptions,
+              ),
+            onSuccess: (node) => applyAppendedNode({ set, get }, activeGame, node),
+          },
+        );
       },
 
       redoScene: async (nodeId, discardHistoryContext) => {
         const state = get();
-        const { settings, openrouterApiKey, activeGame } = state;
+        const { settings, credentials, activeGame } = state;
+        const openrouterApiKey = credentials.openrouterApiKey;
         if (!settings || !openrouterApiKey || !activeGame) return;
         if (state.generation.phase === "running") return;
         if (state.autoplay) return; // manual action: blocked during autoplay
@@ -663,61 +732,36 @@ export const useGameStore = create<GameState>()(
             gameId: sourceGame.id,
             rootId: nodeId,
           };
-          set({
-            generation: { phase: "running", payload, startedAt: new Date().toISOString() },
-            generationStage: "scene",
-            imageGenerationProgress: null,
-          });
-          const streamingEnabled = isStreamingEnabledForSettings(settings);
-          streamStore.begin(streamingEnabled);
-          try {
-            const imageGenConfig = await buildImageConfigForSettings(settings);
-            const { game, rootNode } = await startGame(
-              {
-                apiKey: openrouterApiKey,
-                model: settings.textModel,
-                theme: sourceGame.title,
-                language: settings.language,
-                // Root redo keeps the save's own length order (legacy
-                // performRootRegenerate), falling back to the global setting.
-                sceneTextLength: sourceGame.sceneTextLength ?? settings.sceneTextLength,
-                attachmentTexts: sourceGame.attachmentTexts ?? [],
-                imageGenConfig,
-                webpCompression: settings.webpCompression,
-                memoryStrategy: settings.memoryStrategy,
-                enableStoryLogCompaction: settings.enableStoryLogCompaction,
-                onSceneTextDelta: streamingEnabled
-                  ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
-                  : undefined,
+          await runNarrativeTurn(
+            { set },
+            {
+              settings,
+              payload,
+              stage: "scene",
+              run: (serviceOptions, imageGenConfig) =>
+                startGame(
+                  {
+                    ...baseNarrativeRequest(settings, openrouterApiKey),
+                    ...saveNarrativeFields(sourceGame, settings),
+                    theme: sourceGame.title,
+                    imageGenConfig,
+                  },
+                  serviceOptions,
+                ),
+              onSuccess: async ({ game, rootNode }) => {
+                const assets = await loadAssetsForNodes([rootNode.id]);
+                const games = await gameRepository.listGames();
+                set({
+                  games,
+                  activeGame: game,
+                  nodes: [rootNode],
+                  assets,
+                  viewingNodeId: rootNode.id,
+                  currentNodeId: rootNode.id,
+                });
               },
-              {
-                signal: streamStore.getSignal() ?? undefined,
-                onTextGenerationStart: () => set({ generationStage: "scene" }),
-                onImageGenerationStart: () => set({ generationStage: "image" }),
-                onImageGenerationProgress: (progress) => set({ imageGenerationProgress: progress }),
-                onImageGenerationFailed: notifyImageGenerationFailure,
-              },
-            );
-            const assets = await loadAssetsForNodes([rootNode.id]);
-            const games = await gameRepository.listGames();
-            set({
-              games,
-              activeGame: game,
-              nodes: [rootNode],
-              assets,
-              viewingNodeId: rootNode.id,
-              currentNodeId: rootNode.id,
-              generation: { phase: "idle" },
-              imageGenerationProgress: null,
-            });
-          } catch (error) {
-            set({
-              generation: { phase: "failed", payload, error: error as Error },
-              imageGenerationProgress: null,
-            });
-          } finally {
-            streamStore.end();
-          }
+            },
+          );
           return;
         }
 
@@ -728,6 +772,7 @@ export const useGameStore = create<GameState>()(
           ? (state.nodes.find((n) => n.id === targetNode.parentNodeId) ?? null)
           : null;
         if (!parentNode || !targetNode.choiceText) return;
+        const choiceText = targetNode.choiceText;
         const byId = new Map(state.nodes.map((n) => [n.id, n]));
         const ancestors = discardHistoryContext
           ? []
@@ -737,69 +782,29 @@ export const useGameStore = create<GameState>()(
           nodeId,
           discardHistoryContext,
         };
-        set({
-          generation: { phase: "running", payload, startedAt: new Date().toISOString() },
-          generationStage: "choice",
-          imageGenerationProgress: null,
-        });
-        const streamingEnabled = isStreamingEnabledForSettings(settings);
-        streamStore.begin(streamingEnabled);
-        try {
-          const imageGenConfig = await buildImageConfigForSettings(settings);
-          const node = await choosePath(
-            {
-              apiKey: openrouterApiKey,
-              model: settings.textModel,
-              game: activeGame,
-              parentNode,
-              ancestors,
-              choiceText: targetNode.choiceText,
-              language: settings.language,
-              // Per-save snapshot (legacy behavior); old saves fall back to
-              // the current global setting.
-              sceneTextLength: activeGame.sceneTextLength ?? settings.sceneTextLength,
-              attachmentTexts: activeGame.attachmentTexts ?? [],
-              imageGenConfig,
-              webpCompression: settings.webpCompression,
-              memoryStrategy: settings.memoryStrategy,
-              enableStoryLogCompaction: settings.enableStoryLogCompaction,
-              discardHistoryContext,
-              onSceneTextDelta: streamingEnabled
-                ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
-                : undefined,
-            },
-            {
-              signal: streamStore.getSignal() ?? undefined,
-              onTextGenerationStart: () => set({ generationStage: "scene" }),
-              onImageGenerationStart: () => set({ generationStage: "image" }),
-              onImageGenerationProgress: (progress) => set({ imageGenerationProgress: progress }),
-              onImageGenerationFailed: notifyImageGenerationFailure,
-            },
-          );
-          const updatedGame = {
-            ...activeGame,
-            latestNodeId: node.id,
-            lastPlayedAt: node.createdAt,
-          };
-          const newAssets = await loadAssetsForNodes([node.id]);
-          set({
-            nodes: [...get().nodes, node],
-            assets: { ...get().assets, ...newAssets },
-            games: upsertGameSummary(get().games, updatedGame),
-            activeGame: updatedGame,
-            viewingNodeId: node.id,
-            currentNodeId: node.id,
-            generation: { phase: "idle" },
-            imageGenerationProgress: null,
-          });
-        } catch (error) {
-          set({
-            generation: { phase: "failed", payload, error: error as Error },
-            imageGenerationProgress: null,
-          });
-        } finally {
-          streamStore.end();
-        }
+        await runNarrativeTurn(
+          { set },
+          {
+            settings,
+            payload,
+            stage: "choice",
+            run: (serviceOptions, imageGenConfig) =>
+              choosePath(
+                {
+                  ...baseNarrativeRequest(settings, openrouterApiKey),
+                  ...saveNarrativeFields(activeGame, settings),
+                  game: activeGame,
+                  parentNode,
+                  ancestors,
+                  choiceText,
+                  imageGenConfig,
+                  discardHistoryContext,
+                },
+                serviceOptions,
+              ),
+            onSuccess: (node) => applyAppendedNode({ set, get }, activeGame, node),
+          },
+        );
       },
 
       regenerateImage: async (nodeId) => {
@@ -879,25 +884,14 @@ export const useGameStore = create<GameState>()(
         const updatedGame = await gameRepository.deleteBranch(activeGame.id, nodeId);
         if (!updatedGame) {
           // Entire game deleted
-          const games = await gameRepository.listGames();
-          releaseWakeLock("autoplay");
-          set({
-            games,
-            activeGame: null,
-            nodes: [],
-            assets: {},
-            viewingNodeId: null,
-            currentNodeId: null,
-            chronicleTargetNodeId: null,
-            autoplay: false,
-          });
+          await clearActiveGameState(set);
           return { gameDeleted: true };
         }
         // Reload to get accurate remaining nodes/assets
         const freshNodes = await gameRepository.getNodesOfGame(activeGame.id);
         const freshAssets = await loadAssetsForNodes(freshNodes.map((n) => n.id));
         const games = await gameRepository.listGames();
-        const playhead = updatedGame.latestNodeId ?? freshNodes[0]?.id ?? null;
+        const playhead = playheadForGame(updatedGame, freshNodes);
         releaseWakeLock("autoplay");
         set({
           games,
@@ -917,12 +911,11 @@ export const useGameStore = create<GameState>()(
       updateSceneText: async (nodeId, sceneText) => {
         const node = get().nodes.find((n) => n.id === nodeId);
         if (!node) return;
-        await gameRepository.updateNodeSceneText(nodeId, sceneText, countWords(sceneText));
+        const sceneWordCount = countWords(sceneText);
+        await gameRepository.updateNodeSceneText(nodeId, sceneText, sceneWordCount);
         set({
           nodes: get().nodes.map((n) =>
-            n.id === nodeId
-              ? { ...n, scene: { ...n.scene, sceneText, sceneWordCount: countWords(sceneText) } }
-              : n,
+            n.id === nodeId ? { ...n, scene: { ...n.scene, sceneText, sceneWordCount } } : n,
           ),
         });
       },
@@ -935,7 +928,8 @@ export const useGameStore = create<GameState>()(
           set({ generatedThemes: remaining });
           return nextTheme ?? null;
         }
-        const { settings, openrouterApiKey } = state;
+        const { settings, credentials } = state;
+        const openrouterApiKey = credentials.openrouterApiKey;
         if (!settings || !openrouterApiKey) throw new Error("Setup incomplete.");
         if (state.themeGeneration.phase === "running") return null;
         const payload = { kind: "generate" } as const;
@@ -1001,7 +995,8 @@ export const useGameStore = create<GameState>()(
 
       runAutoplayTurn: async () => {
         const state = get();
-        const { settings, openrouterApiKey, activeGame, nodes, viewingNodeId, autoplay } = state;
+        const { settings, credentials, activeGame, nodes, viewingNodeId, autoplay } = state;
+        const openrouterApiKey = credentials.openrouterApiKey;
         if (!autoplay || !settings || !openrouterApiKey || !activeGame || !viewingNodeId) return;
         if (state.generation.phase !== "idle") return;
         if (state.autoplayTurn.phase !== "idle") return;
@@ -1145,7 +1140,8 @@ export const useGameStore = create<GameState>()(
 
       translateUi: async (languageName) => {
         const state = get();
-        const { settings, openrouterApiKey } = state;
+        const { settings, credentials } = state;
+        const openrouterApiKey = credentials.openrouterApiKey;
         if (!settings || !openrouterApiKey) throw new Error("Setup incomplete.");
         if (state.uiTranslation.phase === "running") return;
         const payload: UiTranslationPayload = { languageName };
@@ -1236,7 +1232,7 @@ export const useGameStore = create<GameState>()(
 
       deleteSave: async (gameId) => {
         await gameRepository.deleteGame(gameId);
-        set({ games: await gameRepository.listGames() });
+        await refreshGames(set);
       },
 
       exportSave: async (gameId) => {
@@ -1258,17 +1254,7 @@ export const useGameStore = create<GameState>()(
           new Promise<void>((resolve) => setTimeout(resolve, WIPE_REVOKE_TIMEOUT_MS)),
         ]);
         await wipeRepository.wipeAllUserData();
-        localStorage.clear();
-        sessionStorage.clear();
-        // Flag for the completion screen; must be set AFTER the storage wipe
-        // because the wipe intentionally clears everything. While the flag
-        // is set, SW re-registration and bootstrap stay skipped (see
-        // features/wipe/api.ts and App) so the completion screen recreates
-        // nothing and closing the tab ends the session fully wiped.
-        markDataDeletionComplete();
-        // Full reload guarantees no stale in-memory state over a deleted DB
-        // (Dexie refuses to auto-reopen a deleted database).
-        window.location.reload();
+        finalizeDataWipe();
       },
 
       downloadEncryptedBackup: async (passphrase) => {
@@ -1291,7 +1277,7 @@ export const useGameStore = create<GameState>()(
       importSaveFromFile: async (file) => {
         using _guard = new WakeLockGuard("backup");
         const result = await importSaveFromZipBytes(new Uint8Array(await file.arrayBuffer()));
-        set({ games: await gameRepository.listGames() });
+        await refreshGames(set);
         return result;
       },
 
@@ -1300,25 +1286,17 @@ export const useGameStore = create<GameState>()(
         try {
           return await importSampleSavesFromBundle();
         } finally {
-          set({ games: await gameRepository.listGames() });
+          await refreshGames(set);
         }
       },
 
       connectGoogleDrive: async () => {
-        using _guard = new WakeLockGuard("backup");
-        try {
-          const accessToken = await requestDriveAccessToken();
+        await withDriveConnection(set, async (accessToken) => {
           set({ driveConnected: true, driveBackups: [] });
           // Metadata only (names/sizes/dates) — one cheap API call, no
           // backup contents are downloaded until the user restores one.
           set({ driveBackups: await listDriveBackups(accessToken) });
-        } catch (error) {
-          if (error instanceof DriveUnauthorizedError) {
-            clearDriveAccessToken();
-            set({ driveConnected: false });
-          }
-          throw error;
-        }
+        });
       },
 
       disconnectGoogleDrive: async () => {
@@ -1328,40 +1306,22 @@ export const useGameStore = create<GameState>()(
       },
 
       uploadBackupToGoogleDrive: async (passphrase) => {
-        using _guard = new WakeLockGuard("backup");
-        try {
+        return withDriveConnection(set, async (accessToken) => {
           // Token first: GIS needs the user gesture, and key derivation is slow.
-          const accessToken = await requestDriveAccessToken();
           const { fileName } = await uploadBackupToDrive(accessToken, passphrase);
           set({ driveConnected: true, driveBackups: await listDriveBackups(accessToken) });
           return { fileName };
-        } catch (error) {
-          if (error instanceof DriveUnauthorizedError) {
-            clearDriveAccessToken();
-            set({ driveConnected: false });
-          }
-          throw error;
-        }
+        });
       },
 
       refreshGoogleDriveBackups: async () => {
-        using _guard = new WakeLockGuard("backup");
-        try {
-          const accessToken = await requestDriveAccessToken();
+        return withDriveConnection(set, async (accessToken) => {
           set({ driveConnected: true, driveBackups: await listDriveBackups(accessToken) });
-        } catch (error) {
-          if (error instanceof DriveUnauthorizedError) {
-            clearDriveAccessToken();
-            set({ driveConnected: false });
-          }
-          throw error;
-        }
+        });
       },
 
       restoreGoogleDriveBackup: async (fileId, passphrase) => {
-        using _guard = new WakeLockGuard("backup");
-        try {
-          const accessToken = await requestDriveAccessToken();
+        return withDriveConnection(set, async (accessToken) => {
           const summary = await restoreBackupFromDrive(accessToken, fileId, passphrase);
           const [games, settings] = await Promise.all([
             gameRepository.listGames(),
@@ -1369,28 +1329,14 @@ export const useGameStore = create<GameState>()(
           ]);
           set({ games, settings });
           return summary;
-        } catch (error) {
-          if (error instanceof DriveUnauthorizedError) {
-            clearDriveAccessToken();
-            set({ driveConnected: false });
-          }
-          throw error;
-        }
+        });
       },
 
       deleteGoogleDriveBackup: async (fileId) => {
-        using _guard = new WakeLockGuard("backup");
-        try {
-          const accessToken = await requestDriveAccessToken();
+        await withDriveConnection(set, async (accessToken) => {
           await deleteDriveBackup(accessToken, fileId);
           set({ driveBackups: get().driveBackups.filter((backup) => backup.fileId !== fileId) });
-        } catch (error) {
-          if (error instanceof DriveUnauthorizedError) {
-            clearDriveAccessToken();
-            set({ driveConnected: false });
-          }
-          throw error;
-        }
+        });
       },
     })),
     { name: "game" },

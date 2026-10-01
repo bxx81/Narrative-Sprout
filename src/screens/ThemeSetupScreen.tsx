@@ -25,13 +25,13 @@ const ThemeSetupScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const settings = useGameStore((s) => s.settings);
-  const apiKey = useGameStore((s) => s.openrouterApiKey);
+  const apiKey = useGameStore((s) => s.credentials.openrouterApiKey);
   const generation = useGameStore((s) => s.generation);
   const startNewGame = useGameStore((s) => s.startNewGame);
   const updateSettings = useGameStore((s) => s.updateSettings);
   const saveCredential = useGameStore((s) => s.saveCredential);
-  const huggingFaceToken = useGameStore((s) => s.huggingFaceToken);
-  const nvidiaNimToken = useGameStore((s) => s.nvidiaNimToken);
+  const huggingFaceToken = useGameStore((s) => s.credentials.huggingFaceToken);
+  const nvidiaNimToken = useGameStore((s) => s.credentials.nvidiaNimToken);
   const generatedThemes = useGameStore((s) => s.generatedThemes);
   const themeGeneration = useGameStore((s) => s.themeGeneration);
   const cycleTheme = useGameStore((s) => s.cycleTheme);

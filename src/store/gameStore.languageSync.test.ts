@@ -15,7 +15,11 @@ describe("display language mirrors into settings.language", () => {
     await db.open();
     useGameStore.setState({
       settings: { ...defaultSettingsRecord },
-      openrouterApiKey: null,
+      credentials: {
+        openrouterApiKey: null,
+        huggingFaceToken: null,
+        nvidiaNimToken: null,
+      },
       activeGame: null,
       nodes: [],
       viewingNodeId: null,

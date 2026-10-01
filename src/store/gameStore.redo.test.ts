@@ -96,7 +96,11 @@ describe("gameStore redoScene", () => {
     stubNarratorFetch();
     useGameStore.setState({
       settings: { ...defaultSettingsRecord, enableStreaming: false },
-      openrouterApiKey: "sk-or-test",
+      credentials: {
+        openrouterApiKey: "sk-or-test",
+        huggingFaceToken: null,
+        nvidiaNimToken: null,
+      },
       activeGame: null,
       nodes: [],
       viewingNodeId: null,
