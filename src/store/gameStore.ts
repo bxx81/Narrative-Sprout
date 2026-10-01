@@ -217,6 +217,38 @@ async function loadAssetsForNodes(nodeIds: string[]): Promise<Record<string, Ass
 }
 
 /**
+ * Store reset for leaving the active game entirely (title screen or a fully
+ * deleted save): reloads the save list, clears the active game + session
+ * state, and stops the autoplay chain (legacy REWIND behavior). The
+ * generation phase is NOT reset here — only actions that own the generation
+ * lifecycle touch it.
+ */
+async function clearActiveGameState(
+  set: (partial: Partial<GameState>) => void,
+): Promise<void> {
+  const games = await gameRepository.listGames();
+  releaseWakeLock("autoplay");
+  set({
+    games,
+    activeGame: null,
+    nodes: [],
+    assets: {},
+    viewingNodeId: null,
+    currentNodeId: null,
+    chronicleTargetNodeId: null,
+    autoplay: false,
+  });
+}
+
+/**
+ * Playhead after (re)loading a game: the end node of the remembered
+ * root->end route on the record, falling back to the first node.
+ */
+function playheadForGame(game: GameRecord, nodes: StoryNodeRecord[]): string | null {
+  return game.latestNodeId ?? nodes[0]?.id ?? null;
+}
+
+/**
  * Keeps the in-memory save list (`games`) in sync when a game record is
  * created or advanced. DB writes alone leave `games` stale, so LoadScreen
  * (which sorts/fetches thumbnails from `games`) would show the old order
@@ -522,19 +554,8 @@ export const useGameStore = create<GameState>()(
       },
 
       goToTitle: async () => {
-        const games = await gameRepository.listGames();
-        releaseWakeLock("autoplay");
-        set({
-          games,
-          activeGame: null,
-          nodes: [],
-          assets: {},
-          viewingNodeId: null,
-          currentNodeId: null,
-          chronicleTargetNodeId: null,
-          generation: { phase: "idle" },
-          autoplay: false,
-        });
+        await clearActiveGameState(set);
+        set({ generation: { phase: "idle" } });
       },
 
       startNewGame: async (theme, attachmentFiles) => {
@@ -584,7 +605,7 @@ export const useGameStore = create<GameState>()(
         ]);
         if (!game) return;
         const assets = await loadAssetsForNodes(nodes.map((n) => n.id));
-        const playhead = game.latestNodeId ?? nodes[0]?.id ?? null;
+        const playhead = playheadForGame(game, nodes);
         releaseWakeLock("autoplay");
         set({
           activeGame: game,
@@ -860,25 +881,14 @@ export const useGameStore = create<GameState>()(
         const updatedGame = await gameRepository.deleteBranch(activeGame.id, nodeId);
         if (!updatedGame) {
           // Entire game deleted
-          const games = await gameRepository.listGames();
-          releaseWakeLock("autoplay");
-          set({
-            games,
-            activeGame: null,
-            nodes: [],
-            assets: {},
-            viewingNodeId: null,
-            currentNodeId: null,
-            chronicleTargetNodeId: null,
-            autoplay: false,
-          });
+          await clearActiveGameState(set);
           return { gameDeleted: true };
         }
         // Reload to get accurate remaining nodes/assets
         const freshNodes = await gameRepository.getNodesOfGame(activeGame.id);
         const freshAssets = await loadAssetsForNodes(freshNodes.map((n) => n.id));
         const games = await gameRepository.listGames();
-        const playhead = updatedGame.latestNodeId ?? freshNodes[0]?.id ?? null;
+        const playhead = playheadForGame(updatedGame, freshNodes);
         releaseWakeLock("autoplay");
         set({
           games,
