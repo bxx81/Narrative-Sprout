@@ -253,6 +253,11 @@ function playheadForGame(game: GameRecord, nodes: StoryNodeRecord[]): string | n
   return game.latestNodeId ?? nodes[0]?.id ?? null;
 }
 
+/** Reloads the in-memory save list from the DB after a save-level change. */
+async function refreshGames(set: (partial: Partial<GameState>) => void): Promise<void> {
+  set({ games: await gameRepository.listGames() });
+}
+
 /**
  * Keeps the in-memory save list (`games`) in sync when a game record is
  * created or advanced. DB writes alone leave `games` stale, so LoadScreen
@@ -913,11 +918,12 @@ export const useGameStore = create<GameState>()(
       updateSceneText: async (nodeId, sceneText) => {
         const node = get().nodes.find((n) => n.id === nodeId);
         if (!node) return;
-        await gameRepository.updateNodeSceneText(nodeId, sceneText, countWords(sceneText));
+        const sceneWordCount = countWords(sceneText);
+        await gameRepository.updateNodeSceneText(nodeId, sceneText, sceneWordCount);
         set({
           nodes: get().nodes.map((n) =>
             n.id === nodeId
-              ? { ...n, scene: { ...n.scene, sceneText, sceneWordCount: countWords(sceneText) } }
+              ? { ...n, scene: { ...n.scene, sceneText, sceneWordCount } }
               : n,
           ),
         });
@@ -1235,7 +1241,7 @@ export const useGameStore = create<GameState>()(
 
       deleteSave: async (gameId) => {
         await gameRepository.deleteGame(gameId);
-        set({ games: await gameRepository.listGames() });
+        await refreshGames(set);
       },
 
       exportSave: async (gameId) => {
@@ -1290,7 +1296,7 @@ export const useGameStore = create<GameState>()(
       importSaveFromFile: async (file) => {
         using _guard = new WakeLockGuard("backup");
         const result = await importSaveFromZipBytes(new Uint8Array(await file.arrayBuffer()));
-        set({ games: await gameRepository.listGames() });
+        await refreshGames(set);
         return result;
       },
 
@@ -1299,7 +1305,7 @@ export const useGameStore = create<GameState>()(
         try {
           return await importSampleSavesFromBundle();
         } finally {
-          set({ games: await gameRepository.listGames() });
+          await refreshGames(set);
         }
       },
 
