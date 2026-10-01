@@ -89,11 +89,16 @@ interface ImageRegenerationPayload {
   nodeId: string;
 }
 
+/**
+ * In-memory credential values mirrored from the credentials store for UI
+ * display + turn requests. Keyed 1:1 by CredentialKey; the Drive access
+ * token is excluded — it lives only in googleAuth (never persisted here).
+ */
+type StoredCredentials = Record<Exclude<CredentialKey, "googleOAuthToken">, string | null>;
+
 interface GameState {
   settings: SettingsRecord | null;
-  openrouterApiKey: string | null;
-  huggingFaceToken: string | null;
-  nvidiaNimToken: string | null;
+  credentials: StoredCredentials;
   games: GameRecord[];
   activeGame: GameRecord | null;
   nodes: StoryNodeRecord[]; // all nodes of the active game
@@ -459,9 +464,11 @@ export const useGameStore = create<GameState>()(
   devtools(
     subscribeWithSelector((set, get) => ({
       settings: null,
-      openrouterApiKey: null,
-      huggingFaceToken: null,
-      nvidiaNimToken: null,
+      credentials: {
+        openrouterApiKey: null,
+        huggingFaceToken: null,
+        nvidiaNimToken: null,
+      },
       games: [],
       activeGame: null,
       nodes: [],
@@ -506,33 +513,27 @@ export const useGameStore = create<GameState>()(
         void assetRepository.collectGarbage().catch(() => {});
         set({
           settings,
-          openrouterApiKey: apiKey,
-          huggingFaceToken: hfToken,
-          nvidiaNimToken: nimToken,
+          credentials: {
+            openrouterApiKey: apiKey,
+            huggingFaceToken: hfToken,
+            nvidiaNimToken: nimToken,
+          },
           games,
         });
       },
 
       saveApiKey: async (key) => {
         await credentialsRepository.set("openrouterApiKey", key);
-        set({ openrouterApiKey: key });
+        set({ credentials: { ...get().credentials, openrouterApiKey: key } });
       },
 
       saveCredential: async (key, value) => {
         await credentialsRepository.set(key, value);
-        switch (key) {
-          case "openrouterApiKey":
-            set({ openrouterApiKey: value });
-            break;
-          case "huggingFaceToken":
-            set({ huggingFaceToken: value });
-            break;
-          case "nvidiaNimToken":
-            set({ nvidiaNimToken: value });
-            break;
-          default:
-            break;
-        }
+        // googleOAuthToken never enters this record: it lives only in
+        // googleAuth, and Exclude<CredentialKey, "googleOAuthToken"> enforces
+        // that at the type level.
+        if (key === "googleOAuthToken") return;
+        set({ credentials: { ...get().credentials, [key]: value } });
       },
 
       updateSettings: async (partial) => {
@@ -559,7 +560,8 @@ export const useGameStore = create<GameState>()(
       },
 
       startNewGame: async (theme, attachmentFiles) => {
-        const { settings, openrouterApiKey } = get();
+        const { settings, credentials } = get();
+        const openrouterApiKey = credentials.openrouterApiKey;
         if (!settings || !openrouterApiKey) throw new Error("Setup incomplete.");
         const payload: GenerationPayload = { kind: "start", theme, attachmentFiles };
         await runNarrativeTurn(
@@ -619,7 +621,8 @@ export const useGameStore = create<GameState>()(
 
       choose: async (choiceText, options) => {
         const state = get();
-        const { settings, openrouterApiKey, activeGame, viewingNodeId } = state;
+        const { settings, credentials, activeGame, viewingNodeId } = state;
+        const openrouterApiKey = credentials.openrouterApiKey;
         if (!settings || !openrouterApiKey || !activeGame || !viewingNodeId) return;
         const isAutoplayChain = options?.autoplayReasoning !== undefined;
         // Autoplay was toggled off while the player AI was deciding: discard
@@ -671,7 +674,8 @@ export const useGameStore = create<GameState>()(
 
       refine: async (nodeId, refinePrompt) => {
         const state = get();
-        const { settings, openrouterApiKey, activeGame } = state;
+        const { settings, credentials, activeGame } = state;
+        const openrouterApiKey = credentials.openrouterApiKey;
         if (!settings || !openrouterApiKey || !activeGame) return;
         if (state.generation.phase === "running") return;
         const targetNode = state.nodes.find((n) => n.id === nodeId);
@@ -712,7 +716,8 @@ export const useGameStore = create<GameState>()(
 
       redoScene: async (nodeId, discardHistoryContext) => {
         const state = get();
-        const { settings, openrouterApiKey, activeGame } = state;
+        const { settings, credentials, activeGame } = state;
+        const openrouterApiKey = credentials.openrouterApiKey;
         if (!settings || !openrouterApiKey || !activeGame) return;
         if (state.generation.phase === "running") return;
         if (state.autoplay) return; // manual action: blocked during autoplay
@@ -926,7 +931,8 @@ export const useGameStore = create<GameState>()(
           set({ generatedThemes: remaining });
           return nextTheme ?? null;
         }
-        const { settings, openrouterApiKey } = state;
+        const { settings, credentials } = state;
+        const openrouterApiKey = credentials.openrouterApiKey;
         if (!settings || !openrouterApiKey) throw new Error("Setup incomplete.");
         if (state.themeGeneration.phase === "running") return null;
         const payload = { kind: "generate" } as const;
@@ -992,7 +998,8 @@ export const useGameStore = create<GameState>()(
 
       runAutoplayTurn: async () => {
         const state = get();
-        const { settings, openrouterApiKey, activeGame, nodes, viewingNodeId, autoplay } = state;
+        const { settings, credentials, activeGame, nodes, viewingNodeId, autoplay } = state;
+        const openrouterApiKey = credentials.openrouterApiKey;
         if (!autoplay || !settings || !openrouterApiKey || !activeGame || !viewingNodeId) return;
         if (state.generation.phase !== "idle") return;
         if (state.autoplayTurn.phase !== "idle") return;
@@ -1136,7 +1143,8 @@ export const useGameStore = create<GameState>()(
 
       translateUi: async (languageName) => {
         const state = get();
-        const { settings, openrouterApiKey } = state;
+        const { settings, credentials } = state;
+        const openrouterApiKey = credentials.openrouterApiKey;
         if (!settings || !openrouterApiKey) throw new Error("Setup incomplete.");
         if (state.uiTranslation.phase === "running") return;
         const payload: UiTranslationPayload = { languageName };

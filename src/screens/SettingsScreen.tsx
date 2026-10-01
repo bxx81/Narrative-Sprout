@@ -218,9 +218,9 @@ const SettingsScreen: React.FC = () => {
   const { isFullscreen, toggleFullscreen } = useFullscreen();
 
   const settings = useGameStore((s) => s.settings);
-  const apiKey = useGameStore((s) => s.openrouterApiKey);
-  const huggingFaceToken = useGameStore((s) => s.huggingFaceToken);
-  const nvidiaNimToken = useGameStore((s) => s.nvidiaNimToken);
+  const apiKey = useGameStore((s) => s.credentials.openrouterApiKey);
+  const huggingFaceToken = useGameStore((s) => s.credentials.huggingFaceToken);
+  const nvidiaNimToken = useGameStore((s) => s.credentials.nvidiaNimToken);
   const activeGame = useGameStore((s) => s.activeGame);
   const generation = useGameStore((s) => s.generation);
   const imageRegeneration = useGameStore((s) => s.imageRegeneration);

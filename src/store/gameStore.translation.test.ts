@@ -43,7 +43,11 @@ describe("ui translation cancellation", () => {
         // an invalid one would fail before any request goes out.
         textModel: "openai/gpt-4o-mini",
       },
-      openrouterApiKey: "sk-or-test",
+      credentials: {
+        openrouterApiKey: "sk-or-test",
+        huggingFaceToken: null,
+        nvidiaNimToken: null,
+      },
       activeGame: null,
       nodes: [],
       viewingNodeId: null,

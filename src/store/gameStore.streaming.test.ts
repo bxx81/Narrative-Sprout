@@ -66,7 +66,11 @@ describe("gameStore streaming delivery mode", () => {
     stubCapturingFetch();
     useGameStore.setState({
       settings: { ...defaultSettingsRecord, enableStreaming: false },
-      openrouterApiKey: "sk-or-test",
+      credentials: {
+        openrouterApiKey: "sk-or-test",
+        huggingFaceToken: null,
+        nvidiaNimToken: null,
+      },
     });
     await useGameStore.getState().startNewGame("a quiet town");
     expect(useGameStore.getState().generation.phase).toBe("idle");
@@ -79,7 +83,11 @@ describe("gameStore streaming delivery mode", () => {
     stubCapturingFetch();
     useGameStore.setState({
       settings: { ...defaultSettingsRecord, enableStreaming: true },
-      openrouterApiKey: "sk-or-test",
+      credentials: {
+        openrouterApiKey: "sk-or-test",
+        huggingFaceToken: null,
+        nvidiaNimToken: null,
+      },
     });
     await useGameStore.getState().startNewGame("a quiet town");
     expect(useGameStore.getState().generation.phase).toBe("idle");

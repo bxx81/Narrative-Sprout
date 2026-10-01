@@ -104,7 +104,11 @@ describe("per-save sceneTextLength snapshot", () => {
     stubFetchCapturingSystem();
     useGameStore.setState({
       settings: { ...defaultSettingsRecord, enableStreaming: false, imageGenerator: "disabled" },
-      openrouterApiKey: "sk-or-test",
+      credentials: {
+        openrouterApiKey: "sk-or-test",
+        huggingFaceToken: null,
+        nvidiaNimToken: null,
+      },
       activeGame: null,
       nodes: [],
       viewingNodeId: null,

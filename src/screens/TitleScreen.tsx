@@ -83,7 +83,7 @@ const TitleScreen: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const games = useGameStore((s) => s.games);
-  const apiKey = useGameStore((s) => s.openrouterApiKey);
+  const apiKey = useGameStore((s) => s.credentials.openrouterApiKey);
   const openGame = useGameStore((s) => s.openGame);
   const importSampleSaves = useGameStore((s) => s.importSampleSaves);
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);

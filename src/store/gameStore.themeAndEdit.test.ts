@@ -79,7 +79,11 @@ describe("gameStore cycleTheme (Generate Idea)", () => {
   test("generation failure records the phase and rethrows for the caller", async () => {
     useGameStore.setState({
       settings: { ...defaultSettingsRecord, textModel: "" }, // invalid → fails fast
-      openrouterApiKey: "sk-or-test",
+      credentials: {
+        openrouterApiKey: "sk-or-test",
+        huggingFaceToken: null,
+        nvidiaNimToken: null,
+      },
       language: undefined,
     } as never);
     let threw = false;
