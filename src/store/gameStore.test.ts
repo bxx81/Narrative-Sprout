@@ -143,7 +143,11 @@ describe("gameStore generation retry (error dialog)", () => {
         // ("Model setting is invalid") without touching the network.
         textModel: "",
       },
-      openrouterApiKey: "sk-or-test",
+      credentials: {
+        openrouterApiKey: "sk-or-test",
+        huggingFaceToken: null,
+        nvidiaNimToken: null,
+      },
       activeGame: game,
       nodes: [root],
       viewingNodeId: root.id,
