@@ -8,7 +8,12 @@ import { settingsRepository } from "../db/settingsRepository";
 import { assetRepository } from "../db/assetRepository";
 import { wipeRepository } from "../db/wipeRepository";
 import { db } from "../db/database";
-import { choosePath, refineScene, startGame } from "../features/gameplay/turnService";
+import {
+  choosePath,
+  refineScene,
+  startGame,
+  type TurnServiceOptions,
+} from "../features/gameplay/turnService";
 import { collectAncestors, applyHistoryContextCut } from "../features/storytree/api";
 import { countWords } from "../features/narrative/api";
 import { decideAutoplayTurn } from "../features/autoplay/api";
@@ -47,6 +52,7 @@ import {
   generateSceneImage,
   notifyImageGenerationFailure,
   webpQualityForCompression,
+  type ImageGenConfig,
 } from "../features/image/api";
 import { processAttachmentFiles } from "../features/attachments/api";
 import { playSound } from "../features/sound/api";
@@ -248,6 +254,68 @@ async function buildImageConfigForSettings(settings: SettingsRecord) {
 }
 
 /**
+ * Runs one narrative generation turn (start / choice / refine / redo) with
+ * the skeleton every turn action shares: running/failed phase bookkeeping,
+ * streaming setup, image-gen config, and the identical turn-service
+ * callbacks. `run` receives the signal + image config and resolves with the
+ * service result; `onSuccess` applies it to the store (node/game/asset
+ * updates — the phase reset stays with the runner). A failure anywhere
+ * inside `run` (config build, service call, store application) marks the
+ * generation failed with the retained payload.
+ */
+async function runNarrativeTurn<T>(
+  {
+    set,
+  }: { set: (partial: Partial<GameState>) => void },
+  {
+    settings,
+    payload,
+    stage,
+    run,
+    onSuccess,
+  }: {
+    settings: SettingsRecord;
+    payload: GenerationPayload;
+    stage: "choice" | "scene";
+    run: (serviceOptions: TurnServiceOptions, imageGenConfig: ImageGenConfig) => Promise<T>;
+    onSuccess: (result: T) => void | Promise<void>;
+  },
+): Promise<void> {
+  set({
+    generation: { phase: "running", payload, startedAt: new Date().toISOString() },
+    generationStage: stage,
+    imageGenerationProgress: null,
+  });
+  // The delta callback presence decides the API delivery mode (legacy
+  // beginStream): pass it to begin only when streaming is actually enabled,
+  // otherwise the request goes out non-streamed.
+  const streamingEnabled = isStreamingEnabledForSettings(settings);
+  streamStore.begin(streamingEnabled);
+  try {
+    const imageGenConfig = await buildImageConfigForSettings(settings);
+    const result = await run(
+      {
+        signal: streamStore.getSignal() ?? undefined,
+        onTextGenerationStart: () => set({ generationStage: "scene" }),
+        onImageGenerationStart: () => set({ generationStage: "image" }),
+        onImageGenerationProgress: (progress) => set({ imageGenerationProgress: progress }),
+        onImageGenerationFailed: notifyImageGenerationFailure,
+      },
+      imageGenConfig,
+    );
+    await onSuccess(result);
+    set({ generation: { phase: "idle" }, imageGenerationProgress: null });
+  } catch (error) {
+    set({
+      generation: { phase: "failed", payload, error: error as Error },
+      imageGenerationProgress: null,
+    });
+  } finally {
+    streamStore.end();
+  }
+}
+
+/**
  * AbortController for the in-flight autoplay decision (`decideAutoplayTurn`).
  * Kept outside the store because it is not serializable state; the narrative
  * generation uses `streamStore`'s controller instead.
@@ -386,66 +454,49 @@ export const useGameStore = create<GameState>()(
         const { settings, openrouterApiKey } = get();
         if (!settings || !openrouterApiKey) throw new Error("Setup incomplete.");
         const payload: GenerationPayload = { kind: "start", theme, attachmentFiles };
-        set({
-          generation: { phase: "running", payload, startedAt: new Date().toISOString() },
-          generationStage: "scene",
-          imageGenerationProgress: null,
-        });
-        // The delta callback decides the API delivery mode (legacy
-        // beginStream): pass it only when streaming is actually enabled,
-        // otherwise the request goes out non-streamed.
         const streamingEnabled = isStreamingEnabledForSettings(settings);
-        streamStore.begin(streamingEnabled);
-        try {
-          // Always run through the attachment processor so theme `{a|b}`
-          // placeholders are fixed once here, even with no attachment files.
-          const processed = await processAttachmentFiles(attachmentFiles ?? [], theme);
-          const resolvedTheme = processed.theme;
-          const attachmentTexts = processed.attachmentTexts;
-          const imageGenConfig = await buildImageConfigForSettings(settings);
-          const { game, rootNode } = await startGame(
-            {
-              apiKey: openrouterApiKey,
-              model: settings.textModel,
-              theme: resolvedTheme,
-              language: settings.language,
-              sceneTextLength: settings.sceneTextLength,
-              attachmentTexts,
-              imageGenConfig,
-              webpCompression: settings.webpCompression,
-              memoryStrategy: settings.memoryStrategy,
-              enableStoryLogCompaction: settings.enableStoryLogCompaction,
-              onSceneTextDelta: streamingEnabled
-                ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
-                : undefined,
+        await runNarrativeTurn(
+          { set },
+          {
+            settings,
+            payload,
+            stage: "scene",
+            run: async (serviceOptions, imageGenConfig) => {
+              // Always run through the attachment processor so theme `{a|b}`
+              // placeholders are fixed once here, even with no attachment files.
+              const processed = await processAttachmentFiles(attachmentFiles ?? [], theme);
+              return startGame(
+                {
+                  apiKey: openrouterApiKey,
+                  model: settings.textModel,
+                  theme: processed.theme,
+                  language: settings.language,
+                  sceneTextLength: settings.sceneTextLength,
+                  attachmentTexts: processed.attachmentTexts,
+                  imageGenConfig,
+                  webpCompression: settings.webpCompression,
+                  memoryStrategy: settings.memoryStrategy,
+                  enableStoryLogCompaction: settings.enableStoryLogCompaction,
+                  onSceneTextDelta: streamingEnabled
+                    ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
+                    : undefined,
+                },
+                serviceOptions,
+              );
             },
-            {
-              signal: streamStore.getSignal() ?? undefined,
-              onTextGenerationStart: () => set({ generationStage: "scene" }),
-              onImageGenerationStart: () => set({ generationStage: "image" }),
-              onImageGenerationProgress: (progress) => set({ imageGenerationProgress: progress }),
-              onImageGenerationFailed: notifyImageGenerationFailure,
+            onSuccess: async ({ game, rootNode }) => {
+              const assets = await loadAssetsForNodes([rootNode.id]);
+              set({
+                games: upsertGameSummary(get().games, game),
+                activeGame: game,
+                nodes: [rootNode],
+                assets,
+                viewingNodeId: rootNode.id,
+                currentNodeId: rootNode.id,
+              });
             },
-          );
-          const assets = await loadAssetsForNodes([rootNode.id]);
-          set({
-            games: upsertGameSummary(get().games, game),
-            activeGame: game,
-            nodes: [rootNode],
-            assets,
-            viewingNodeId: rootNode.id,
-            currentNodeId: rootNode.id,
-            generation: { phase: "idle" },
-            imageGenerationProgress: null,
-          });
-        } catch (error) {
-          set({
-            generation: { phase: "failed", payload, error: error as Error },
-            imageGenerationProgress: null,
-          });
-        } finally {
-          streamStore.end();
-        }
+          },
+        );
       },
 
       openGame: async (gameId) => {
@@ -493,72 +544,58 @@ export const useGameStore = create<GameState>()(
           autoplayReasoning: options?.autoplayReasoning,
           autoplayCost: options?.autoplayCost,
         };
-        set({
-          generation: { phase: "running", payload, startedAt: new Date().toISOString() },
-          generationStage: "choice",
-          imageGenerationProgress: null,
-        });
-        // See startNewGame: the delta callback presence selects the API mode.
         const streamingEnabled = isStreamingEnabledForSettings(settings);
-        streamStore.begin(streamingEnabled);
-        try {
-          const imageGenConfig = await buildImageConfigForSettings(settings);
-          const node = await choosePath(
-            {
-              apiKey: openrouterApiKey,
-              model: settings.textModel,
-              game: activeGame,
-              parentNode,
-              ancestors,
-              choiceText,
-              language: settings.language,
-              // Per-save snapshot (legacy behavior); old saves fall back to
-              // the current global setting.
-              sceneTextLength: activeGame.sceneTextLength ?? settings.sceneTextLength,
-              attachmentTexts: activeGame.attachmentTexts ?? [],
-              imageGenConfig,
-              webpCompression: settings.webpCompression,
-              memoryStrategy: settings.memoryStrategy,
-              enableStoryLogCompaction: settings.enableStoryLogCompaction,
-              autoplayReasoning: options?.autoplayReasoning,
-              autoplayCost: options?.autoplayCost,
-              onSceneTextDelta: streamingEnabled
-                ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
-                : undefined,
+        await runNarrativeTurn(
+          { set },
+          {
+            settings,
+            payload,
+            stage: "choice",
+            run: (serviceOptions, imageGenConfig) =>
+              choosePath(
+                {
+                  apiKey: openrouterApiKey,
+                  model: settings.textModel,
+                  game: activeGame,
+                  parentNode,
+                  ancestors,
+                  choiceText,
+                  language: settings.language,
+                  // Per-save snapshot (legacy behavior); old saves fall back to
+                  // the current global setting.
+                  sceneTextLength: activeGame.sceneTextLength ?? settings.sceneTextLength,
+                  attachmentTexts: activeGame.attachmentTexts ?? [],
+                  imageGenConfig,
+                  webpCompression: settings.webpCompression,
+                  memoryStrategy: settings.memoryStrategy,
+                  enableStoryLogCompaction: settings.enableStoryLogCompaction,
+                  autoplayReasoning: options?.autoplayReasoning,
+                  autoplayCost: options?.autoplayCost,
+                  onSceneTextDelta: streamingEnabled
+                    ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
+                    : undefined,
+                },
+                serviceOptions,
+              ),
+            onSuccess: async (node) => {
+              const updatedNodes = [...get().nodes, node];
+              const updatedGame = {
+                ...activeGame,
+                latestNodeId: node.id,
+                lastPlayedAt: node.createdAt,
+              };
+              const newAssets = await loadAssetsForNodes([node.id]);
+              set({
+                nodes: updatedNodes,
+                assets: { ...get().assets, ...newAssets },
+                games: upsertGameSummary(get().games, updatedGame),
+                activeGame: updatedGame,
+                viewingNodeId: node.id,
+                currentNodeId: node.id,
+              });
             },
-            {
-              signal: streamStore.getSignal() ?? undefined,
-              onTextGenerationStart: () => set({ generationStage: "scene" }),
-              onImageGenerationStart: () => set({ generationStage: "image" }),
-              onImageGenerationProgress: (progress) => set({ imageGenerationProgress: progress }),
-              onImageGenerationFailed: notifyImageGenerationFailure,
-            },
-          );
-          const updatedNodes = [...get().nodes, node];
-          const updatedGame = {
-            ...activeGame,
-            latestNodeId: node.id,
-            lastPlayedAt: node.createdAt,
-          };
-          const newAssets = await loadAssetsForNodes([node.id]);
-          set({
-            nodes: updatedNodes,
-            assets: { ...get().assets, ...newAssets },
-            games: upsertGameSummary(get().games, updatedGame),
-            activeGame: updatedGame,
-            viewingNodeId: node.id,
-            currentNodeId: node.id,
-            generation: { phase: "idle" },
-            imageGenerationProgress: null,
-          });
-        } catch (error) {
-          set({
-            generation: { phase: "failed", payload, error: error as Error },
-            imageGenerationProgress: null,
-          });
-        } finally {
-          streamStore.end();
-        }
+          },
+        );
       },
 
       refine: async (nodeId, refinePrompt) => {
@@ -577,71 +614,57 @@ export const useGameStore = create<GameState>()(
           ? applyHistoryContextCut(collectAncestors(byId, parentNode.id, true))
           : [];
         const payload: GenerationPayload = { kind: "refine", nodeId, refinePrompt };
-        set({
-          generation: { phase: "running", payload, startedAt: new Date().toISOString() },
-          generationStage: "scene",
-          imageGenerationProgress: null,
-        });
-        // See startNewGame: the delta callback presence selects the API mode.
         const streamingEnabled = isStreamingEnabledForSettings(settings);
-        streamStore.begin(streamingEnabled);
-        try {
-          const imageGenConfig = await buildImageConfigForSettings(settings);
-          const node = await refineScene(
-            {
-              apiKey: openrouterApiKey,
-              model: settings.textModel,
-              game: activeGame,
-              targetNode,
-              parentNode,
-              ancestors,
-              refinePrompt,
-              language: settings.language,
-              // Per-save snapshot (legacy behavior); old saves fall back to
-              // the current global setting.
-              sceneTextLength: activeGame.sceneTextLength ?? settings.sceneTextLength,
-              attachmentTexts: activeGame.attachmentTexts ?? [],
-              imageGenConfig,
-              webpCompression: settings.webpCompression,
-              memoryStrategy: settings.memoryStrategy,
-              enableStoryLogCompaction: settings.enableStoryLogCompaction,
-              onSceneTextDelta: streamingEnabled
-                ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
-                : undefined,
+        await runNarrativeTurn(
+          { set },
+          {
+            settings,
+            payload,
+            stage: "scene",
+            run: (serviceOptions, imageGenConfig) =>
+              refineScene(
+                {
+                  apiKey: openrouterApiKey,
+                  model: settings.textModel,
+                  game: activeGame,
+                  targetNode,
+                  parentNode,
+                  ancestors,
+                  refinePrompt,
+                  language: settings.language,
+                  // Per-save snapshot (legacy behavior); old saves fall back to
+                  // the current global setting.
+                  sceneTextLength: activeGame.sceneTextLength ?? settings.sceneTextLength,
+                  attachmentTexts: activeGame.attachmentTexts ?? [],
+                  imageGenConfig,
+                  webpCompression: settings.webpCompression,
+                  memoryStrategy: settings.memoryStrategy,
+                  enableStoryLogCompaction: settings.enableStoryLogCompaction,
+                  onSceneTextDelta: streamingEnabled
+                    ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
+                    : undefined,
+                },
+                serviceOptions,
+              ),
+            onSuccess: async (node) => {
+              const updatedNodes = [...get().nodes, node];
+              const updatedGame = {
+                ...activeGame,
+                latestNodeId: node.id,
+                lastPlayedAt: node.createdAt,
+              };
+              const newAssets = await loadAssetsForNodes([node.id]);
+              set({
+                nodes: updatedNodes,
+                assets: { ...get().assets, ...newAssets },
+                games: upsertGameSummary(get().games, updatedGame),
+                activeGame: updatedGame,
+                viewingNodeId: node.id,
+                currentNodeId: node.id,
+              });
             },
-            {
-              signal: streamStore.getSignal() ?? undefined,
-              onTextGenerationStart: () => set({ generationStage: "scene" }),
-              onImageGenerationStart: () => set({ generationStage: "image" }),
-              onImageGenerationProgress: (progress) => set({ imageGenerationProgress: progress }),
-              onImageGenerationFailed: notifyImageGenerationFailure,
-            },
-          );
-          const updatedNodes = [...get().nodes, node];
-          const updatedGame = {
-            ...activeGame,
-            latestNodeId: node.id,
-            lastPlayedAt: node.createdAt,
-          };
-          const newAssets = await loadAssetsForNodes([node.id]);
-          set({
-            nodes: updatedNodes,
-            assets: { ...get().assets, ...newAssets },
-            games: upsertGameSummary(get().games, updatedGame),
-            activeGame: updatedGame,
-            viewingNodeId: node.id,
-            currentNodeId: node.id,
-            generation: { phase: "idle" },
-            imageGenerationProgress: null,
-          });
-        } catch (error) {
-          set({
-            generation: { phase: "failed", payload, error: error as Error },
-            imageGenerationProgress: null,
-          });
-        } finally {
-          streamStore.end();
-        }
+          },
+        );
       },
 
       redoScene: async (nodeId, discardHistoryContext) => {
@@ -663,61 +686,48 @@ export const useGameStore = create<GameState>()(
             gameId: sourceGame.id,
             rootId: nodeId,
           };
-          set({
-            generation: { phase: "running", payload, startedAt: new Date().toISOString() },
-            generationStage: "scene",
-            imageGenerationProgress: null,
-          });
           const streamingEnabled = isStreamingEnabledForSettings(settings);
-          streamStore.begin(streamingEnabled);
-          try {
-            const imageGenConfig = await buildImageConfigForSettings(settings);
-            const { game, rootNode } = await startGame(
-              {
-                apiKey: openrouterApiKey,
-                model: settings.textModel,
-                theme: sourceGame.title,
-                language: settings.language,
-                // Root redo keeps the save's own length order (legacy
-                // performRootRegenerate), falling back to the global setting.
-                sceneTextLength: sourceGame.sceneTextLength ?? settings.sceneTextLength,
-                attachmentTexts: sourceGame.attachmentTexts ?? [],
-                imageGenConfig,
-                webpCompression: settings.webpCompression,
-                memoryStrategy: settings.memoryStrategy,
-                enableStoryLogCompaction: settings.enableStoryLogCompaction,
-                onSceneTextDelta: streamingEnabled
-                  ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
-                  : undefined,
+          await runNarrativeTurn(
+            { set },
+            {
+              settings,
+              payload,
+              stage: "scene",
+              run: (serviceOptions, imageGenConfig) =>
+                startGame(
+                  {
+                    apiKey: openrouterApiKey,
+                    model: settings.textModel,
+                    theme: sourceGame.title,
+                    language: settings.language,
+                    // Root redo keeps the save's own length order (legacy
+                    // performRootRegenerate), falling back to the global setting.
+                    sceneTextLength: sourceGame.sceneTextLength ?? settings.sceneTextLength,
+                    attachmentTexts: sourceGame.attachmentTexts ?? [],
+                    imageGenConfig,
+                    webpCompression: settings.webpCompression,
+                    memoryStrategy: settings.memoryStrategy,
+                    enableStoryLogCompaction: settings.enableStoryLogCompaction,
+                    onSceneTextDelta: streamingEnabled
+                      ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
+                      : undefined,
+                  },
+                  serviceOptions,
+                ),
+              onSuccess: async ({ game, rootNode }) => {
+                const assets = await loadAssetsForNodes([rootNode.id]);
+                const games = await gameRepository.listGames();
+                set({
+                  games,
+                  activeGame: game,
+                  nodes: [rootNode],
+                  assets,
+                  viewingNodeId: rootNode.id,
+                  currentNodeId: rootNode.id,
+                });
               },
-              {
-                signal: streamStore.getSignal() ?? undefined,
-                onTextGenerationStart: () => set({ generationStage: "scene" }),
-                onImageGenerationStart: () => set({ generationStage: "image" }),
-                onImageGenerationProgress: (progress) => set({ imageGenerationProgress: progress }),
-                onImageGenerationFailed: notifyImageGenerationFailure,
-              },
-            );
-            const assets = await loadAssetsForNodes([rootNode.id]);
-            const games = await gameRepository.listGames();
-            set({
-              games,
-              activeGame: game,
-              nodes: [rootNode],
-              assets,
-              viewingNodeId: rootNode.id,
-              currentNodeId: rootNode.id,
-              generation: { phase: "idle" },
-              imageGenerationProgress: null,
-            });
-          } catch (error) {
-            set({
-              generation: { phase: "failed", payload, error: error as Error },
-              imageGenerationProgress: null,
-            });
-          } finally {
-            streamStore.end();
-          }
+            },
+          );
           return;
         }
 
@@ -728,6 +738,7 @@ export const useGameStore = create<GameState>()(
           ? (state.nodes.find((n) => n.id === targetNode.parentNodeId) ?? null)
           : null;
         if (!parentNode || !targetNode.choiceText) return;
+        const choiceText = targetNode.choiceText;
         const byId = new Map(state.nodes.map((n) => [n.id, n]));
         const ancestors = discardHistoryContext
           ? []
@@ -737,69 +748,57 @@ export const useGameStore = create<GameState>()(
           nodeId,
           discardHistoryContext,
         };
-        set({
-          generation: { phase: "running", payload, startedAt: new Date().toISOString() },
-          generationStage: "choice",
-          imageGenerationProgress: null,
-        });
         const streamingEnabled = isStreamingEnabledForSettings(settings);
-        streamStore.begin(streamingEnabled);
-        try {
-          const imageGenConfig = await buildImageConfigForSettings(settings);
-          const node = await choosePath(
-            {
-              apiKey: openrouterApiKey,
-              model: settings.textModel,
-              game: activeGame,
-              parentNode,
-              ancestors,
-              choiceText: targetNode.choiceText,
-              language: settings.language,
-              // Per-save snapshot (legacy behavior); old saves fall back to
-              // the current global setting.
-              sceneTextLength: activeGame.sceneTextLength ?? settings.sceneTextLength,
-              attachmentTexts: activeGame.attachmentTexts ?? [],
-              imageGenConfig,
-              webpCompression: settings.webpCompression,
-              memoryStrategy: settings.memoryStrategy,
-              enableStoryLogCompaction: settings.enableStoryLogCompaction,
-              discardHistoryContext,
-              onSceneTextDelta: streamingEnabled
-                ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
-                : undefined,
+        await runNarrativeTurn(
+          { set },
+          {
+            settings,
+            payload,
+            stage: "choice",
+            run: (serviceOptions, imageGenConfig) =>
+              choosePath(
+                {
+                  apiKey: openrouterApiKey,
+                  model: settings.textModel,
+                  game: activeGame,
+                  parentNode,
+                  ancestors,
+                  choiceText,
+                  language: settings.language,
+                  // Per-save snapshot (legacy behavior); old saves fall back to
+                  // the current global setting.
+                  sceneTextLength: activeGame.sceneTextLength ?? settings.sceneTextLength,
+                  attachmentTexts: activeGame.attachmentTexts ?? [],
+                  imageGenConfig,
+                  webpCompression: settings.webpCompression,
+                  memoryStrategy: settings.memoryStrategy,
+                  enableStoryLogCompaction: settings.enableStoryLogCompaction,
+                  discardHistoryContext,
+                  onSceneTextDelta: streamingEnabled
+                    ? (accumulatedText) => streamStore.pushDelta(accumulatedText)
+                    : undefined,
+                },
+                serviceOptions,
+              ),
+            onSuccess: async (node) => {
+              const updatedNodes = [...get().nodes, node];
+              const updatedGame = {
+                ...activeGame,
+                latestNodeId: node.id,
+                lastPlayedAt: node.createdAt,
+              };
+              const newAssets = await loadAssetsForNodes([node.id]);
+              set({
+                nodes: updatedNodes,
+                assets: { ...get().assets, ...newAssets },
+                games: upsertGameSummary(get().games, updatedGame),
+                activeGame: updatedGame,
+                viewingNodeId: node.id,
+                currentNodeId: node.id,
+              });
             },
-            {
-              signal: streamStore.getSignal() ?? undefined,
-              onTextGenerationStart: () => set({ generationStage: "scene" }),
-              onImageGenerationStart: () => set({ generationStage: "image" }),
-              onImageGenerationProgress: (progress) => set({ imageGenerationProgress: progress }),
-              onImageGenerationFailed: notifyImageGenerationFailure,
-            },
-          );
-          const updatedGame = {
-            ...activeGame,
-            latestNodeId: node.id,
-            lastPlayedAt: node.createdAt,
-          };
-          const newAssets = await loadAssetsForNodes([node.id]);
-          set({
-            nodes: [...get().nodes, node],
-            assets: { ...get().assets, ...newAssets },
-            games: upsertGameSummary(get().games, updatedGame),
-            activeGame: updatedGame,
-            viewingNodeId: node.id,
-            currentNodeId: node.id,
-            generation: { phase: "idle" },
-            imageGenerationProgress: null,
-          });
-        } catch (error) {
-          set({
-            generation: { phase: "failed", payload, error: error as Error },
-            imageGenerationProgress: null,
-          });
-        } finally {
-          streamStore.end();
-        }
+          },
+        );
       },
 
       regenerateImage: async (nodeId) => {
