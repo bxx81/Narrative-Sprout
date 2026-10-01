@@ -20,6 +20,23 @@ export function clearDataDeletionCompleteFlag(): void {
 }
 
 /**
+ * Browser-side tail of the data wipe: clears every web-storage surface,
+ * sets the deletion-completion flag for the post-wipe reload (must be set
+ * AFTER the storage wipe because the wipe intentionally clears everything;
+ * while the flag is set, SW re-registration and bootstrap stay skipped —
+ * see App — so the completion screen recreates nothing and closing the tab
+ * ends the session fully wiped), and performs the full reload that
+ * guarantees no stale in-memory state over a deleted DB (Dexie refuses to
+ * auto-reopen a deleted database).
+ */
+export function finalizeDataWipe(): void {
+  localStorage.clear();
+  sessionStorage.clear();
+  markDataDeletionComplete();
+  window.location.reload();
+}
+
+/**
  * Registers the PWA service worker (noop in Tauri builds). Skipped while
  * the deletion-completion flag is set: the wipe already unregistered every
  * SW and deleted every cache, so a user closing the tab on the completion

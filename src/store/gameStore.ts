@@ -56,7 +56,7 @@ import {
 } from "../features/image/api";
 import { processAttachmentFiles } from "../features/attachments/api";
 import { playSound } from "../features/sound/api";
-import { markDataDeletionComplete } from "../features/wipe/api";
+import { finalizeDataWipe } from "../features/wipe/api";
 
 /** Upper bound for the best-effort Drive token revoke inside wipeAllData. */
 const WIPE_REVOKE_TIMEOUT_MS = 3000;
@@ -1263,17 +1263,7 @@ export const useGameStore = create<GameState>()(
           new Promise<void>((resolve) => setTimeout(resolve, WIPE_REVOKE_TIMEOUT_MS)),
         ]);
         await wipeRepository.wipeAllUserData();
-        localStorage.clear();
-        sessionStorage.clear();
-        // Flag for the completion screen; must be set AFTER the storage wipe
-        // because the wipe intentionally clears everything. While the flag
-        // is set, SW re-registration and bootstrap stay skipped (see
-        // features/wipe/api.ts and App) so the completion screen recreates
-        // nothing and closing the tab ends the session fully wiped.
-        markDataDeletionComplete();
-        // Full reload guarantees no stale in-memory state over a deleted DB
-        // (Dexie refuses to auto-reopen a deleted database).
-        window.location.reload();
+        finalizeDataWipe();
       },
 
       downloadEncryptedBackup: async (passphrase) => {
