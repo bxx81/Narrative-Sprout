@@ -228,6 +228,36 @@ function upsertGameSummary(games: GameRecord[], updated: GameRecord): GameRecord
 }
 
 /**
+ * Applies a freshly generated branch node to the store: appends it to the
+ * active game's node list, merges its asset, advances the save summary, and
+ * moves the playhead to the produced node. Shared by choose / refine /
+ * sibling redo, which otherwise repeat the identical update.
+ */
+async function applyAppendedNode(
+  {
+    set,
+    get,
+  }: { set: (partial: Partial<GameState>) => void; get: () => GameState },
+  activeGame: GameRecord,
+  node: StoryNodeRecord,
+): Promise<void> {
+  const updatedGame = {
+    ...activeGame,
+    latestNodeId: node.id,
+    lastPlayedAt: node.createdAt,
+  };
+  const newAssets = await loadAssetsForNodes([node.id]);
+  set({
+    nodes: [...get().nodes, node],
+    assets: { ...get().assets, ...newAssets },
+    games: upsertGameSummary(get().games, updatedGame),
+    activeGame: updatedGame,
+    viewingNodeId: node.id,
+    currentNodeId: node.id,
+  });
+}
+
+/**
  * Language fields a completed UI translation is allowed to write back. The
  * fresh translation becomes the active UI + narrative language only when the
  * user has not switched languages while it ran: an explicit choice made in
@@ -577,23 +607,7 @@ export const useGameStore = create<GameState>()(
                 },
                 serviceOptions,
               ),
-            onSuccess: async (node) => {
-              const updatedNodes = [...get().nodes, node];
-              const updatedGame = {
-                ...activeGame,
-                latestNodeId: node.id,
-                lastPlayedAt: node.createdAt,
-              };
-              const newAssets = await loadAssetsForNodes([node.id]);
-              set({
-                nodes: updatedNodes,
-                assets: { ...get().assets, ...newAssets },
-                games: upsertGameSummary(get().games, updatedGame),
-                activeGame: updatedGame,
-                viewingNodeId: node.id,
-                currentNodeId: node.id,
-              });
-            },
+            onSuccess: (node) => applyAppendedNode({ set, get }, activeGame, node),
           },
         );
       },
@@ -646,23 +660,7 @@ export const useGameStore = create<GameState>()(
                 },
                 serviceOptions,
               ),
-            onSuccess: async (node) => {
-              const updatedNodes = [...get().nodes, node];
-              const updatedGame = {
-                ...activeGame,
-                latestNodeId: node.id,
-                lastPlayedAt: node.createdAt,
-              };
-              const newAssets = await loadAssetsForNodes([node.id]);
-              set({
-                nodes: updatedNodes,
-                assets: { ...get().assets, ...newAssets },
-                games: upsertGameSummary(get().games, updatedGame),
-                activeGame: updatedGame,
-                viewingNodeId: node.id,
-                currentNodeId: node.id,
-              });
-            },
+            onSuccess: (node) => applyAppendedNode({ set, get }, activeGame, node),
           },
         );
       },
@@ -780,23 +778,7 @@ export const useGameStore = create<GameState>()(
                 },
                 serviceOptions,
               ),
-            onSuccess: async (node) => {
-              const updatedNodes = [...get().nodes, node];
-              const updatedGame = {
-                ...activeGame,
-                latestNodeId: node.id,
-                lastPlayedAt: node.createdAt,
-              };
-              const newAssets = await loadAssetsForNodes([node.id]);
-              set({
-                nodes: updatedNodes,
-                assets: { ...get().assets, ...newAssets },
-                games: upsertGameSummary(get().games, updatedGame),
-                activeGame: updatedGame,
-                viewingNodeId: node.id,
-                currentNodeId: node.id,
-              });
-            },
+            onSuccess: (node) => applyAppendedNode({ set, get }, activeGame, node),
           },
         );
       },
