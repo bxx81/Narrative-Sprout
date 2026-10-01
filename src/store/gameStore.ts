@@ -398,6 +398,31 @@ let uiTranslationAbortController: AbortController | null = null;
  */
 let imageRegenerationAbortController: AbortController | null = null;
 
+/**
+ * Runs one Google Drive operation with the skeleton every Drive action
+ * shares: wake-lock guard, fresh token request (GIS needs the user gesture),
+ * and the unauthorized handling that drops the stale in-memory token. A
+ * DriveUnauthorizedError clears the token, marks the store disconnected, and
+ * rethrows; any other error rethrows untouched. The operation is awaited
+ * inside the guard so the wake lock lives through it.
+ */
+async function withDriveConnection<T>(
+  set: (partial: Partial<GameState>) => void,
+  run: (accessToken: string) => Promise<T>,
+): Promise<T> {
+  using _guard = new WakeLockGuard("backup");
+  try {
+    const accessToken = await requestDriveAccessToken();
+    return await run(accessToken);
+  } catch (error) {
+    if (error instanceof DriveUnauthorizedError) {
+      clearDriveAccessToken();
+      set({ driveConnected: false });
+    }
+    throw error;
+  }
+}
+
 export const useGameStore = create<GameState>()(
   devtools(
     subscribeWithSelector((set, get) => ({
@@ -1261,20 +1286,12 @@ export const useGameStore = create<GameState>()(
       },
 
       connectGoogleDrive: async () => {
-        using _guard = new WakeLockGuard("backup");
-        try {
-          const accessToken = await requestDriveAccessToken();
+        await withDriveConnection(set, async (accessToken) => {
           set({ driveConnected: true, driveBackups: [] });
           // Metadata only (names/sizes/dates) — one cheap API call, no
           // backup contents are downloaded until the user restores one.
           set({ driveBackups: await listDriveBackups(accessToken) });
-        } catch (error) {
-          if (error instanceof DriveUnauthorizedError) {
-            clearDriveAccessToken();
-            set({ driveConnected: false });
-          }
-          throw error;
-        }
+        });
       },
 
       disconnectGoogleDrive: async () => {
@@ -1284,40 +1301,22 @@ export const useGameStore = create<GameState>()(
       },
 
       uploadBackupToGoogleDrive: async (passphrase) => {
-        using _guard = new WakeLockGuard("backup");
-        try {
+        return withDriveConnection(set, async (accessToken) => {
           // Token first: GIS needs the user gesture, and key derivation is slow.
-          const accessToken = await requestDriveAccessToken();
           const { fileName } = await uploadBackupToDrive(accessToken, passphrase);
           set({ driveConnected: true, driveBackups: await listDriveBackups(accessToken) });
           return { fileName };
-        } catch (error) {
-          if (error instanceof DriveUnauthorizedError) {
-            clearDriveAccessToken();
-            set({ driveConnected: false });
-          }
-          throw error;
-        }
+        });
       },
 
       refreshGoogleDriveBackups: async () => {
-        using _guard = new WakeLockGuard("backup");
-        try {
-          const accessToken = await requestDriveAccessToken();
+        return withDriveConnection(set, async (accessToken) => {
           set({ driveConnected: true, driveBackups: await listDriveBackups(accessToken) });
-        } catch (error) {
-          if (error instanceof DriveUnauthorizedError) {
-            clearDriveAccessToken();
-            set({ driveConnected: false });
-          }
-          throw error;
-        }
+        });
       },
 
       restoreGoogleDriveBackup: async (fileId, passphrase) => {
-        using _guard = new WakeLockGuard("backup");
-        try {
-          const accessToken = await requestDriveAccessToken();
+        return withDriveConnection(set, async (accessToken) => {
           const summary = await restoreBackupFromDrive(accessToken, fileId, passphrase);
           const [games, settings] = await Promise.all([
             gameRepository.listGames(),
@@ -1325,28 +1324,14 @@ export const useGameStore = create<GameState>()(
           ]);
           set({ games, settings });
           return summary;
-        } catch (error) {
-          if (error instanceof DriveUnauthorizedError) {
-            clearDriveAccessToken();
-            set({ driveConnected: false });
-          }
-          throw error;
-        }
+        });
       },
 
       deleteGoogleDriveBackup: async (fileId) => {
-        using _guard = new WakeLockGuard("backup");
-        try {
-          const accessToken = await requestDriveAccessToken();
+        await withDriveConnection(set, async (accessToken) => {
           await deleteDriveBackup(accessToken, fileId);
           set({ driveBackups: get().driveBackups.filter((backup) => backup.fileId !== fileId) });
-        } catch (error) {
-          if (error instanceof DriveUnauthorizedError) {
-            clearDriveAccessToken();
-            set({ driveConnected: false });
-          }
-          throw error;
-        }
+        });
       },
     })),
     { name: "game" },
