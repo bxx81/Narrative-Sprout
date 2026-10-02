@@ -56,6 +56,16 @@ const StartingScreen: React.FC = () => {
     }
   }, [generation.phase, activeGame, navigate]);
 
+  // Orphaned starting screen (legacy rewind): a reload wipes the in-memory
+  // generation, so browser-back lands here with nothing running and no game.
+  // Return to theme setup; normal flow always mounts with phase "running",
+  // so this cannot fire while a generation is in flight.
+  useEffect(() => {
+    if (generation.phase === "idle" && !activeGame) {
+      navigate(ROUTES.SETUP, { replace: true });
+    }
+  }, [generation.phase, activeGame, navigate]);
+
   return (
     <main className="mx-auto flex h-screen flex-col items-center justify-center text-center">
       <LoadingSpinner className="size-16 text-lime-600 dark:text-lime-400" />
