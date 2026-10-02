@@ -10,6 +10,7 @@ export {
   setDesktopFullscreen,
   onDesktopResize,
 } from "./applicationControl";
+export { setDesktopWindowTheme } from "./windowTheme";
 export {
   openExternalUrl,
   startLoopbackServer,

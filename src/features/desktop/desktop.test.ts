@@ -3,6 +3,7 @@ import { isTauri } from "./detectEnvironment";
 import { resolveAssetUrl } from "./assetResolver";
 import { legalDocumentFileNames, openLegalDocument } from "./legalDocuments";
 import { patchStaticFontStylesheetsForTauri, rewriteFontCssUrls } from "./fontLoader";
+import { setDesktopWindowTheme } from "./windowTheme";
 
 // Outside a Tauri WebView the desktop feature must be inert: no
 // `@tauri-apps/*` module is ever loaded (all value imports are dynamic
@@ -32,6 +33,14 @@ describe("legalDocuments", () => {
 
   test("openLegalDocument() refuses to run outside Tauri", async () => {
     await expect(openLegalDocument("terms")).rejects.toThrow();
+  });
+});
+
+describe("windowTheme", () => {
+  test("setDesktopWindowTheme() is a noop outside Tauri", async () => {
+    await expect(setDesktopWindowTheme("dark")).resolves.toBeUndefined();
+    await expect(setDesktopWindowTheme("light")).resolves.toBeUndefined();
+    await expect(setDesktopWindowTheme(null)).resolves.toBeUndefined();
   });
 });
 
