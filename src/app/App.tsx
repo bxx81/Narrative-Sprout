@@ -14,6 +14,7 @@ import i18n from "../features/i18n/config";
 import { getLanguageCode, applyLanguageDocumentEffects } from "../features/i18n/api";
 import { setWordCountLanguage } from "../features/narrative/api";
 import { applyColorScheme, resolveIsDark } from "../features/theme/api";
+import { setDesktopWindowTheme } from "../features/desktop/api";
 import { isDataDeletionComplete } from "../features/wipe/api";
 import { playSound } from "../features/sound/api";
 import { useGameStore } from "../store/gameStore";
@@ -74,7 +75,12 @@ export function App() {
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const apply = () => {
-      applyColorScheme(resolveIsDark(colorScheme, mediaQuery.matches));
+      const isDark = resolveIsDark(colorScheme, mediaQuery.matches);
+      applyColorScheme(isDark);
+      // `system` must pass null (OS-following), never the media-query-derived
+      // value: setTheme overrides prefers-color-scheme, so reading it back
+      // after a forced theme would pin the native title bar to the old mode.
+      void setDesktopWindowTheme(colorScheme === "system" ? null : isDark ? "dark" : "light");
     };
     apply();
     mediaQuery.addEventListener("change", apply);

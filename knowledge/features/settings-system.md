@@ -4,7 +4,7 @@ title: Settings System
 description: All user-configurable settings and developer options in Narrative Sprout v2.
 tags: [settings, configuration]
 timestamp: 2026-09-09T00:00:00Z
-source: src/types/settings.ts, src/screens/SettingsScreen.tsx, src/screens/ThemeSetupScreen.tsx, src/screens/GameScreen.tsx, src/screens/ChronicleScreen.tsx, src/lib/gameTextSize.ts, src/components/game/GameChoices.tsx, src/store/gameStore.ts, src/components/settings/EndpointConnectionTest.tsx, src/features/connectivity/, src/features/theme/colorScheme.ts, src/app/App.tsx
+source: src/types/settings.ts, src/screens/SettingsScreen.tsx, src/screens/ThemeSetupScreen.tsx, src/screens/GameScreen.tsx, src/screens/ChronicleScreen.tsx, src/lib/gameTextSize.ts, src/components/game/GameChoices.tsx, src/store/gameStore.ts, src/components/settings/EndpointConnectionTest.tsx, src/features/connectivity/, src/features/theme/colorScheme.ts, src/features/desktop/windowTheme.ts, src/app/App.tsx
 ---
 
 # Overview
@@ -67,6 +67,8 @@ The scene size is passed as `MainText`'s `className` (per-`<p>`, overriding the 
 `colorScheme` (`system` / `light` / `dark`, default `"system"`) overrides the OS-following dark mode. `system` preserves the legacy behavior (`matchMedia("(prefers-color-scheme: dark)")` + `change` listener); `light`/`dark` force the choice regardless of the OS preference.
 
 Resolution is split for testability in `src/features/theme/colorScheme.ts` (re-exported via `features/theme/api.ts`): `resolveIsDark(colorScheme, systemPrefersDark)` is a pure function, and `applyColorScheme(isDark)` writes the result to the document — the `.dark` class (consumed by the Tailwind `@custom-variant` in `index.css`), `documentElement.style.colorScheme` (native controls), and the `theme-color` meta (browser chrome). The `App.tsx` effect subscribes to `settings?.colorScheme` (falling back to `"system"` before the IndexedDB bootstrap completes, so first paint matches the old behavior and corrects on load — a brief flash when the stored value differs from the OS value is accepted).
+
+In the Tauri desktop build the same effect also calls `setDesktopWindowTheme(...)` (`features/desktop/windowTheme.ts`), which invokes the native `WebviewWindow.setTheme` so the OS title bar follows the setting — native window decorations ignore the `theme-color` meta that tints the PWA's browser chrome. It passes `"dark"`/`"light"` for forced modes and `null` (OS-following) for `system`: Tauri propagates the window theme to the WebView's `prefers-color-scheme`, so the media-query-derived value read after a forced `setTheme` is already overridden — passing it for `system` would pin the title bar to the previous mode. `null` resets the media query to the real OS preference and the effect's `change` listener re-settles on it. The native color is OS-defined (2-state), not the exact `LIGHT_THEME_COLOR` / `DARK_THEME_COLOR`. The call is a no-op on web and its `@tauri-apps/api` import stays dynamic, so the web bundle is unaffected. Requires the `core:window:allow-set-theme` capability.
 
 The initial `index.html` ships two `media=`-qualified `theme-color` metas for the OS-following default. A forced `light`/`dark` choice cannot rely on media evaluation, so the first `applyColorScheme` call collapses extras into a single media-less meta whose `content` (`#fbf9fa` / `#030712`, exported as `LIGHT_THEME_COLOR` / `DARK_THEME_COLOR`) tracks the effective theme; repeated application is idempotent.
 
