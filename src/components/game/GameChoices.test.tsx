@@ -80,9 +80,9 @@ describe("GameChoices custom-choice-input", () => {
   }
 
   function choiceLabels(): string[] {
-    return Array.from(container?.querySelectorAll<HTMLButtonElement>("button.choice-style") ?? []).map(
-      (button) => button.textContent ?? "",
-    );
+    return Array.from(
+      container?.querySelectorAll<HTMLButtonElement>("button.choice-style") ?? [],
+    ).map((button) => button.textContent ?? "");
   }
 
   async function mountHarness() {
