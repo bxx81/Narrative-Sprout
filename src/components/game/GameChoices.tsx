@@ -118,7 +118,7 @@ const GameChoices: React.FC<GameChoicesProps> = ({
           <div className="flex flex-col gap-3">
             {choices.map((choice, index) => (
               <button
-                key={choice ? `${viewingNodeId}:${choice}` : `${viewingNodeId}:${index}`}
+                key={`${viewingNodeId}:${index}`}
                 onClick={() => {
                   if (suppressNextClickRef.current) {
                     suppressNextClickRef.current = false;

@@ -13,20 +13,23 @@ const harnessControl: {
   setPreset?: (preset: { choice: string } | undefined) => void;
   setChoicesMounted?: (mounted: boolean) => void;
   setViewingNodeId?: (id: string) => void;
+  setChoices?: (choices: string[]) => void;
 } = {};
 
 function Harness() {
   const [preset, setPreset] = useState<{ choice: string } | undefined>(undefined);
   const [choicesMounted, setChoicesMounted] = useState(true);
   const [viewingNodeId, setViewingNodeId] = useState("node-1");
+  const [choices, setChoices] = useState(["go left", "go right"]);
   harnessControl.setPreset = setPreset;
   harnessControl.setChoicesMounted = setChoicesMounted;
   harnessControl.setViewingNodeId = setViewingNodeId;
+  harnessControl.setChoices = setChoices;
   const handleConsumed = useCallback(() => setPreset(undefined), []);
   if (!choicesMounted) return <div data-testid="skeleton" />;
   return (
     <GameChoices
-      choices={["go left", "go right"]}
+      choices={choices}
       isCurrentStoryOver={false}
       loading={false}
       onChoiceSubmit={() => {}}
@@ -74,6 +77,12 @@ describe("GameChoices custom-choice-input", () => {
     const input = container?.querySelector<HTMLInputElement>("#custom-choice-input");
     if (!input) throw new Error("custom-choice-input not found");
     return input.value;
+  }
+
+  function choiceLabels(): string[] {
+    return Array.from(container?.querySelectorAll<HTMLButtonElement>("button.choice-style") ?? []).map(
+      (button) => button.textContent ?? "",
+    );
   }
 
   async function mountHarness() {
@@ -138,5 +147,35 @@ describe("GameChoices custom-choice-input", () => {
     });
     await flushPreset();
     expect(inputValue()).toBe("sneak past");
+  });
+
+  test("duplicate labels do not leave a stale button after navigating away", async () => {
+    await mountHarness();
+
+    // Turn 4 ends the prequel: two disabled choices share the same label.
+    await act(async () => {
+      harnessControl.setViewingNodeId?.("node-4");
+      harnessControl.setChoices?.(["continue", "(unavailable)", "(unavailable)"]);
+    });
+    expect(choiceLabels()).toHaveLength(3);
+
+    // Navigate back to turn 3: all three of its choices must replace turn 4's.
+    await act(async () => {
+      harnessControl.setViewingNodeId?.("node-3");
+      harnessControl.setChoices?.(["first", "second", "third"]);
+    });
+    expect(choiceLabels()).toHaveLength(3);
+    expect(choiceLabels().some((label) => label.includes("unavailable"))).toBe(false);
+
+    // Returning to turn 4 and back again must not accumulate leftovers.
+    await act(async () => {
+      harnessControl.setViewingNodeId?.("node-4");
+      harnessControl.setChoices?.(["continue", "(unavailable)", "(unavailable)"]);
+    });
+    await act(async () => {
+      harnessControl.setViewingNodeId?.("node-3");
+      harnessControl.setChoices?.(["first", "second", "third"]);
+    });
+    expect(choiceLabels()).toHaveLength(3);
   });
 });
