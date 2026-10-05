@@ -7,7 +7,7 @@ import type { GameRecord, StoryNodeRecord } from "../types";
 import { useLazyNodeImage } from "../hooks/useLazyNodeImage";
 import { useLatestNodes } from "../hooks/useLatestNodes";
 import { useIncrementalList } from "../hooks/useIncrementalList";
-import StoryCard from "../components/StoryCard";
+import StoryCard, { type StoryCardMenuItem } from "../components/StoryCard";
 import BackButton from "../components/ui/BackButton";
 import { ROUTES } from "../app/routes";
 import Button from "../components/ui/Button";
@@ -37,6 +37,8 @@ const GameLogCard: React.FC<{ game: GameRecord; latestNode: StoryNodeRecord | nu
     const confirm = useConfirm();
     const openGame = useGameStore((s) => s.openGame);
     const deleteSave = useGameStore((s) => s.deleteSave);
+    const exportSave = useGameStore((s) => s.exportSave);
+    const [isExporting, setIsExporting] = useState(false);
 
     const {
       elementRef,
@@ -68,6 +70,20 @@ const GameLogCard: React.FC<{ game: GameRecord; latestNode: StoryNodeRecord | nu
       });
       if (result !== true) return;
       await deleteSave(game.id);
+    };
+
+    const handleExport = async () => {
+      if (isExporting) return;
+      setIsExporting(true);
+      try {
+        await exportSave(game.id);
+        toast.success(t("toastDownloadSavedataSuccess"));
+      } catch (error) {
+        console.error("[export] save export failed", error);
+        toast.error(error instanceof Error ? error.message : t("exportFailed"));
+      } finally {
+        setIsExporting(false);
+      }
     };
 
     const formattedDate = useMemo(
@@ -110,6 +126,26 @@ const GameLogCard: React.FC<{ game: GameRecord; latestNode: StoryNodeRecord | nu
       [t, game.id],
     );
 
+    const menuItems = useMemo<StoryCardMenuItem[]>(
+      () => [
+        {
+          id: "download",
+          label: t("downloadSavedataButton"),
+          icon: "cloud_download",
+          onSelect: () => void handleExport(),
+          disabled: isExporting,
+        },
+        {
+          id: "delete",
+          label: t("deleteButton"),
+          icon: "delete_forever",
+          onSelect: () => void handleDelete(),
+          isDestructive: true,
+        },
+      ],
+      [t, isExporting, game.id],
+    );
+
     return (
       <article ref={elementRef} className="h-full">
         <StoryCard
@@ -118,8 +154,7 @@ const GameLogCard: React.FC<{ game: GameRecord; latestNode: StoryNodeRecord | nu
           isLoadingImage={isLoadingImage}
           actions={cardActions}
           onImageClick={() => void handleLoadGame()}
-          onMenuClick={() => void handleDelete()}
-          menuText={t("deleteButton")}
+          menuItems={menuItems}
           mainText={game.title}
           subText={scenePreviewText}
           timeText={timeContent}
