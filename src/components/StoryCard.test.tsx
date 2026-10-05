@@ -67,4 +67,127 @@ describe("StoryCard image fallback", () => {
 
     expect(image!.getAttribute("src")).toBe(LOAD_SCREEN_FALLBACK_URL);
   });
+
+  test("menuItems render a menu that fires the action and closes on select", async () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    const current = container;
+    let downloadCount = 0;
+    let deleteCount = 0;
+    await act(async () => {
+      root = createRoot(current);
+      root.render(
+        <StoryCard
+          imageUrl={null}
+          imageAlt="a lighthouse"
+          isLoadingImage={false}
+          mainText="Chapter one"
+          subText="The storm rolled in."
+          menuItems={[
+            {
+              id: "download",
+              label: "Download",
+              icon: "cloud_download",
+              onSelect: () => {
+                downloadCount += 1;
+              },
+            },
+            {
+              id: "delete",
+              label: "Delete",
+              icon: "delete_forever",
+              onSelect: () => {
+                deleteCount += 1;
+              },
+              isDestructive: true,
+            },
+          ]}
+        />,
+      );
+    });
+
+    expect(current.querySelector('[role="menu"]')).toBeNull();
+
+    const toggle = current.querySelector("button")!;
+    await act(async () => {
+      toggle.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    });
+
+    const items = current.querySelectorAll('[role="menuitem"]');
+    expect(items.length).toBe(2);
+
+    const downloadItem = current.querySelector('[role="menuitem"]')!;
+    await act(async () => {
+      downloadItem.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(downloadCount).toBe(1);
+    expect(deleteCount).toBe(0);
+    expect(current.querySelector('[role="menu"]')).toBeNull();
+  });
+
+  test("Escape closes an open menu", async () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    const current = container;
+    await act(async () => {
+      root = createRoot(current);
+      root.render(
+        <StoryCard
+          imageUrl={null}
+          imageAlt="a lighthouse"
+          isLoadingImage={false}
+          menuItems={[
+            {
+              id: "download",
+              label: "Download",
+              icon: "cloud_download",
+              onSelect: () => undefined,
+            },
+          ]}
+        />,
+      );
+    });
+
+    await act(async () => {
+      current
+        .querySelector("button")!
+        .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    });
+    expect(current.querySelector('[role="menu"]')).not.toBeNull();
+
+    await act(async () => {
+      document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(current.querySelector('[role="menu"]')).toBeNull();
+  });
+
+  test("a card without menuItems forwards the menu button to onMenuClick", async () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    const current = container;
+    let clickCount = 0;
+    await act(async () => {
+      root = createRoot(current);
+      root.render(
+        <StoryCard
+          imageUrl={null}
+          imageAlt="a lighthouse"
+          isLoadingImage={false}
+          onMenuClick={() => {
+            clickCount += 1;
+          }}
+        />,
+      );
+    });
+
+    await act(async () => {
+      current
+        .querySelector("button")!
+        .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(clickCount).toBe(1);
+    expect(current.querySelector('[role="menu"]')).toBeNull();
+  });
 });
