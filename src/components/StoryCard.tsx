@@ -131,6 +131,8 @@ const StoryCard: React.FC<StoryCardProps> = ({
                 key={menuItem.id}
                 type="button"
                 role="menuitem"
+                aria-label={menuItem.label}
+                title={menuItem.label}
                 disabled={menuItem.disabled}
                 onClick={() => {
                   setMenuOpen(false);

@@ -17,7 +17,9 @@ test.describe("save slot deletion", () => {
     await page.goto("/load");
     await expect(page.getByText("E2E Doomed Tale")).toBeVisible();
 
-    await page.getByRole("button", { name: "Delete", exact: true }).click();
+    const card = page.locator("li", { hasText: "E2E Doomed Tale" });
+    await card.getByRole("button", { name: "More Options", exact: true }).click();
+    await card.getByRole("menuitem", { name: "Delete", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click();
 
     await expect(page.getByText("No saved games found.")).toBeVisible();
