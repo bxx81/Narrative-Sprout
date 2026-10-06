@@ -1,4 +1,5 @@
-import { strToU8, zip, type Zippable } from "fflate";
+import { strToU8, type Zippable } from "fflate";
+import { createZipBlob } from "../../lib/zipArchive";
 import type { ExportBundle } from "./types";
 
 /**
@@ -18,13 +19,5 @@ export async function createZipArchiveBlob(bundle: ExportBundle): Promise<Blob> 
     const bytes = new Uint8Array(await assetFile.blob.arrayBuffer());
     files[assetFile.path] = [bytes, { level: 0 }];
   }
-  return new Promise<Blob>((resolve, reject) => {
-    zip(files, (error, archive) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve(new Blob([archive], { type: "application/zip" }));
-    });
-  });
+  return createZipBlob(files);
 }

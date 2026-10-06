@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useMemo, useRef } from "react";
+import React, { memo, useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router";
@@ -7,7 +7,7 @@ import type { StoryNodeRecord } from "../types";
 import type { AssetRecord } from "../types/asset";
 import { useLazyNodeImage } from "../hooks/useLazyNodeImage";
 import { useIncrementalList } from "../hooks/useIncrementalList";
-import StoryCard from "../components/StoryCard";
+import StoryCard, { type StoryCardMenuItem } from "../components/StoryCard";
 import BackButton from "../components/ui/BackButton";
 import { ROUTES } from "../app/routes";
 import Button from "../components/ui/Button";
@@ -34,6 +34,8 @@ const EndNodeCard: React.FC<{
   const resumeStoryAtNode = useGameStore((s) => s.resumeStoryAtNode);
   const setChronicleTargetNode = useGameStore((s) => s.setChronicleTargetNode);
   const deleteBranch = useGameStore((s) => s.deleteBranch);
+  const exportChronicle = useGameStore((s) => s.exportChronicle);
+  const [isExporting, setIsExporting] = useState(false);
 
   const {
     elementRef,
@@ -72,6 +74,20 @@ const EndNodeCard: React.FC<{
     }
   };
 
+  const handleExport = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      await exportChronicle(node.id);
+      toast.success(t("exportSuccess"));
+    } catch (error) {
+      console.error("[chronicle-export] failed", error);
+      toast.error(error instanceof Error ? error.message : t("exportFailed"));
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const scenePreviewText = useMemo(
     () =>
       node.scene.sceneText + (node.scene.isStoryOver ? " - " : "") + node.scene.storyClosingText,
@@ -102,6 +118,26 @@ const EndNodeCard: React.FC<{
     [t, node.id],
   );
 
+  const menuItems = useMemo<StoryCardMenuItem[]>(
+    () => [
+      {
+        id: "export",
+        label: isExporting ? t("exportingStoryButton") : t("exportStoryButton"),
+        icon: "cloud_download",
+        onSelect: () => void handleExport(),
+        disabled: isExporting,
+      },
+      {
+        id: "delete",
+        label: t("deleteButton"),
+        icon: "delete_forever",
+        onSelect: () => void handleDelete(),
+        isDestructive: true,
+      },
+    ],
+    [t, isExporting, node.id],
+  );
+
   return (
     <article ref={elementRef} className="h-full">
       <StoryCard
@@ -110,8 +146,7 @@ const EndNodeCard: React.FC<{
         isLoadingImage={isLoadingImage}
         actions={cardActions}
         onImageClick={handleRewind}
-        onMenuClick={() => void handleDelete()}
-        menuText={t("deleteButton")}
+        menuItems={menuItems}
         mainText={mainText}
         subText={scenePreviewText}
       />

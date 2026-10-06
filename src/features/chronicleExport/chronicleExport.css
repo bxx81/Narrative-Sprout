@@ -1,0 +1,35 @@
+/*
+ * Tailwind entry for the standalone chronicle export page.
+ *
+ * Compiled at build time by scripts/build-chronicle-export-css.ts into
+ * generated/chronicleExportCss.ts. Scanning is limited to the export markup
+ * (plus the text-size class literals) so this stylesheet stays page-sized
+ * instead of generating every utility the app uses. Design tokens / custom
+ * classes are shared with the app via src/styles/*.
+ */
+@import "tailwindcss" source(none);
+@import "../../styles/designTokens.css";
+@import "../../styles/appBase.css";
+@import "../../styles/appUtilities.css";
+@import "../../components/ui/Divider.module.css";
+
+@source "./markup.ts";
+@source "../../lib/gameTextSize.ts";
+
+@layer components {
+  /* MainText prose indentation (non-Tailwind rules from
+     components/ui/MainText.module.css; spacing/size come from utilities in
+     markup.ts). */
+  .main-text-prose p {
+    text-indent: 0;
+  }
+  :lang(ja) .main-text-prose p {
+    text-indent: 1em;
+  }
+  .main-text-prose p.bracket-start {
+    text-indent: 0;
+  }
+  :lang(ja) .main-text-prose p.bracket-start {
+    text-indent: 0.5em;
+  }
+}

@@ -1,5 +1,6 @@
 import { db } from "../../db/database";
 import { gameRepository } from "../../db/gameRepository";
+import { sanitizeFileName } from "../../lib/sanitizeFileName";
 import type { AssetRecord } from "../../types/asset";
 import type { GameRecord } from "../../types";
 import { buildExportBundle } from "./exportBundle";
@@ -38,12 +39,4 @@ function buildExportFileName(game: GameRecord): string {
   const safeTitle = sanitizeFileName(game.title).slice(0, 40) || "game";
   const stamp = new Date().toISOString().replace(/[:T]/g, "-").slice(0, 19);
   return `ns-save_${safeTitle}_${stamp}.zip`;
-}
-
-/** Removes characters that are invalid in file names across OSes. */
-function sanitizeFileName(title: string): string {
-  return [...title.replace(/[<>:"/\\|?*]/g, "")]
-    .filter((char) => (char.codePointAt(0) ?? 0) >= 0x20) // drop control characters
-    .join("")
-    .trim();
 }

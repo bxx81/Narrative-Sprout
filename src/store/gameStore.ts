@@ -18,12 +18,13 @@ import { collectAncestors, applyHistoryContextCut } from "../features/storytree/
 import { countWords } from "../features/narrative/api";
 import { decideAutoplayTurn } from "../features/autoplay/api";
 import { generateThemes } from "../features/theme/api";
-import { englishUiTexts } from "../features/i18n/api";
+import { englishUiTexts, translate } from "../features/i18n/api";
 import { translateUIText } from "../features/i18n/translateService";
 import { streamStore } from "./streamStore";
 import { releaseWakeLock, acquireWakeLock, WakeLockGuard } from "../features/wakelock/api";
 import { isStreamingEnabledForSettings, parseTextModelOptions } from "../lib/modelOptions";
 import { downloadBlob, exportGameAsZip } from "../features/export/api";
+import { exportChronicleAsZip } from "../features/chronicleExport/api";
 import {
   clearDriveAccessToken,
   createBackupFile,
@@ -161,6 +162,8 @@ interface GameState {
   deleteBranch: (nodeId: string) => Promise<{ gameDeleted: boolean }>;
   deleteSave: (gameId: string) => Promise<void>;
   exportSave: (gameId: string) => Promise<void>;
+  /** Exports the branch ending at `targetNodeId` as a standalone HTML ZIP. */
+  exportChronicle: (targetNodeId: string) => Promise<void>;
   wipeAllData: () => Promise<void>;
   setViewingNode: (nodeId: string) => void;
   /** Rewrites the viewed node's scene text in place (manual editing). */
@@ -1238,6 +1241,25 @@ export const useGameStore = create<GameState>()(
       exportSave: async (gameId) => {
         using _guard = new WakeLockGuard("backup");
         const { fileName, blob } = await exportGameAsZip(gameId);
+        downloadBlob(blob, fileName);
+      },
+
+      exportChronicle: async (targetNodeId) => {
+        using _guard = new WakeLockGuard("backup");
+        const { activeGame, nodes, assets, settings } = get();
+        if (!activeGame || !settings) return;
+        const { fileName, blob } = await exportChronicleAsZip({
+          game: activeGame,
+          nodes,
+          assets,
+          targetNodeId,
+          settings,
+          translation: {
+            chronicleTitle: translate("chronicleTitle"),
+            chronicleDescription: translate("chronicleDescription"),
+            historyChoicePrefix: translate("historyChoicePrefix"),
+          },
+        });
         downloadBlob(blob, fileName);
       },
 

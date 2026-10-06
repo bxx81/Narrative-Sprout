@@ -16,6 +16,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun run lint
+      - run: bun run check:chronicle-css
       - run: bunx tsc --noEmit
       - run: bun test --path-ignore-patterns='e2e/**'
       - run: bun run format:check
