@@ -1,0 +1,69 @@
+@custom-variant dark (&:where(.dark, .dark *));
+@theme {
+  --shadow-dialog: 0 4px 16px rgba(0, 0, 0, 0.2);
+  --radius-dialog: 24px;
+  --spacing-dialog: 24px;
+  --color-body-text: #27272a;
+  --color-text-text: #27272a;
+  --color-body-bg: #f6f7f8;
+  --color-text-bg: #ffffff;
+  --color-text-border: #dddddd;
+  --color-text-support: #6a7282;
+  --color-text-disable: #6a728280;
+  --color-border: #6a7282;
+  --color-primary: oklch(64.33% 0.17075 131.639);
+  --color-primary-text: #ffffff;
+  --color-secondary: #d5d7db;
+  --color-secondary-text: #1e2939;
+  --color-tertiary: #4a654e;
+  --color-tertiary-text: #ffffff;
+  --color-alt: #f3d470;
+  --color-alt-text: #250325;
+  --color-danger: oklch(55.398% 0.20029 24.776);
+  --color-danger-text: #ffffff;
+  --color-warning: oklch(79.5% 0.184 86.047);
+  --color-warning-text: #ffffff;
+  --color-navigator: #364153;
+  --color-navigator-text: #ffffff;
+  --color-disable: #99a1af;
+  --color-disable-text: #dee1e7;
+
+  --color-divider: #a1a1a1;
+  --color-title-text: #e5e7eb;
+  --color-title-text-support: #d1d5dc;
+
+  --color-primary-light: oklch(from var(--color-primary) calc(l + 0.1) c h);
+  --color-primary-dark: oklch(from var(--color-primary) calc(l - 0.1) c h);
+  --color-secondary-light: oklch(from var(--color-secondary) calc(l + 0.1) c h);
+  --color-secondary-dark: oklch(from var(--color-secondary) calc(l - 0.1) c h);
+  --color-tertiary-light: oklch(from var(--color-tertiary) calc(l + 0.1) c h);
+  --color-tertiary-dark: oklch(from var(--color-tertiary) calc(l - 0.1) c h);
+  --color-alt-light: oklch(from var(--color-alt) calc(l + 0.1) c h);
+  --color-alt-dark: oklch(from var(--color-alt) calc(l - 0.1) c h);
+  --color-danger-light: oklch(from var(--color-danger) calc(l + 0.1) c h);
+  --color-danger-dark: oklch(from var(--color-danger) calc(l - 0.1) c h);
+  --color-warning-light: oklch(from var(--color-warning) calc(l + 0.1) c h);
+  --color-warning-dark: oklch(from var(--color-warning) calc(l - 0.1) c h);
+  --color-navigator-light: oklch(from var(--color-primary) calc(l + 0.1) c h);
+  --color-navigator-dark: oklch(from var(--color-navigator) calc(l - 0.1) c h);
+  --value-hover: -0.1;
+}
+.dark {
+  --color-body-text: #e4e4e7;
+  --color-text-text: #e4e4e7;
+  --color-body-bg: #101012;
+  --color-text-bg: #09090b;
+  --color-text-border: #202022;
+  --color-text-support: #99a1af;
+  --color-text-disable: #99a1af;
+  --color-border: #99a1af;
+  --color-primary: oklch(57.311% 0.16172 133.156);
+  --color-secondary: #364153;
+  --color-secondary-text: #ffffff;
+  --color-navigator: #1e2939;
+  --color-disable: #1d2228;
+  --color-disable-text: #111213;
+  --color-divider: #737373;
+
+  --value-hover: 0.1;
+}

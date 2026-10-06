@@ -1,0 +1,123 @@
+@layer base {
+  body {
+    @apply bg-body-bg text-body-text transition-colors duration-300;
+
+    font-family: "Inter", "Noto Sans", sans-serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+    text-wrap: pretty;
+
+    &:lang(ja) {
+      font-family: "Noto Sans", "BIZ UDPGothic", sans-serif;
+    }
+
+    &:lang(zh) {
+      font-family: "Noto Sans SC", "Noto Sans", sans-serif;
+    }
+
+    &:is(:lang(zh-hant), :lang(zh-tw)) {
+      font-family: "Noto Sans TC", "Noto Sans", sans-serif;
+    }
+
+    &:lang(zh-hk) {
+      font-family: "Noto Sans HK", "Noto Sans", sans-serif;
+    }
+
+    &:lang(ko) {
+      font-family: "Noto Sans KR", "Noto Sans", sans-serif;
+    }
+
+    &:lang(hi) {
+      font-family: "Noto Sans Devanagari", "Noto Sans", sans-serif;
+    }
+
+    &:lang(th) {
+      font-family: "Noto Sans Thai", "Noto Sans", sans-serif;
+    }
+
+    &:lang(lo) {
+      font-family: "Noto Sans Lao", "Noto Sans", sans-serif;
+    }
+
+    &:lang(he) {
+      font-family: "Noto Sans Hebrew", "Noto Sans", sans-serif;
+    }
+
+    &:lang(ar) {
+      font-family: "Noto Kufi Arabic", "Noto Sans", sans-serif;
+    }
+  }
+  * {
+    font-family: inherit;
+  }
+
+  .text-bg-color {
+    @apply bg-text-bg;
+  }
+
+  .support-text-color,
+  .explanation-text-style,
+  .legend-text-style {
+    @apply text-text-support;
+  }
+
+  .body-bg-color,
+  body {
+    @apply bg-body-bg;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out forwards;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  .animate-fade-out {
+    animation: fadeOut 0.3s ease-in-out forwards;
+  }
+
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+    }
+  }
+
+  .molle-regular-italic,
+  .dividers-style {
+    font-family: "Molle", cursive;
+    font-weight: 400;
+    font-style: italic;
+  }
+
+  .dividers-style {
+    @apply my-4 text-center text-[8pt] text-divider;
+  }
+
+  .h2-style {
+    @apply mb-4 border-b border-text-border pb-2 text-lg font-semibold;
+  }
+
+  .explanation-text-style {
+    @apply mx-1 mt-2 mb-4 text-sm;
+  }
+
+  .legend-text-style {
+    @apply text-sm;
+  }
+
+  a.explanation-text-style {
+    @apply text-primary hover:underline;
+  }
+}

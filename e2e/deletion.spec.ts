@@ -49,7 +49,8 @@ test.describe("branch deletion", () => {
     await expect(page.getByText("Go right")).toBeVisible();
 
     const leftCard = page.locator("li", { hasText: "Go left" });
-    await leftCard.getByRole("button", { name: "Delete", exact: true }).click();
+    await leftCard.getByRole("button", { name: "More Options", exact: true }).click();
+    await leftCard.getByRole("menuitem", { name: "Delete", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click();
 
     await expect(page.locator("li", { hasText: "Go left" })).toHaveCount(0);
@@ -72,13 +73,9 @@ test.describe("branch deletion", () => {
     await expect(page.getByRole("heading", { name: "Story Endings" })).toBeVisible();
 
     for (const choice of ["Go left", "Go right"]) {
-      await page
-        .locator("li", { hasText: choice })
-        .getByRole("button", {
-          name: "Delete",
-          exact: true,
-        })
-        .click();
+      const card = page.locator("li", { hasText: choice });
+      await card.getByRole("button", { name: "More Options", exact: true }).click();
+      await card.getByRole("menuitem", { name: "Delete", exact: true }).click();
       await page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click();
     }
 

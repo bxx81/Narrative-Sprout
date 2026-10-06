@@ -97,6 +97,21 @@ const languageFontCss: Record<string, string> = {
 };
 
 /**
+ * Resolves the self-hosted font stylesheet path for a language code, or null
+ * when the language needs no extra stylesheet (English ships globally).
+ * Exposed so non-UI consumers (chronicle export) can reference the same font
+ * map without duplicating it.
+ */
+export function getLanguageFontCssPath(languageCode: string): string | null {
+  const lower = languageCode.toLowerCase();
+  const direct = languageFontCss[lower];
+  if (direct) return direct;
+  const shortLanguage = lower.substring(0, 2);
+  if (shortLanguage !== lower) return languageFontCss[shortLanguage] ?? null;
+  return null;
+}
+
+/**
  * Loads the self-hosted font stylesheet for the language when it needs one
  * (English is already loaded globally from index.html). Falls back to the
  * two-letter primary tag for tags like `xx-YY`.

@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
+import toast from "react-hot-toast";
 import { useGameStore } from "../store/gameStore";
 import MainText from "../components/ui/MainText";
 import Button from "../components/ui/Button";
@@ -100,9 +101,25 @@ const ChronicleScreen: React.FC = () => {
   const nodes = useGameStore((s) => s.nodes);
   const chronicleTargetNodeId = useGameStore((s) => s.chronicleTargetNodeId);
   const settings = useGameStore((s) => s.settings);
+  const exportChronicle = useGameStore((s) => s.exportChronicle);
+  const [isExporting, setIsExporting] = useState(false);
   const sceneTextClass =
     GAME_TEXT_SIZE_CLASSES[resolveGameTextSize(settings?.gameTextSize)].sceneText;
   const choicesClass = GAME_TEXT_SIZE_CLASSES[resolveGameTextSize(settings?.gameTextSize)].choices;
+
+  const handleExport = async () => {
+    if (!chronicleTargetNodeId || isExporting) return;
+    setIsExporting(true);
+    try {
+      await exportChronicle(chronicleTargetNodeId);
+      toast.success(t("exportSuccess"));
+    } catch (error) {
+      console.error("[chronicle-export] failed", error);
+      toast.error(error instanceof Error ? error.message : t("exportFailed"));
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -132,6 +149,18 @@ const ChronicleScreen: React.FC = () => {
           {t("chronicleDescription")}
         </p>
       </header>
+
+      <div className="mb-12 flex justify-center">
+        <Button
+          size="small"
+          intent="tertiary"
+          onClick={() => void handleExport()}
+          isWorking={isExporting}
+          disabled={isExporting}
+        >
+          {isExporting ? t("exportingStoryButton") : t("exportStoryButton")}
+        </Button>
+      </div>
 
       <section className="mx-auto max-w-2xl">
         {branchPath.map((node, index) => {
