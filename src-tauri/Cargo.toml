@@ -1,6 +1,6 @@
 [package]
 name = "narrative-sprout"
-version = "2.0.0"
+version = "2.0.0" # x-release-please-version
 description = "An AI-powered interactive visual novel that runs entirely in your browser."
 authors = []
 license = "MIT"

@@ -280,12 +280,16 @@ const TitleScreen: React.FC = () => {
         </div>
         <div>
           <a
-            href={REPOSITORY_URL + "/commits/main/"}
+            href={
+              __BUILD_SHA__ === "unknown"
+                ? REPOSITORY_URL + "/commits/main/"
+                : `${REPOSITORY_URL}/commit/${__BUILD_SHA__}`
+            }
             target="_blank"
             rel="noopener noreferrer"
             className="version-link"
           >
-            Version: {__APP_VERSION__}
+            Version: {__APP_VERSION__} ({__BUILD_SHA__})
           </a>
         </div>
         {isTauri && (
