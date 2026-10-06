@@ -32,6 +32,8 @@ Design rationale, architecture, and the security/threat model live in the `knowl
 - `bun run test:e2e` — E2E tests (Playwright, chromium + webkit; needs `bunx playwright install chromium webkit`)
 - `bun run build` — `tsc --noEmit` + production build
 - `bun run lint` — ESLint
+- `bun run sync:tauri-version` — copy `package.json#version` into `src-tauri/Cargo.toml`
+- `bun run check:tauri-version` — verify the versions match (CI; no writes)
 
 ## Conventions
 

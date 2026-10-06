@@ -3,13 +3,13 @@ type: Configuration
 title: Build System (v2)
 description: Vite, TypeScript, chunk splitting, and build toolchain of Narrative Sprout v2.
 tags: [build, vite, typescript, chunks]
-timestamp: 2026-09-09T00:00:00Z
+timestamp: 2026-10-07T00:00:00Z
 source: vite.config.ts, tsconfig.json, package.json
 ---
 
 # Overview
 
-Vite 7 + React plugin + Tailwind v4 plugin + `vite-plugin-pwa`. TypeScript is strict (`strict`, `noUnusedLocals/Parameters`, `noFallthroughCasesInSwitch`, `moduleResolution: bundler`, `target ES2022`, `jsx: react-jsx`); `bun run build` runs `tsc --noEmit` before `vite build`. `__APP_VERSION__` is defined from `package.json` (`2.0.0`).
+Vite 7 + React plugin + Tailwind v4 plugin + `vite-plugin-pwa`. TypeScript is strict (`strict`, `noUnusedLocals/Parameters`, `noFallthroughCasesInSwitch`, `moduleResolution: bundler`, `target ES2022`, `jsx: react-jsx`); `bun run build` runs `tsc --noEmit` before `vite build`. `__APP_VERSION__` is defined from `package.json` (`2.0.0`); `__BUILD_SHA__` is the short commit SHA (Cloudflare `CF_PAGES_COMMIT_SHA` → GitHub `GITHUB_SHA` → `git rev-parse --short=7 HEAD`, else `unknown`). Both appear on the title screen as `Version: 2.0.0 (abc1234)`, linked to that exact commit.
 
 # Chunk Splitting
 
@@ -34,3 +34,5 @@ Vite 7 + React plugin + Tailwind v4 plugin + `vite-plugin-pwa`. TypeScript is st
 | `bun run build` | `tsc --noEmit && vite build` |
 | `bun run lint` | `eslint .` |
 | `bun run format:check` | `prettier --check .` |
+| `bun run sync:tauri-version` | copy `package.json#version` into `src-tauri/Cargo.toml` |
+| `bun run check:tauri-version` | verify `Cargo.toml` version matches (CI; no writes) |

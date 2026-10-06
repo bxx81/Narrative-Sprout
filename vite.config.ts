@@ -6,10 +6,29 @@ import { version } from "./package.json";
 import license from "rollup-plugin-license";
 import path from "path";
 import fs from "fs-extra";
+import { execSync } from "node:child_process";
 
 const outDir = path.resolve(import.meta.dirname, "./dist");
 const publicLegalDir = path.resolve(import.meta.dirname, "./public/legal");
 const tauriLegalDir = path.resolve(import.meta.dirname, "./src-tauri/resources/legal");
+
+// Short commit SHA of the build, shown next to the version so a specific
+// deploy can be identified even while the release version is unchanged.
+// Cloudflare Pages / GitHub Actions expose their own SHA (the checked-out git
+// metadata may be absent), and local/Tauri builds fall back to `git`.
+function resolveBuildSha(): string {
+  const fromCi = process.env.CF_PAGES_COMMIT_SHA ?? process.env.GITHUB_SHA;
+  if (fromCi) return fromCi.slice(0, 7);
+  try {
+    return execSync("git rev-parse --short=7 HEAD", { stdio: ["ignore", "pipe", "ignore"] })
+      .toString()
+      .trim();
+  } catch {
+    return "unknown";
+  }
+}
+
+const buildSha = resolveBuildSha();
 
 export default defineConfig(({ mode }) => {
   // Tauri builds (`vite --mode tauri`) must not bundle a service worker:
@@ -21,6 +40,7 @@ export default defineConfig(({ mode }) => {
   return {
     define: {
       __APP_VERSION__: JSON.stringify(version),
+      __BUILD_SHA__: JSON.stringify(buildSha),
       // Compile-time platform gate: Vite replaces this with a literal, so in
       // the web/PWA build `isTauri` (src/features/desktop/detectEnvironment.ts)
       // folds to `false` and Rollup tree-shakes every `@tauri-apps/*` dynamic
