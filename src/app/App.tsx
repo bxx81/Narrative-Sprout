@@ -138,6 +138,13 @@ const AppLayout: React.FC = () => {
     setWordCountLanguage(getLanguageCode(settings.language, settings.aiLanguageMappings));
   }, [settings, uiLanguage, aiLanguageMappings, aiTranslationTexts]);
 
+  // BrowserRouter does not reset the window scroll on navigation, so leaving a
+  // scrolled screen (e.g. a long game) would carry that offset into the next
+  // one (e.g. Settings). Reset it per route change (legacy ScrollRestoration).
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, [location.pathname]);
+
   // Full data wipe reloads the app with this flag set; show the completion
   // screen instead of the routed screen (bootstrap stays skipped too).
   if (isDataDeletionComplete()) {
