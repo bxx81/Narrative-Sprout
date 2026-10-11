@@ -80,6 +80,7 @@ Notes:
 - **OAuth** (OpenRouter key setup, Google Drive) opens the OS browser and returns through a temporary localhost server; consent never happens inside the app window.
 - **Files**: OS-level drag & drop onto the window works for attachments and save imports; fonts/images ship as native resources instead of web assets.
 - **Single instance**: launching twice focuses the first window instead of starting a second process.
+- **Releases**: each GitHub release gets the NSIS installer attached automatically by CI (`.github/workflows/tauri-release.yml`), so a local `bunx tauri build` is only needed for testing. The Google Drive OAuth values for that CI build come from the repository Actions secrets `VITE_GOOGLE_CLIENT_ID_TAURI` / `VITE_GOOGLE_CLIENT_SECRET_TAURI`.
 - The honest threat model (what the Vault does and does not protect against) is documented in `knowledge/operations/desktop-app.md` — same-account processes are outside the protection boundary.
 
 ## Security
