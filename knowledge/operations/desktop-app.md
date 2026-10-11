@@ -3,13 +3,13 @@ type: Playbook
 title: Desktop App (Tauri)
 description: Windows desktop build of Narrative Sprout v2 — Stronghold credential Vault, system-browser OAuth, and Tauri-mode build notes.
 tags: [tauri, desktop, stronghold, oauth]
-timestamp: 2026-09-15T00:00:00Z
+timestamp: 2026-10-11T00:00:00Z
 source: src-tauri/src/lib.rs, src-tauri/tauri.conf.json, src/features/desktop/, src/db/credentialsRepository.ts, vite.config.ts, scripts/separate-assets.mjs
 ---
 
 # Overview
 
-The same `main` branch builds a Windows desktop app (`src-tauri/` lives alongside the web app; only `target/` and `gen/` are ignored). `bun run tauri:dev` runs Vite in `--mode tauri`; `bunx tauri build` produces the NSIS installer. Tauri mode disables the PWA service worker (`virtual:pwa-register` becomes a noop stub), and `scripts/separate-assets.mjs` strips fonts/images from `dist/` into native resources resolved at runtime via `resourceDir` + `convertFileSrc` (`features/desktop/assetResolver.ts`, `fontLoader.ts`). The bundled `legal/` pages (terms/privacy + OSS licenses, native resources) are opened in the system browser via `openPath` (`features/desktop/legalDocuments.ts`, wired in `TitleScreen`). OS file drop, native fullscreen, app exit, and the native title-bar theme (`windowTheme.ts` — `WebviewWindow.setTheme` follows the `colorScheme` setting, `null` for `system`; `core:window:allow-set-theme` capability) are wired in `features/desktop/` with dynamic imports only (nothing Tauri enters the web bundle; verified by chunk split). Second launches focus the first window (single-instance plugin — concurrent writers must never touch the Vault, keyring entry, or IndexedDB).
+The same `main` branch builds a Windows desktop app (`src-tauri/` lives alongside the web app; only `target/` and `gen/` are ignored). `bun run tauri:dev` runs Vite in `--mode tauri`; `bunx tauri build` produces the NSIS installer. Every GitHub release gets that same installer attached automatically by CI (`.github/workflows/tauri-release.yml` — see `operations/build-and-deploy.md`), so a local build is only needed for testing. Tauri mode disables the PWA service worker (`virtual:pwa-register` becomes a noop stub), and `scripts/separate-assets.mjs` strips fonts/images from `dist/` into native resources resolved at runtime via `resourceDir` + `convertFileSrc` (`features/desktop/assetResolver.ts`, `fontLoader.ts`). The bundled `legal/` pages (terms/privacy + OSS licenses, native resources) are opened in the system browser via `openPath` (`features/desktop/legalDocuments.ts`, wired in `TitleScreen`). OS file drop, native fullscreen, app exit, and the native title-bar theme (`windowTheme.ts` — `WebviewWindow.setTheme` follows the `colorScheme` setting, `null` for `system`; `core:window:allow-set-theme` capability) are wired in `features/desktop/` with dynamic imports only (nothing Tauri enters the web bundle; verified by chunk split). Second launches focus the first window (single-instance plugin — concurrent writers must never touch the Vault, keyring entry, or IndexedDB).
 
 # OSS License Page (per-build generation)
 

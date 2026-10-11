@@ -1,0 +1,91 @@
+name: tauri-release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - uses: oven-sh/setup-bun@v2
+
+      # The desktop build embeds the Google Drive OAuth values at build time.
+      # `.env.tauri` is gitignored (Vite loads it automatically for
+      # `--mode tauri`), so the CI values come from repository Actions secrets
+      # and are written to the runner workspace only — never to git.
+      - name: Write .env.tauri from repository secrets
+        shell: bash
+        env:
+          VITE_GOOGLE_CLIENT_ID_TAURI: ${{ secrets.VITE_GOOGLE_CLIENT_ID_TAURI }}
+          VITE_GOOGLE_CLIENT_SECRET_TAURI: ${{ secrets.VITE_GOOGLE_CLIENT_SECRET_TAURI }}
+        run: |
+          set -euo pipefail
+          if [ -z "$VITE_GOOGLE_CLIENT_ID_TAURI" ] || [ -z "$VITE_GOOGLE_CLIENT_SECRET_TAURI" ]; then
+            echo "::error::Add VITE_GOOGLE_CLIENT_ID_TAURI and VITE_GOOGLE_CLIENT_SECRET_TAURI as repository Actions secrets (README > Google Drive setup > Desktop app variant)"
+            exit 1
+          fi
+          printf 'VITE_GOOGLE_CLIENT_ID_TAURI=%s\nVITE_GOOGLE_CLIENT_SECRET_TAURI=%s\n' \
+            "$VITE_GOOGLE_CLIENT_ID_TAURI" "$VITE_GOOGLE_CLIENT_SECRET_TAURI" > .env.tauri
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # tauriScript resolves to `bun run tauri build`, which runs
+      # sync:tauri-version first — the same command as a local release build.
+      # releaseId uploads the NSIS installer to the release release-please
+      # just published, so no manual asset upload is needed.
+      - name: Build and upload the installer
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          releaseId: ${{ github.event.release.id }}
+          tauriScript: bun run tauri
+          uploadUpdaterJson: false
+
+      # cargo owns the narrative-sprout version line in Cargo.lock: it rewrites
+      # the file on every run and drops comments, so release-please cannot
+      # bump it and a local build after the release-PR merge would otherwise
+      # leave the tree dirty. This build already regenerated the lock, so it
+      # is committed back to main. Idempotent and skip-safe: nothing is pushed
+      # when main is already ahead of the release commit (an earlier run's
+      # back-commit, or dependencies merged in the meantime that must not be
+      # rolled back).
+      - name: Commit the refreshed Cargo.lock back to main
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          MAIN_SHA=$(git rev-parse origin/main)
+          if [ "$MAIN_SHA" != "$(git rev-parse HEAD)" ] && git merge-base --is-ancestor HEAD "$MAIN_SHA"; then
+            echo "::notice::main is ahead of the release commit; skipping the Cargo.lock refresh"
+            exit 0
+          fi
+          if git diff --quiet origin/main -- src-tauri/Cargo.lock; then
+            echo "::notice::main already carries this Cargo.lock; nothing to refresh"
+            exit 0
+          fi
+          git add src-tauri/Cargo.lock
+          git commit -m "chore: refresh Cargo.lock for $RELEASE_TAG"
+          if ! git push origin HEAD:main; then
+            echo "::error::Cargo.lock refresh push was rejected — re-run this workflow"
+            exit 1
+          fi
