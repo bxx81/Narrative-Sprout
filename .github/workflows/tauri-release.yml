@@ -3,6 +3,13 @@ name: tauri-release
 on:
   release:
     types: [published]
+  # Retry/recovery path: run the same build against any existing release tag
+  # (e.g. when a run failed or a release shipped without its installer).
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Tag of the existing release to attach the installer to (e.g. narrative-sprout-v2.1.0)
+        required: true
 
 permissions:
   contents: write
@@ -10,12 +17,40 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag || github.event.release.tag_name }}
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ env.RELEASE_TAG }}
 
       - uses: oven-sh/setup-bun@v2
+
+      # Resolves the upload target once for both triggers (the release event
+      # carries the release id; a dispatch only knows the tag). Existing
+      # installer assets are removed first so a re-run replaces instead of
+      # failing on a duplicate asset name.
+      - name: Resolve the release to upload to
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          release_id=$(gh api "repos/${{ github.repository }}/releases/tags/$RELEASE_TAG" --jq .id)
+          if [ -z "$release_id" ]; then
+            echo "::error::No GitHub release found for tag $RELEASE_TAG"
+            exit 1
+          fi
+          gh api "repos/${{ github.repository }}/releases/$release_id" --jq '.assets[] | "\(.id) \(.name)"' |
+            while read -r asset_id asset_name; do
+              case "$asset_name" in
+                *-setup.exe | *.msi)
+                  echo "Removing existing asset $asset_name"
+                  gh api -X DELETE "repos/${{ github.repository }}/releases/assets/$asset_id" > /dev/null
+                  ;;
+              esac
+            done
+          echo "RELEASE_ID=$release_id" >> "$GITHUB_ENV"
 
       # The desktop build embeds the Google Drive OAuth values at build time.
       # `.env.tauri` is gitignored (Vite loads it automatically for
@@ -46,14 +81,14 @@ jobs:
 
       # tauriScript resolves to `bun run tauri build`, which runs
       # sync:tauri-version first — the same command as a local release build.
-      # releaseId uploads the NSIS installer to the release release-please
-      # just published, so no manual asset upload is needed.
+      # RELEASE_ID (resolved above) points the upload at the release tied to
+      # RELEASE_TAG, so no manual asset upload is needed.
       - name: Build and upload the installer
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          releaseId: ${{ github.event.release.id }}
+          releaseId: ${{ env.RELEASE_ID }}
           tauriScript: bun run tauri
           uploadUpdaterJson: false
 
@@ -67,8 +102,6 @@ jobs:
       # rolled back).
       - name: Commit the refreshed Cargo.lock back to main
         shell: bash
-        env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
