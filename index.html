@@ -1,10 +1,44 @@
 <!doctype html>
-<html lang="en">
+<html lang="ja">
   <head>
     <meta charset="UTF-8" />
     <meta name="google" content="notranslate" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Narrative Sprout</title>
+
+    <title>Narrative Sprout — AIが紡ぐインタラクティブ・ビジュアルノベル</title>
+    <meta
+      name="description"
+      content="テーマを入力するだけで、AIが分岐する物語を書き、挿絵を描き、記憶しながら成長させていく、ブラウザだけで動くAIインタラクティブ・ビジュアルノベル。サーバーはなく、データは端末の外に出ません。"
+    />
+    <link rel="canonical" href="https://narrative-sprout.pages.dev/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Narrative Sprout" />
+    <meta
+      property="og:title"
+      content="Narrative Sprout — AIが紡ぐインタラクティブ・ビジュアルノベル"
+    />
+    <meta
+      property="og:description"
+      content="テーマを入力するだけで、AIが分岐する物語を書き、挿絵を描き、記憶しながら成長させていく。ブラウザだけで動くAIビジュアルノベル。"
+    />
+    <meta property="og:url" content="https://narrative-sprout.pages.dev/" />
+    <meta property="og:image" content="https://narrative-sprout.pages.dev/images/og-cover.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="ja_JP" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Narrative Sprout — AIが紡ぐインタラクティブ・ビジュアルノベル"
+    />
+    <meta
+      name="twitter:description"
+      content="テーマを入力するだけで、AIが分岐する物語を書き、挿絵を描き、記憶しながら成長させていく。ブラウザだけで動くAIビジュアルノベル。"
+    />
+    <meta name="twitter:image" content="https://narrative-sprout.pages.dev/images/og-cover.png" />
+
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png" />
     <link rel="alternate icon" href="/icons/favicon.ico" />
@@ -13,9 +47,38 @@
     <meta name="theme-color" content="#030712" media="(prefers-color-scheme: dark)" />
     <link href="/s/icons.css" rel="stylesheet" />
     <link href="/s/en.css" rel="stylesheet" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Narrative Sprout",
+        "url": "https://narrative-sprout.pages.dev/",
+        "description": "テーマを入力するだけで、AIが分岐する物語を書き、挿絵を描き、記憶しながら成長させていく、ブラウザだけで動くAIインタラクティブ・ビジュアルノベル。",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Web browser, Windows",
+        "inLanguage": ["ja", "en", "ko", "zh", "zh-TW"],
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+        "license": "https://opensource.org/licenses/MIT",
+        "screenshot": "https://narrative-sprout.pages.dev/images/og-cover.png"
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <main>
+        <h1>Narrative Sprout</h1>
+        <p>
+          テーマを入力するだけで、AIが分岐する物語を書き、挿絵を描き、記憶しながら成長させていく、ブラウザだけで動くAIインタラクティブ・ビジュアルノベルです。
+        </p>
+        <p>
+          このアプリの利用には JavaScript が必要です。詳しくは<a href="/about.html"
+            >Narrative Sprout について</a
+          >をご覧ください。
+        </p>
+      </main>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

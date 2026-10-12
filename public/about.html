@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Narrative Sprout について — AIが紡ぐインタラクティブ・ビジュアルノベル</title>
+    <meta
+      name="description"
+      content="Narrative Sprout は、テーマを入力するだけでAIが分岐する物語を書き、挿絵を描き、記憶しながら成長させていく、ブラウザだけで動くインタラクティブ・ビジュアルノベルです。データは端末内に保存され、サーバーには送信されません。"
+    />
+    <link rel="canonical" href="https://narrative-sprout.pages.dev/about.html" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Narrative Sprout" />
+    <meta property="og:title" content="Narrative Sprout について" />
+    <meta
+      property="og:description"
+      content="AIが分岐する物語を書き、挿絵を描き、記憶しながら成長させていく、ブラウザだけで動くインタラクティブ・ビジュアルノベル。"
+    />
+    <meta property="og:url" content="https://narrative-sprout.pages.dev/about.html" />
+    <meta property="og:image" content="https://narrative-sprout.pages.dev/images/og-cover.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="ja_JP" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Narrative Sprout について" />
+    <meta
+      name="twitter:description"
+      content="AIが分岐する物語を書き、挿絵を描き、記憶しながら成長させていく、ブラウザだけで動くインタラクティブ・ビジュアルノベル。"
+    />
+    <meta name="twitter:image" content="https://narrative-sprout.pages.dev/images/og-cover.png" />
+
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png" />
+    <link rel="alternate icon" href="/icons/favicon.ico" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180x180.png" sizes="180x180" />
+
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        font-family:
+          "BIZ UDPGothic",
+          "Noto Sans JP",
+          system-ui,
+          -apple-system,
+          "Hiragino Sans",
+          "Yu Gothic",
+          "Meiryo",
+          sans-serif;
+        font-optical-sizing: auto;
+        font-style: normal;
+        line-height: 1.8;
+        max-width: 50em;
+        margin: 0 auto;
+        padding: 2em 1.25em 4em;
+      }
+      h1 {
+        font-size: 1.75em;
+        line-height: 1.4;
+      }
+      h2 {
+        margin-top: 2em;
+        padding-bottom: 0.25em;
+        border-bottom: 1px solid currentColor;
+        font-size: 1.25em;
+      }
+      ul,
+      ol {
+        padding-left: 1.4em;
+      }
+      li + li {
+        margin-top: 0.4em;
+      }
+      a {
+        color: #0b6bcb;
+      }
+      .lead {
+        font-size: 1.05em;
+      }
+      .actions {
+        margin: 2em 0;
+        padding: 1em 1.25em;
+        border: 1px solid currentColor;
+        border-radius: 0.5em;
+      }
+      .actions a {
+        font-weight: bold;
+      }
+      footer {
+        margin-top: 4em;
+        font-size: 0.85em;
+        opacity: 0.75;
+      }
+    </style>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Narrative Sprout について",
+        "url": "https://narrative-sprout.pages.dev/about.html",
+        "inLanguage": "ja",
+        "isPartOf": {
+          "@type": "WebApplication",
+          "name": "Narrative Sprout",
+          "url": "https://narrative-sprout.pages.dev/"
+        }
+      }
+    </script>
+  </head>
+
+  <body>
+    <h1>Narrative Sprout</h1>
+
+    <p class="lead">
+      Narrative Sprout は、<strong>テーマを入力するだけでAIが物語を紡ぐ、インタラクティブ・ビジュアルノベル</strong>です。AIがその場でシーンを書き、挿絵を描き、これまでの物語を記憶しながら、選んだ道によって分岐するストーリーを育てていきます。すべてはブラウザの中で完結し、専用のサーバーは存在しません。
+    </p>
+
+    <div class="actions">
+      <p>
+        アプリはこちらから：<a href="https://narrative-sprout.pages.dev/"
+          >https://narrative-sprout.pages.dev/</a
+        >
+      </p>
+      <p>
+        テキストと画像の生成には、ご自身で用意したAIサービスのAPIキーを使用します。APIキーは端末内にのみ保存され、当方のサーバーに送信されることはありません。
+      </p>
+    </div>
+
+    <h2>主な特徴</h2>
+    <ul>
+      <li>
+        <strong>AIによる物語生成</strong>：AIが文学的な散文で各シーンを書き、1ターンにつき3つの選択肢を提示します。
+      </li>
+      <li>
+        <strong>AIによる挿絵生成</strong>：シーンごとにイラストを生成します。クラウド（Hugging Face、NVIDIA NIM）とローカル（AUTOMATIC1111、ComfyUI）の両方に対応します。
+      </li>
+      <li>
+        <strong>分岐するストーリーツリー</strong>：すべての選択が新しいノードを生みます。巻き戻し、分岐、やり直し、推敲（リファイン）を行い、ひとつの物語の中で別の道を探索できます。
+      </li>
+      <li>
+        <strong>添付システム</strong>：テキスト／Markdown のシナリオファイル（YAMLフロントマター対応）、<code>.b64</code>、画像を素材として添付でき、AIが世界設定の主要な参照元として利用します。
+      </li>
+      <li>
+        <strong>長期記憶</strong>：AIは永続的なノート（キー・バリュー）と、シーン要約の物語ログをターンをまたいで保持し、物語の一貫性を保ちます。
+      </li>
+      <li>
+        <strong>IndexedDBによる保存</strong>：セーブデータ、設定、画像、認証情報はすべて端末内の IndexedDB に保存されます。ユーザーがエクスポートまたは暗号化バックアップを有効にしない限り、データが端末の外に出ることはありません。
+      </li>
+      <li>
+        <strong>暗号化バックアップ</strong>：ローカルファイル（<code>.nsbak</code>）へのダウンロードと Google Drive へのバックアップは、常にユーザーのパスフレーズによる AES-GCM 暗号化が施されます。暗号化されないバックアップ経路は存在しません。
+      </li>
+      <li>
+        <strong>多言語対応</strong>：5つの言語を内蔵し、AIによる動的な翻訳にも対応します。
+      </li>
+      <li>
+        <strong>ストリーミング／オートプレイ</strong>：生成中のテキストをリアルタイム表示できます。プレイヤーAIが自動でターンを進めるオートプレイも可能です。
+      </li>
+      <li>
+        <strong>PWA</strong>：インストール可能で、オフラインでも UI を操作できます。
+      </li>
+    </ul>
+
+    <h2>遊び方</h2>
+    <ol>
+      <li>設定画面で、利用するAIサービス（既定は OpenRouter）のAPIキーを登録します。</li>
+      <li>タイトル画面から新しい物語を開始し、テーマを入力します。</li>
+      <li>AIが生成したシーンを読み、提示された選択肢を選んで物語を進めます。</li>
+      <li>気に入った物語は、セーブデータとして保存し、暗号化バックアップで保管できます。</li>
+    </ol>
+    <p>
+      各機能の詳しい使い方は、<a
+        href="https://narrative-sprout-docs.pages.dev/"
+        rel="noopener"
+        >ユーザーガイド（Narrative Sprout Docs）</a
+      >をご覧ください。
+    </p>
+
+    <h2>データとプライバシー</h2>
+    <p>
+      Narrative Sprout にはゲーム用のサーバーがなく、アプリはすべてユーザーのブラウザ上で動作します。入力した物語、設定、画像、APIキーは端末内にのみ保存されます。唯一、ユーザーの操作に基づいて、テキスト生成・画像生成・Google Drive
+      バックアップのために外部サービスへ直接リクエストが送信されます。詳細は
+      <a href="/legal/privacy_policy.html">プライバシーポリシー</a> をご覧ください。
+    </p>
+
+    <h2>動作環境</h2>
+    <ul>
+      <li>モダンなWebブラウザ（Chromium 系、Firefox、Safari など）。PWA としてインストール可能です。</li>
+      <li>同じコードベースから Windows 向けデスクトップアプリ（Tauri）も提供されています。</li>
+    </ul>
+
+    <h2>リンク</h2>
+    <ul>
+      <li><a href="https://narrative-sprout.pages.dev/">アプリを開く</a></li>
+      <li>
+        <a href="https://narrative-sprout-docs.pages.dev/" rel="noopener"
+          >ユーザーガイド（Narrative Sprout Docs）</a
+        >
+      </li>
+      <li><a href="/legal/privacy_policy.html">プライバシーポリシー</a></li>
+      <li><a href="/legal/terms_of_service.html">利用規約</a></li>
+      <li><a href="/legal/license.html">ライセンス</a></li>
+      <li>
+        <a href="https://github.com/bxx81/Narrative-Sprout" rel="noopener">ソースコード（GitHub）</a>
+      </li>
+    </ul>
+
+    <footer>
+      <p>Narrative Sprout — MIT License. 開発: ham.</p>
+    </footer>
+  </body>
+</html>

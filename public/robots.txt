@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /savedata/
+
+Sitemap: https://narrative-sprout.pages.dev/sitemap.xml
