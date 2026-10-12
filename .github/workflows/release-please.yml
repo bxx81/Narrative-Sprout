@@ -23,7 +23,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "$RELEASE_PLEASE_TOKEN" ]; then
-            echo "::error::Add a repository secret RELEASE_PLEASE_TOKEN (fine-grained PAT, this repository only, Contents read/write) so release-please's releases trigger the tauri-release workflow"
+            echo "::error::Add a repository secret RELEASE_PLEASE_TOKEN (fine-grained PAT, this repository only; permissions: Contents read/write, Pull requests read/write, Issues read/write) so release-please's releases trigger the tauri-release workflow"
             exit 1
           fi
 
@@ -34,8 +34,11 @@ jobs:
       # The PAT is REQUIRED: events created with the default GITHUB_TOKEN never
       # start new workflow runs, so a release-please-created tag/release would
       # not reach `.github/workflows/tauri-release.yml` (which builds and
-      # attaches the Windows installer). Keep the token scoped to this
-      # repository with Contents read/write; rotate it before expiry.
+      # attaches the Windows installer). The fine-grained token needs
+      # Contents read/write (push the release branch, create the tag + release),
+      # Pull requests read/write (create the release PR) and Issues read/write
+      # (the autorelease pending/tagged labels go through the Issues API even
+      # on PRs). Scope it to this repository only and rotate it before expiry.
       - uses: googleapis/release-please-action@v4
         with:
           config-file: release-please-config.json
