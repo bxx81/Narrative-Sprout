@@ -13,10 +13,31 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
+      # Fails loudly (instead of silently publishing releases whose installer
+      # build never triggers) until the maintainer has added the PAT as the
+      # repository secret RELEASE_PLEASE_TOKEN.
+      - name: Require the release-please token
+        shell: bash
+        env:
+          RELEASE_PLEASE_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$RELEASE_PLEASE_TOKEN" ]; then
+            echo "::error::Add a repository secret RELEASE_PLEASE_TOKEN (fine-grained PAT, this repository only, Contents read/write) so release-please's releases trigger the tauri-release workflow"
+            exit 1
+          fi
+
       # Reads release-please-config.json + .release-please-manifest.json.
       # `package.json` is the version source of truth; the release PR also bumps
       # `src-tauri/Cargo.toml` via its `# x-release-please-version` annotation.
+      #
+      # The PAT is REQUIRED: events created with the default GITHUB_TOKEN never
+      # start new workflow runs, so a release-please-created tag/release would
+      # not reach `.github/workflows/tauri-release.yml` (which builds and
+      # attaches the Windows installer). Keep the token scoped to this
+      # repository with Contents read/write; rotate it before expiry.
       - uses: googleapis/release-please-action@v4
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
