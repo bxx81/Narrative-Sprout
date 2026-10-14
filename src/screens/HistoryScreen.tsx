@@ -1,7 +1,7 @@
 import React, { memo, useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
-import { useAppNavigate } from "../hooks/useAppNavigate";
+import { useNavigate } from "react-router";
 import { useGameStore } from "../store/gameStore";
 import type { StoryNodeRecord } from "../types";
 import type { AssetRecord } from "../types/asset";
@@ -28,7 +28,7 @@ const EndNodeCard: React.FC<{
   node: StoryNodeRecord;
   getAsset: (nodeId: string) => Promise<AssetRecord | undefined>;
 }> = memo(({ node, getAsset }) => {
-  const navigate = useAppNavigate();
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const confirm = useConfirm();
   const resumeStoryAtNode = useGameStore((s) => s.resumeStoryAtNode);

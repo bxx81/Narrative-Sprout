@@ -1,5 +1,5 @@
 import React, { useEffect, useSyncExternalStore } from "react";
-import { useAppNavigate } from "../hooks/useAppNavigate";
+import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useGameStore } from "../store/gameStore";
 import { streamStore } from "../store/streamStore";
@@ -13,7 +13,7 @@ import { minWordsTarget } from "../features/narrative/api";
 // テーマ送信後、APIの応答待ちをしている間表示される。応答後GameScreenに遷移する。
 
 const StartingScreen: React.FC = () => {
-  const navigate = useAppNavigate();
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const generation = useGameStore((s) => s.generation);
   const generationStage = useGameStore((s) => s.generationStage);

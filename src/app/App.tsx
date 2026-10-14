@@ -1,5 +1,13 @@
-import React, { useEffect, useRef, ViewTransition } from "react";
-import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "react-router";
+import React, { useEffect, useLayoutEffect, useRef, ViewTransition } from "react";
+import {
+  BrowserRouter,
+  Navigate,
+  Outlet,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from "react-router";
 import { Toaster, useToasterStore } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import i18n from "../features/i18n/config";
@@ -9,12 +17,14 @@ import { applyColorScheme, resolveIsDark } from "../features/theme/api";
 import { setDesktopWindowTheme } from "../features/desktop/api";
 import { isDataDeletionComplete } from "../features/wipe/api";
 import { playSound } from "../features/sound/api";
-import { isViewTransitionAnimationSupported } from "../features/viewTransition/api";
+import {
+  isViewTransitionActive,
+  isViewTransitionAnimationSupported,
+} from "../features/viewTransition/api";
 import { useGameStore } from "../store/gameStore";
 import ErrorDialog from "../components/ErrorDialog";
 import { ROUTES, isNeedPadding, isVisibleSettingsButton } from "./routes";
 import { ConfirmationProvider } from "./ConfirmationProvider";
-import { useAppNavigate } from "../hooks/useAppNavigate";
 import Button from "../components/ui/Button";
 import { Icon } from "../components/ui/Icon";
 import TitleScreen from "../screens/TitleScreen";
@@ -114,7 +124,8 @@ const AppLayout: React.FC = () => {
   const settings = useGameStore((s) => s.settings);
   const settingsLoaded = useGameStore((s) => s.settings !== null);
   const location = useLocation();
-  const navigate = useAppNavigate();
+  const navigate = useNavigate();
+  const routeWrapperRef = useRef<HTMLDivElement>(null);
 
   // Apply the UI language to i18next and the document (html lang, text
   // direction, per-language fonts). AI translation bundles are merged into
@@ -135,10 +146,45 @@ const AppLayout: React.FC = () => {
     setWordCountLanguage(getLanguageCode(settings.language, settings.aiLanguageMappings));
   }, [settings, uiLanguage, aiLanguageMappings, aiTranslationTexts]);
 
+  // Keep the current scroll offset representable while the incoming screen
+  // replaces a taller outgoing one: the browser would otherwise clamp the
+  // scroll the moment the shorter layout commits, and the outgoing view
+  // transition snapshot is anchored to the document, so it would slide with
+  // the clamp. During normal browsing the value stays at or below the natural
+  // height, so this never changes the layout until a transition needs it.
+  useEffect(() => {
+    if (!viewTransitionAnimationsSupported) return;
+    const keepScrollRepresentable = () => {
+      const wrapper = routeWrapperRef.current;
+      if (!wrapper) return;
+      wrapper.style.minHeight = `${window.scrollY + window.innerHeight}px`;
+    };
+    keepScrollRepresentable();
+    window.addEventListener("scroll", keepScrollRepresentable, { passive: true });
+    return () => window.removeEventListener("scroll", keepScrollRepresentable);
+  }, []);
+
+  // While a view transition runs, the live scroll must not move: the outgoing
+  // snapshot is anchored to the document and would slide with it. The incoming
+  // screen is pushed down to the current scroll offset (plus its own top
+  // padding, so the offset is removed without a shift) so its snapshot
+  // captures its own top while the outgoing glimpse keeps its scrolled view.
+  // The effect below removes the offset and the scroll in one frame once the
+  // animation is done, which leaves the rendered position unchanged.
+  useLayoutEffect(() => {
+    if (!isViewTransitionActive()) return;
+    const wrapper = routeWrapperRef.current;
+    if (!wrapper) return;
+    const currentPaddingTop = Number.parseFloat(getComputedStyle(wrapper).paddingTop) || 0;
+    wrapper.style.paddingTop = `${window.scrollY + currentPaddingTop}px`;
+  }, [location.pathname]);
+
   // BrowserRouter does not reset the window scroll on navigation, so leaving a
   // scrolled screen (e.g. a long game) would carry that offset into the next
   // one (e.g. Settings). Reset it per route change (legacy ScrollRestoration).
   useEffect(() => {
+    routeWrapperRef.current?.style.removeProperty("padding-top");
+    routeWrapperRef.current?.style.removeProperty("min-height");
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [location.pathname]);
 
@@ -187,7 +233,9 @@ const AppLayout: React.FC = () => {
         // so fixed decorations inside a screen (the title background) are not
         // clipped to the screen's own, shorter box in the snapshot.
         <ViewTransition update="route-cross-fade" default="none">
-          <div className={`min-h-screen ${padding ? "p-4" : ""}`}>{routesContent}</div>
+          <div ref={routeWrapperRef} className={`min-h-screen ${padding ? "p-4" : ""}`}>
+            {routesContent}
+          </div>
         </ViewTransition>
       ) : (
         <div

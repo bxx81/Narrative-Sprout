@@ -30,3 +30,22 @@ export function isViewTransitionAnimationSupported(): boolean {
   if (typeof document.startViewTransition !== "function") return false;
   return hasChromiumEngineBrand();
 }
+
+let activeViewTransitionSelectorSupported: boolean | null = null;
+
+/**
+ * True while a view transition is capturing or animating. A layout effect
+ * runs inside React's update callback — after the outgoing snapshot was
+ * captured (keeping its scroll position) and before the incoming state is
+ * captured — which is when the incoming screen can still be laid out at the
+ * outgoing scroll offset.
+ */
+export function isViewTransitionActive(): boolean {
+  if (typeof document === "undefined") return false;
+  if (activeViewTransitionSelectorSupported === null) {
+    activeViewTransitionSelectorSupported =
+      typeof CSS !== "undefined" && CSS.supports("selector(:active-view-transition)");
+  }
+  if (!activeViewTransitionSelectorSupported) return false;
+  return document.documentElement.matches(":active-view-transition");
+}

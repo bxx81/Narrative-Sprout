@@ -1,5 +1,5 @@
 import React, { memo, useMemo, useRef, useState } from "react";
-import { useAppNavigate } from "../hooks/useAppNavigate";
+import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { useGameStore } from "../store/gameStore";
@@ -32,7 +32,7 @@ const dateFormatter = new Intl.DateTimeFormat(undefined, {
  */
 const GameLogCard: React.FC<{ game: GameRecord; latestNode: StoryNodeRecord | null }> = memo(
   ({ game, latestNode }) => {
-    const navigate = useAppNavigate();
+    const navigate = useNavigate();
     const { t } = useTranslation();
     const confirm = useConfirm();
     const openGame = useGameStore((s) => s.openGame);

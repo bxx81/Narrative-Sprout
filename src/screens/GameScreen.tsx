@@ -9,7 +9,7 @@ import React, {
   startTransition,
   ViewTransition,
 } from "react";
-import { useAppNavigate } from "../hooks/useAppNavigate";
+import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { useBreakpoint } from "../hooks/useBreakpoint";
@@ -58,7 +58,7 @@ const ordinal = (n: number): string => {
  * suppressed; while autoplay is active the player AI drives the choices.
  */
 const GameScreen: React.FC = () => {
-  const navigate = useAppNavigate();
+  const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const activeGame = useGameStore((s) => s.activeGame);
   const nodes = useGameStore((s) => s.nodes);

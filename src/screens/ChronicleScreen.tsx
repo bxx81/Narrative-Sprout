@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useAppNavigate } from "../hooks/useAppNavigate";
+import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { useGameStore } from "../store/gameStore";
@@ -28,7 +28,7 @@ const ChronicleNode: React.FC<{
   sceneTextClass: string;
   choicesClass: string;
 }> = React.memo(({ node, choiceText, branchEndNodeId, sceneTextClass, choicesClass }) => {
-  const navigate = useAppNavigate();
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const resumeStoryAtNode = useGameStore((s) => s.resumeStoryAtNode);
   // No asset (generator disabled / generation failed / node has none) and a
