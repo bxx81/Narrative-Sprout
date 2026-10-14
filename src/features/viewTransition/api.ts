@@ -9,7 +9,8 @@ interface UserAgentDataLike {
 const CHROMIUM_BRANDS = new Set(["Chromium", "Google Chrome"]);
 
 function hasChromiumEngineBrand(): boolean {
-  const userAgentData = (navigator as Navigator & { userAgentData?: UserAgentDataLike }).userAgentData;
+  const userAgentData = (navigator as Navigator & { userAgentData?: UserAgentDataLike })
+    .userAgentData;
   const brands = userAgentData?.brands;
   if (!brands) return false;
   return brands.some((entry) => CHROMIUM_BRANDS.has(entry.brand));
