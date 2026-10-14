@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, ViewTransition } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -17,6 +17,7 @@ import { applyColorScheme, resolveIsDark } from "../features/theme/api";
 import { setDesktopWindowTheme } from "../features/desktop/api";
 import { isDataDeletionComplete } from "../features/wipe/api";
 import { playSound } from "../features/sound/api";
+import { isViewTransitionAnimationSupported } from "../features/viewTransition/api";
 import { useGameStore } from "../store/gameStore";
 import ErrorDialog from "../components/ErrorDialog";
 import { ROUTES, isNeedPadding, isVisibleSettingsButton } from "./routes";
@@ -32,6 +33,9 @@ import HistoryScreen from "../screens/HistoryScreen";
 import ChronicleScreen from "../screens/ChronicleScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import CompletedDataDeletionScreen from "../screens/CompletedDataDeletionScreen";
+
+/** Evaluated once: the engine brand does not change during a session. */
+const viewTransitionAnimationsSupported = isViewTransitionAnimationSupported();
 
 /** Redirects to the title screen when no game is loaded in memory. */
 function RequireActiveGame() {
@@ -167,25 +171,35 @@ const AppLayout: React.FC = () => {
     navigate(ROUTES.SETTINGS, { state: { from: location.pathname } });
   };
 
+  const routesContent = (
+    <Routes>
+      <Route path={ROUTES.HOME} element={<TitleScreen />} />
+      <Route path={ROUTES.SETUP} element={<ThemeSetupScreen />} />
+      <Route path={ROUTES.STARTING} element={<StartingScreen />} />
+      <Route path={ROUTES.LOAD} element={<LoadScreen />} />
+      <Route path={ROUTES.SETTINGS} element={<SettingsScreen />} />
+      <Route element={<RequireActiveGame />}>
+        <Route path={ROUTES.PLAY} element={<GameScreen />} />
+        <Route path={ROUTES.HISTORY} element={<HistoryScreen />} />
+        <Route path={ROUTES.CHRONICLE} element={<ChronicleScreen />} />
+      </Route>
+      <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
+    </Routes>
+  );
+
   return (
     <div
       className={`min-h-screen antialiased transition-colors duration-300 select-none ${padding ? "p-4" : ""}`}
     >
-      <div key={location.pathname} className="animate-fade-in motion-reduce:animate-none">
-        <Routes>
-          <Route path={ROUTES.HOME} element={<TitleScreen />} />
-          <Route path={ROUTES.SETUP} element={<ThemeSetupScreen />} />
-          <Route path={ROUTES.STARTING} element={<StartingScreen />} />
-          <Route path={ROUTES.LOAD} element={<LoadScreen />} />
-          <Route path={ROUTES.SETTINGS} element={<SettingsScreen />} />
-          <Route element={<RequireActiveGame />}>
-            <Route path={ROUTES.PLAY} element={<GameScreen />} />
-            <Route path={ROUTES.HISTORY} element={<HistoryScreen />} />
-            <Route path={ROUTES.CHRONICLE} element={<ChronicleScreen />} />
-          </Route>
-          <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
-        </Routes>
-      </div>
+      {viewTransitionAnimationsSupported ? (
+        <ViewTransition update="route-cross-fade" default="none">
+          {routesContent}
+        </ViewTransition>
+      ) : (
+        <div key={location.pathname} className="animate-fade-in motion-reduce:animate-none">
+          {routesContent}
+        </div>
+      )}
 
       <ErrorDialog />
 
