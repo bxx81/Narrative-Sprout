@@ -1,3 +1,11 @@
+/* A classic scrollbar appearing between the old and new captures changes
+   the layout width (e.g. title screen -> a taller screen), which makes the
+   snapshot rectangles differ and drifts the whole cross-fade sideways.
+   Reserving the scrollbar at all times keeps both captures identical. */
+html {
+  overflow-y: scroll;
+}
+
 /* `both` is required: without a fill mode the old snapshot reverts to
    opacity 1 when the animation ends and flashes over the new screen. */
 ::view-transition-old(.route-cross-fade) {
