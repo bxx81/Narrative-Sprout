@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useDebouncedExternalState } from "../hooks/useDebouncedExternalState";
-import { useNavigate, useLocation } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { useGameStore } from "../store/gameStore";

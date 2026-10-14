@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useLayoutEffect, useRef } from "react";
 import ImageDisplay from "./ImageDisplay";
 
 interface ZoomOverlayProps {
@@ -12,7 +12,7 @@ const ZoomOverlay: React.FC<ZoomOverlayProps> = ({ isClosing, onClose, imageBlob
   const dialogRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const active = document.activeElement;
     if (active instanceof HTMLElement) {
       previouslyFocused.current = active;
@@ -23,7 +23,10 @@ const ZoomOverlay: React.FC<ZoomOverlayProps> = ({ isClosing, onClose, imageBlob
     };
   }, []);
 
-  useEffect(() => {
+  // Layout effect: with the ViewTransition enter animation, useEffect runs
+  // only after the animation finishes, which would leave the overlay
+  // unresponsive to Escape for its duration.
+  useLayoutEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         onClose();

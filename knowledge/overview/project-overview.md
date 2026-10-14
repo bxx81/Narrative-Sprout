@@ -30,14 +30,14 @@ v2 keeps v1's features and look but redesigns internals: IndexedDB persistence i
 | Layer | Technology |
 |-------|-----------|
 | Runtime | [Bun](https://bun.sh/) 1.4.0 (pinned in `packageManager` / `.bun-version` / Pages `BUN_VERSION`) |
-| Framework | [React 19](https://react.dev/) |
+| Framework | [React 19.3](https://react.dev/) (ViewTransition adopted for route transitions, see [Route Transitions](/features/route-transitions.md)) |
 | Build | [Vite 7](https://vite.dev/) |
 | Styling | [Tailwind CSS v4](https://tailwindcss.com/) |
 | AI SDK | Custom fetch-based `OpenAiCompatibleClient` (OpenAI-compatible) |
 | Validation | [Zod](https://zod.dev/) v4 (full bundle, element-wise validation) |
 | Persistence | [Dexie.js](https://dexie.org/) (IndexedDB) |
 | State | [Zustand](https://zustand.docs.pmnd.rs/) v5 |
-| Routing | [React Router](https://reactrouter.com/) v8 (declarative `BrowserRouter`; route-level page fade via a `pathname`-keyed wrapper) |
+| Routing | [React Router](https://reactrouter.com/) v8 (declarative `BrowserRouter`; route cross-fade via `<ViewTransition>` on Chromium engines, `pathname`-keyed CSS fade fallback elsewhere — see [Route Transitions](/features/route-transitions.md)) |
 | i18n | [i18next](https://www.i18next.com/) (bundled locales, no http-backend) |
 | Web (PWA) | [Cloudflare Pages](https://pages.cloudflare.com/) — also installable as offline-capable PWA. |
 | Desktop (Tauri) | Tauri v2 (Windows NSIS installer; Stronghold Vault for credentials) — ships from the same `main` branch. |

@@ -11,7 +11,7 @@ source: package.json, bun.lock
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| react / react-dom | 19.x | UI framework. |
+| react / react-dom | 19.3+ | UI framework. 19.3 pins the stable `<ViewTransition>` used for route transitions (Chromium-gated, see [Route Transitions](/features/route-transitions.md)). |
 | react-router | 8.x | Route-based screens + `RequireActiveGame` guards. |
 | zustand | 5.x | App store (`devtools` + `subscribeWithSelector`; no `persist`). |
 | dexie | 4.x | IndexedDB wrapper (5-table schema, transactions). |

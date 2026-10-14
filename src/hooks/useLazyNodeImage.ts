@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useLayoutEffect, useRef } from "react";
 import { assetRepository } from "../db/assetRepository";
 import type { AssetRecord } from "../types/asset";
 
@@ -41,7 +41,10 @@ export const useLazyNodeImage = (
   const [isLoading, setIsLoading] = useState(false);
   const elementRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  // Layout effects: under a route view transition React defers useEffect
+  // until the animation finishes, which would hold every card image back by
+  // that much. Observing and loading in the commit starts them immediately.
+  useLayoutEffect(() => {
     const element = elementRef.current;
     if (!element || isVisible) return;
 
@@ -59,7 +62,7 @@ export const useLazyNodeImage = (
     return () => observer.disconnect();
   }, [isVisible, rootMargin]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isVisible || !nodeId) {
       return;
     }

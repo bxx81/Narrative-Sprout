@@ -1,0 +1,43 @@
+/* A classic scrollbar appearing between the old and new captures changes
+   the layout width (e.g. title screen -> a taller screen), which makes the
+   snapshot rectangles differ and drifts the whole cross-fade sideways.
+   Reserving the scrollbar's lane at all times keeps both captures identical
+   while still showing only the lane's background on pages without overflow
+   (and nothing at all with overlay scrollbars). */
+html {
+  scrollbar-gutter: stable;
+}
+
+/* `both` is required: without a fill mode the old snapshot reverts to
+   opacity 1 when the animation ends and flashes over the new screen. */
+::view-transition-old(.route-cross-fade) {
+  animation: fadeOut 0.3s ease-in-out both;
+}
+
+::view-transition-new(.route-cross-fade) {
+  animation: fadeIn 0.3s ease-in-out both;
+}
+
+::view-transition-new(.zoom-overlay-enter) {
+  animation: zoomOverlayEnter 0.3s ease-out both;
+}
+
+@keyframes zoomOverlayEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none;
+  }
+}

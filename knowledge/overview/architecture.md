@@ -91,3 +91,4 @@ The legacy v1 codebase was unshippable: its git history contained leaked API key
 - **No direct `set`**. Components and features never call Zustand `set` directly; all state changes go through action functions in the store.
 - **Element-wise validation**. Persisted records/arrays are never validated with whole-record `.catch()`/`.default()`; elements are `safeParse`d individually and failures are skipped with a warning.
 - **Encrypted-only backup**. Plaintext backup paths do not exist; Drive uploads carry only the `ns-backup` envelope.
+- **Decorative animations are progressive enhancement**. The route cross-fade and the zoom-overlay enter run through React's `<ViewTransition>` only on Chromium-family engines; everywhere else the CSS fallbacks keep identical DOM behavior. WebKit's View Transition implementation has a crash history that reaches this app's layouts and the Tauri targets (see [Route Transitions](/features/route-transitions.md)).

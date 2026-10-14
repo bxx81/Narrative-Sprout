@@ -6,6 +6,8 @@ import React, {
   useRef,
   useState,
   useSyncExternalStore,
+  startTransition,
+  ViewTransition,
 } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
@@ -31,6 +33,7 @@ import { countWords } from "../features/narrative/api";
 import { IMAGE_ALT_MAX_LENGTH, truncateText } from "../lib/truncateText";
 import { GAME_TEXT_SIZE_CLASSES, resolveGameTextSize } from "../lib/gameTextSize";
 import { documentationAnchor, documentationUrl } from "../lib/documentation";
+import { isViewTransitionAnimationSupported } from "../features/viewTransition/api";
 
 /**
  * Distance (px) the streaming tail anchor may sit off the viewport bottom
@@ -39,6 +42,8 @@ import { documentationAnchor, documentationUrl } from "../lib/documentation";
  * dividers, model credit) is deliberately ignored.
  */
 const STREAMING_TAIL_FOLLOW_THRESHOLD_PX = 120;
+
+const ZOOM_ENTER_ANIMATION_SUPPORTED = isViewTransitionAnimationSupported();
 
 const ordinal = (n: number): string => {
   const suffixes = ["th", "st", "nd", "rd"];
@@ -259,8 +264,10 @@ const GameScreen: React.FC = () => {
   };
 
   const openZoom = () => {
-    setIsClosing(false);
-    setIsZoomed(true);
+    startTransition(() => {
+      setIsClosing(false);
+      setIsZoomed(true);
+    });
   };
 
   const closeZoom = () => {
@@ -519,13 +526,24 @@ const GameScreen: React.FC = () => {
         isBusy={loading}
       />
 
-      {isZoomed && (
-        <ZoomOverlay
-          isClosing={isClosing}
-          onClose={closeZoom}
-          imageBlob={asset?.blob ?? null}
-          alt={truncateText(scene.imagePrompt, IMAGE_ALT_MAX_LENGTH)}
-        />
+      {isZoomed && ZOOM_ENTER_ANIMATION_SUPPORTED ? (
+        <ViewTransition enter="zoom-overlay-enter" default="none">
+          <ZoomOverlay
+            isClosing={isClosing}
+            onClose={closeZoom}
+            imageBlob={asset?.blob ?? null}
+            alt={truncateText(scene.imagePrompt, IMAGE_ALT_MAX_LENGTH)}
+          />
+        </ViewTransition>
+      ) : (
+        isZoomed && (
+          <ZoomOverlay
+            isClosing={isClosing}
+            onClose={closeZoom}
+            imageBlob={asset?.blob ?? null}
+            alt={truncateText(scene.imagePrompt, IMAGE_ALT_MAX_LENGTH)}
+          />
+        )
       )}
 
       {!isMd && (
