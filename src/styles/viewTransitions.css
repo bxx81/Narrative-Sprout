@@ -1,9 +1,11 @@
 /* A classic scrollbar appearing between the old and new captures changes
    the layout width (e.g. title screen -> a taller screen), which makes the
    snapshot rectangles differ and drifts the whole cross-fade sideways.
-   Reserving the scrollbar at all times keeps both captures identical. */
+   Reserving the scrollbar's lane at all times keeps both captures identical
+   while still showing only the lane's background on pages without overflow
+   (and nothing at all with overlay scrollbars). */
 html {
-  overflow-y: scroll;
+  scrollbar-gutter: stable;
 }
 
 /* `both` is required: without a fill mode the old snapshot reverts to
