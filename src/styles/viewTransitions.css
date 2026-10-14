@@ -1,13 +1,15 @@
+/* `both` is required: without a fill mode the old snapshot reverts to
+   opacity 1 when the animation ends and flashes over the new screen. */
 ::view-transition-old(.route-cross-fade) {
-  animation: fadeOut 0.3s ease-in-out;
+  animation: fadeOut 0.3s ease-in-out both;
 }
 
 ::view-transition-new(.route-cross-fade) {
-  animation: fadeIn 0.3s ease-in-out;
+  animation: fadeIn 0.3s ease-in-out both;
 }
 
 ::view-transition-new(.zoom-overlay-enter) {
-  animation: zoomOverlayEnter 0.3s ease-out;
+  animation: zoomOverlayEnter 0.3s ease-out both;
 }
 
 @keyframes zoomOverlayEnter {

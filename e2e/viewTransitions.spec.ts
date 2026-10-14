@@ -5,22 +5,38 @@ import { startStory } from "./helpers/story";
 
 /**
  * Guards the Chromium-gated ViewTransition wiring: React only activates a
- * boundary inside a transition, so these poll for live ::view-transition
- * pseudo-element animations. On engines without the gate (WebKit/Firefox)
- * the boundary never renders, so no such animation exists and only the
- * non-animated path is asserted there.
+ * boundary inside a transition, so these poll for the live
+ * ::view-transition pseudo-element animation of the boundary. The fill mode
+ * is asserted too — without `both` the old snapshot reverts to opacity 1
+ * when the animation ends and flashes the previous screen back in.
+ *
+ * On engines without the gate (WebKit/Firefox) the boundary never renders,
+ * so no such animation exists and only the non-animated path is asserted.
  */
-const hasActiveViewTransition = (page: import("@playwright/test").Page) =>
-  page.evaluate(() => {
-    const getAnimationsWithSubtree = (
-      document.getAnimations as (options?: { subtree?: boolean }) => Animation[]
-    ).bind(document);
-    return getAnimationsWithSubtree({ subtree: true }).filter((animation) => {
-      const pseudoElement = (animation.effect as { pseudoElement?: string } | null | undefined)
-        ?.pseudoElement;
-      return pseudoElement?.includes("::view-transition") ?? false;
-    });
-  });
+const hasViewTransitionAnimation = (
+  page: import("@playwright/test").Page,
+  animationName: string,
+  pseudoElementPart: string,
+) =>
+  page.evaluate(
+    ([name, pseudoPart]) => {
+      const getAnimationsWithSubtree = (
+        document.getAnimations as (options?: { subtree?: boolean }) => Animation[]
+      ).bind(document);
+      return getAnimationsWithSubtree({ subtree: true }).some((animation) => {
+        const effect = animation.effect as
+          ({ pseudoElement?: string } & { getTiming?: () => { fill?: string } }) | null | undefined;
+        const pseudoElement = effect?.pseudoElement;
+        return (
+          (animation as CSSAnimation).animationName === name &&
+          typeof pseudoElement === "string" &&
+          pseudoElement.includes(pseudoPart) &&
+          effect?.getTiming?.().fill === "both"
+        );
+      });
+    },
+    [animationName, pseudoElementPart] as const,
+  );
 
 test.describe("view transition animations", () => {
   test("route change cross-fades on Chromium engines", async ({ page, browserName }) => {
@@ -30,7 +46,11 @@ test.describe("view transition animations", () => {
       await expect(page).toHaveURL(/\/settings$/);
       return;
     }
-    await expect.poll(() => hasActiveViewTransition(page), { timeout: 3000 }).not.toHaveLength(0);
+    await expect
+      .poll(() => hasViewTransitionAnimation(page, "fadeOut", "view-transition-old"), {
+        timeout: 3000,
+      })
+      .toBe(true);
     await expect(page).toHaveURL(/\/settings$/);
   });
 
@@ -61,7 +81,11 @@ test.describe("view transition animations", () => {
       await expect(zoomOverlay).toHaveCount(0);
       return;
     }
-    await expect.poll(() => hasActiveViewTransition(page), { timeout: 3000 }).not.toHaveLength(0);
+    await expect
+      .poll(() => hasViewTransitionAnimation(page, "zoomOverlayEnter", "view-transition-new"), {
+        timeout: 3000,
+      })
+      .toBe(true);
 
     await page.keyboard.press("Escape");
     await expect(zoomOverlay).toHaveCount(0);
