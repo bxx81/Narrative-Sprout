@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/bxx81/Narrative-Sprout/compare/narrative-sprout-v2.1.1...narrative-sprout-v2.2.0) (2026-10-14)
+
+
+### Features
+
+* cross-fade route changes and zoom overlay enter with React ViewTransition ([#90](https://github.com/bxx81/Narrative-Sprout/issues/90)) ([186656a](https://github.com/bxx81/Narrative-Sprout/commit/186656a8f22c810c11be6f802b6086e917a28539))
+
 ## [2.1.1](https://github.com/bxx81/Narrative-Sprout/compare/narrative-sprout-v2.1.0...narrative-sprout-v2.1.1) (2026-10-12)
 
 
