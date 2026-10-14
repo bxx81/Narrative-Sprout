@@ -57,11 +57,11 @@ async function dismissCopyToast(copyToast: ReturnType<Page["getByText"]>): Promi
   await expect(copyToast).toBeHidden();
 }
 
-/** Holds a real touch on `target` for `holdMs`, optionally sliding before lift-off. */
+/** Holds a real touch on `target` until the copy lands, optionally sliding before lift-off. */
 async function holdTouch(
   page: Page,
   target: Locator,
-  holdMs: number,
+  copyToast: ReturnType<Page["getByText"]>,
   options?: { driftX: number },
 ): Promise<void> {
   const box = (await target.boundingBox())!;
@@ -75,7 +75,10 @@ async function holdTouch(
     });
 
   await send("touchStart", centerX, centerY);
-  await page.waitForTimeout(holdMs);
+  // Wait for the timer-driven copy instead of a fixed hold: under load the
+  // app's long-press timer can fire well past any fixed margin, and ending
+  // the gesture first cancels it (the refusal path).
+  await expect(copyToast).toBeVisible();
   if (options !== undefined) {
     await send("touchMove", options.driftX, centerY);
   }
@@ -86,7 +89,10 @@ test.describe("long-press copy", () => {
   test("mouse: a completed copy toasts and the next click submits", async ({ page }) => {
     const { chat, firstChoice, copyToast, input } = await reachFirstScene(page);
 
-    await firstChoice.click({ delay: 1300 });
+    await firstChoice.hover();
+    await page.mouse.down();
+    await expect(copyToast).toBeVisible();
+    await page.mouse.up();
 
     await expect(input).toHaveValue(FIRST_CHOICE);
     await dismissCopyToast(copyToast);
@@ -105,7 +111,7 @@ test.describe("long-press copy", () => {
 
     await page.mouse.move(centerX, centerY);
     await page.mouse.down();
-    await page.waitForTimeout(1300);
+    await expect(copyToast).toBeVisible();
     await page.mouse.move(box.x - 60, centerY, { steps: 5 });
     await page.mouse.up();
 
@@ -129,7 +135,7 @@ test.describe("long-press copy", () => {
     const box = (await echo.boundingBox())!;
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
-    await page.waitForTimeout(1300);
+    await expect(copyToast).toBeVisible();
     await page.mouse.up();
 
     await expect(input).toHaveValue(FIRST_CHOICE);
@@ -152,7 +158,7 @@ test.describe("long-press copy", () => {
       test.skip(browserName !== "chromium", CHROMIUM_ONLY);
       const { chat, firstChoice, copyToast, input } = await reachFirstScene(page);
 
-      await holdTouch(page, firstChoice, 1300);
+      await holdTouch(page, firstChoice, copyToast);
 
       await expect(input).toHaveValue(FIRST_CHOICE);
       await dismissCopyToast(copyToast);
@@ -171,7 +177,7 @@ test.describe("long-press copy", () => {
       const { chat, firstChoice, copyToast, input } = await reachFirstScene(page);
       const box = (await firstChoice.boundingBox())!;
 
-      await holdTouch(page, firstChoice, 1300, { driftX: box.x - 40 });
+      await holdTouch(page, firstChoice, copyToast, { driftX: box.x - 40 });
 
       await expect(input).toHaveValue(FIRST_CHOICE);
       await dismissCopyToast(copyToast);

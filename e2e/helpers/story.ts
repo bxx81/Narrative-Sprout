@@ -20,4 +20,34 @@ export async function startStory(page: Page, theme: string): Promise<void> {
   // First generation passes through the starting screen.
   await expect(page).toHaveURL(/\/setup\/starting$/);
   await expect(page).toHaveURL(/\/play$/);
+
+  await waitForRouteTransition(page);
+}
+
+/**
+ * Chromium blocks pointer input while a view transition animates — hits
+ * land on the overlay and retarget to `<html>` — and the route commit
+ * starts the cross-fade a moment after the URL changes. Wait for the
+ * transition to appear (bounded) and then to finish, so callers interact
+ * with a settled screen. No-op on engines without view transitions.
+ */
+export async function waitForRouteTransition(page: Page): Promise<void> {
+  const hasViewTransitions = await page.evaluate(
+    () =>
+      "startViewTransition" in document &&
+      ((
+        navigator as unknown as { userAgentData?: { brands?: { brand: string }[] } }
+      ).userAgentData?.brands?.some(
+        (brand) => brand.brand === "Chromium" || brand.brand === "Google Chrome",
+      ) ??
+        false),
+  );
+  if (!hasViewTransitions) return;
+
+  await page
+    .waitForFunction(() => document.documentElement.matches(":active-view-transition"), undefined, {
+      timeout: 2000,
+    })
+    .catch(() => undefined);
+  await page.waitForFunction(() => !document.documentElement.matches(":active-view-transition"));
 }
