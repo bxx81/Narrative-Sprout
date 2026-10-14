@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router";
+import { useAppNavigate } from "../hooks/useAppNavigate";
 import { useTranslation } from "react-i18next";
 import Button from "../components/ui/Button";
 import { ROUTES } from "../app/routes";
@@ -14,7 +14,7 @@ import { clearDataDeletionCompleteFlag, registerServiceWorker } from "../feature
  * Returning re-registers the wiped worker and bootstraps a fresh app.
  */
 const CompletedDataDeletionScreen: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const bootstrap = useGameStore((s) => s.bootstrap);
   const { t } = useTranslation();
 

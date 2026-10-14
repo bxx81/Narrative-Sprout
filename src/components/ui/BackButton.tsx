@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router";
+import { useAppNavigate } from "../../hooks/useAppNavigate";
 import { useTranslation } from "react-i18next";
 import Button from "./Button";
 import { Icon } from "./Icon";
@@ -11,7 +11,7 @@ interface BackButtonProps {
 }
 
 const BackButton: React.FC<BackButtonProps> = ({ onClick, ariaLabel, disabled = false }) => {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const { t } = useTranslation();
 
   const handleBackClick = () => {

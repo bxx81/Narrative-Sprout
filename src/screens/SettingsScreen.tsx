@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useDebouncedExternalState } from "../hooks/useDebouncedExternalState";
-import { useNavigate, useLocation } from "react-router";
+import { useLocation } from "react-router";
+import { useAppNavigate } from "../hooks/useAppNavigate";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { useGameStore } from "../store/gameStore";
@@ -211,7 +212,7 @@ TextModelInput.displayName = "TextModelInput";
  * sections arrived in Phase 6.
  */
 const SettingsScreen: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const location = useLocation();
   const { t, i18n } = useTranslation();
   const confirm = useConfirm();

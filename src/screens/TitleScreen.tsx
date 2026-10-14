@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useAppNavigate } from "../hooks/useAppNavigate";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { useGameStore } from "../store/gameStore";
@@ -80,7 +80,7 @@ const LegalLink: React.FC<{
  * The main title screen of the application.
  */
 const TitleScreen: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const { t } = useTranslation();
   const games = useGameStore((s) => s.games);
   const apiKey = useGameStore((s) => s.credentials.openrouterApiKey);

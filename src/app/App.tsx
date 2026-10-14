@@ -1,13 +1,5 @@
 import React, { useEffect, useRef, ViewTransition } from "react";
-import {
-  BrowserRouter,
-  Navigate,
-  Outlet,
-  Route,
-  Routes,
-  useLocation,
-  useNavigate,
-} from "react-router";
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "react-router";
 import { Toaster, useToasterStore } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import i18n from "../features/i18n/config";
@@ -22,6 +14,7 @@ import { useGameStore } from "../store/gameStore";
 import ErrorDialog from "../components/ErrorDialog";
 import { ROUTES, isNeedPadding, isVisibleSettingsButton } from "./routes";
 import { ConfirmationProvider } from "./ConfirmationProvider";
+import { useAppNavigate } from "../hooks/useAppNavigate";
 import Button from "../components/ui/Button";
 import { Icon } from "../components/ui/Icon";
 import TitleScreen from "../screens/TitleScreen";
@@ -121,7 +114,7 @@ const AppLayout: React.FC = () => {
   const settings = useGameStore((s) => s.settings);
   const settingsLoaded = useGameStore((s) => s.settings !== null);
   const location = useLocation();
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
 
   // Apply the UI language to i18next and the document (html lang, text
   // direction, per-language fonts). AI translation bundles are merged into
@@ -188,15 +181,19 @@ const AppLayout: React.FC = () => {
   );
 
   return (
-    <div
-      className={`min-h-screen antialiased transition-colors duration-300 select-none ${padding ? "p-4" : ""}`}
-    >
+    <div className="antialiased transition-colors duration-300 select-none">
       {viewTransitionAnimationsSupported ? (
+        // The wrapper is the boundary's named node: it must be viewport-tall
+        // so fixed decorations inside a screen (the title background) are not
+        // clipped to the screen's own, shorter box in the snapshot.
         <ViewTransition update="route-cross-fade" default="none">
-          {routesContent}
+          <div className={`min-h-screen ${padding ? "p-4" : ""}`}>{routesContent}</div>
         </ViewTransition>
       ) : (
-        <div key={location.pathname} className="animate-fade-in motion-reduce:animate-none">
+        <div
+          key={location.pathname}
+          className={`animate-fade-in min-h-screen motion-reduce:animate-none ${padding ? "p-4" : ""}`}
+        >
           {routesContent}
         </div>
       )}

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useAppNavigate } from "../hooks/useAppNavigate";
 import { useTranslation } from "react-i18next";
 import { useGameStore } from "../store/gameStore";
 import { classifyError } from "../lib/errorClassification";
@@ -18,7 +18,7 @@ const MAX_VISIBLE_LINES = 7;
  * payload to re-run) offer only Dismiss.
  */
 const ErrorDialog: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const { t } = useTranslation();
   const generation = useGameStore((s) => s.generation);
   const imageRegeneration = useGameStore((s) => s.imageRegeneration);

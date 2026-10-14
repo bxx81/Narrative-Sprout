@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router";
+import { useAppNavigate } from "../hooks/useAppNavigate";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { useGameStore } from "../store/gameStore";
@@ -22,7 +22,7 @@ import { documentationAnchor, documentationUrl } from "../lib/documentation";
  * A screen for setting up a new game theme.
  */
 const ThemeSetupScreen: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const { t, i18n } = useTranslation();
   const settings = useGameStore((s) => s.settings);
   const apiKey = useGameStore((s) => s.credentials.openrouterApiKey);
