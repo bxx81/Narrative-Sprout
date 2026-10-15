@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/bxx81/Narrative-Sprout/compare/narrative-sprout-v2.2.1...narrative-sprout-v2.3.0) (2026-10-15)
+
+
+### Features
+
+* overlay scrollbar and in-transition scene image loading ([#94](https://github.com/bxx81/Narrative-Sprout/issues/94)) ([30ffe54](https://github.com/bxx81/Narrative-Sprout/commit/30ffe5483e8ac1b18aea7ddf44210db3551864a2))
+
 ## [2.2.1](https://github.com/bxx81/Narrative-Sprout/compare/narrative-sprout-v2.2.0...narrative-sprout-v2.2.1) (2026-10-15)
 
 
