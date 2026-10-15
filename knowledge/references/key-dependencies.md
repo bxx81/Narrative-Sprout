@@ -18,6 +18,7 @@ source: package.json, bun.lock
 | zod | 4.x | Schemas + `z.infer` types + `z.toJSONSchema` for structured outputs (full bundle; mini rejected, see [Build System](/configuration/build-system.md)). |
 | i18next / react-i18next | 26.x / 17.x | UI localization with bundled resources (no http-backend). |
 | react-hot-toast | 2.6.0 | Toast notifications. |
+| overlayscrollbars | 2.x | Overlay document scrollbar (native bars hidden; hover reveal, drag, track click) — see [Overlay Scrollbar](/features/overlay-scrollbar.md). |
 | fflate | 0.8.x | ZIP build/parse for `ns-save` and backup payloads. |
 | yaml | 2.x | Scenario front-matter parsing. |
 | @gradio/client | 2.5.x | Hugging Face Spaces image backend (lazy import). |

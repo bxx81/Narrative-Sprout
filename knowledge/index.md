@@ -25,7 +25,8 @@ timestamp: 2026-09-04T00:00:00Z
 * [Conditional Text (Flag-Gated Disclosure)](features/conditional-text.md) — Flag-based disclosure of theme and attachment content.
 * [Theme Generation](features/theme-generation.md) — AI-generated theme ideas (Generate Idea).
 * [Sound Effects](features/sound-effects.md) — UI chimes for generation completion, toasts, and the error dialog.
-* [Route Transitions](features/route-transitions.md) — ViewTransition route cross-fade and zoom-overlay enter (Chromium-gated), with the scroll and scrollbar machinery that keeps the outgoing screen still.
+* [Route Transitions](features/route-transitions.md) — ViewTransition route cross-fade and zoom-overlay enter (Chromium-gated), with the scroll machinery and overlay scrollbar that keep the outgoing screen still.
+* [Overlay Scrollbar](features/overlay-scrollbar.md) — OverlayScrollbars document scrollbar: constant layout width across route captures, hover reveal, drag and track-click.
 * [Wake Lock](features/wake-lock.md) — Screen wake lock during generation, autoplay, translation, image regeneration, and backup/Drive transfers.
 * [Settings System](features/settings-system.md) — All user-configurable settings and developer options.
 * [Story Export (ns-save)](features/story-export.md) — Single-save ZIP export and re-import.

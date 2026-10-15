@@ -81,6 +81,7 @@ export default defineConfig(({ mode }) => {
               return "react";
             }
             if (id.includes("node_modules/i18next/")) return "i18next";
+            if (id.includes("node_modules/overlayscrollbars/")) return "overlayscrollbars";
           },
         },
       },

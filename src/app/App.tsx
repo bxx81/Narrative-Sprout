@@ -17,6 +17,7 @@ import { applyColorScheme, resolveIsDark } from "../features/theme/api";
 import { setDesktopWindowTheme } from "../features/desktop/api";
 import { isDataDeletionComplete } from "../features/wipe/api";
 import { playSound } from "../features/sound/api";
+import { initializeDocumentScrollbar } from "../features/scrollbar/api";
 import {
   isViewTransitionActive,
   isViewTransitionAnimationSupported,
@@ -77,6 +78,11 @@ export function App() {
     // Screen bootstraps itself on "Return to Title".
     if (!isDataDeletionComplete()) void bootstrap();
   }, [bootstrap]);
+
+  // The document scrollbar is an overlay scrollbar (native bars hidden): it
+  // never takes layout space, so route captures share one width and the
+  // title screen's full-bleed photo reaches the viewport edge.
+  useEffect(() => initializeDocumentScrollbar(), []);
 
   // Dark mode follows the `colorScheme` setting (`system` = OS preference).
   useEffect(() => {
@@ -175,12 +181,12 @@ const AppLayout: React.FC = () => {
   // captures its own top while the outgoing glimpse keeps its scrolled view.
   // The wrapper height is pinned to the outgoing one too: the group animation
   // maps the snapshots through the size difference, which drifts the outgoing
-  // content by a pixel at fractional device pixel ratios. The scrollbar is
-  // hidden as well — the pins make the document artificially scrollable, so
-  // it would point at a stale position mid-fade (the stable gutter keeps the
-  // layout width unchanged). The effect below removes the pins and the scroll
-  // in one frame once the animation is done, which leaves the rendered
-  // position unchanged.
+  // content by a pixel at fractional device pixel ratios. The overlay
+  // scrollbar is hidden as well — the pins make the document artificially
+  // scrollable, so it would point at a stale position mid-fade (the native
+  // scrollbar is hidden, so the layout width never changes). The effect below
+  // removes the pins and the scroll in one frame once the animation is done,
+  // which leaves the rendered position unchanged.
   useLayoutEffect(() => {
     if (!isViewTransitionActive()) return;
     const wrapper = routeWrapperRef.current;
@@ -209,8 +215,8 @@ const AppLayout: React.FC = () => {
       wrapper?.style.removeProperty("padding-top");
       wrapper?.style.removeProperty("min-height");
       window.scrollTo({ top: 0, behavior: "auto" });
-      // After the scroll reset, so the scrollbar never paints the pinned
-      // position once it comes back.
+      // After the scroll reset, so the scrollbar (hidden by CSS while the
+      // transition runs) comes back at the reset position.
       document.documentElement.style.removeProperty("overflow-y");
     };
     if (!isViewTransitionActive()) {
