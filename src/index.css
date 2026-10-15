@@ -1,8 +1,10 @@
 @import "tailwindcss";
+@import "overlayscrollbars/overlayscrollbars.css";
 @import "./styles/designTokens.css";
 @import "./styles/appBase.css";
 @import "./styles/appUtilities.css";
 @import "./styles/viewTransitions.css";
+@import "./styles/overlayScrollbar.css";
 
 /* The generated chronicle-export stylesheet is minified CSS embedded as a
    string for a standalone page — never treat it as an app class source. */

@@ -1,0 +1,27 @@
+/* Overlay scrollbar (OverlayScrollbars) theming for the document scrollbar.
+   The library hides the native scrollbar, so the bar never takes layout
+   space: View Transition captures keep one width, and the title screen's
+   full-bleed photo reaches the viewport edge. The bar colors follow the
+   design tokens (light/dark). */
+.os-scrollbar {
+  --os-size: 12px;
+  --os-padding-perpendicular: 2px;
+  --os-padding-axis: 2px;
+  --os-track-border-radius: 6px;
+  --os-handle-border-radius: 4px;
+  --os-track-bg: none;
+  --os-track-bg-hover: color-mix(in oklab, var(--color-border) 12%, transparent);
+  --os-track-bg-active: color-mix(in oklab, var(--color-border) 18%, transparent);
+  --os-handle-bg: color-mix(in oklab, var(--color-border) 45%, transparent);
+  --os-handle-bg-hover: color-mix(in oklab, var(--color-border) 65%, transparent);
+  --os-handle-bg-active: color-mix(in oklab, var(--color-border) 80%, transparent);
+  --os-handle-min-size: 40px;
+  --os-handle-interactive-area-offset: 4px;
+}
+
+/* While a route transition pins the scroll, the handle would paint a stale
+   position (the scroll resets when the animation ends), so keep the bar
+   hidden for the duration of the transition. */
+html:active-view-transition .os-scrollbar {
+  display: none;
+}

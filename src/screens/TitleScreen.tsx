@@ -121,45 +121,6 @@ const TitleScreen: React.FC = () => {
     };
   }, []);
 
-  // Classic scrollbars occupy a reserved lane (scrollbar-gutter) next to the
-  // full-bleed background photo, which cannot paint into it. Sample the
-  // photo's right edge into a gradient (at the same 0.6 brightness as the
-  // blurred layer) and paint the canvas with it so the lane blends in.
-  useEffect(() => {
-    if (!backgroundUrl) return;
-    if (window.innerWidth - document.documentElement.clientWidth < 8) return;
-    let cancelled = false;
-    const image = new Image();
-    image.onload = () => {
-      if (cancelled) return;
-      try {
-        const canvas = document.createElement("canvas");
-        canvas.width = 8;
-        canvas.height = 64;
-        const context = canvas.getContext("2d");
-        if (!context) return;
-        context.drawImage(image, 0, 0, canvas.width, canvas.height);
-        const edge = context.getImageData(canvas.width - 1, 0, 1, canvas.height).data;
-        const stops = [0, 16, 32, 48].map((row) => {
-          const index = row * 4;
-          const red = Math.round((edge[index] ?? 0) * 0.6);
-          const green = Math.round((edge[index + 1] ?? 0) * 0.6);
-          const blue = Math.round((edge[index + 2] ?? 0) * 0.6);
-          return `rgb(${red} ${green} ${blue})`;
-        });
-        document.documentElement.style.backgroundImage = `linear-gradient(to bottom, ${stops.join(", ")})`;
-      } catch {
-        // Cross-origin images (Tauri's asset protocol) taint the canvas;
-        // the lane then keeps the page background instead.
-      }
-    };
-    image.src = backgroundUrl;
-    return () => {
-      cancelled = true;
-      document.documentElement.style.removeProperty("background-image");
-    };
-  }, [backgroundUrl]);
-
   const handleBegin = () => {
     if (!apiKey) {
       navigate(ROUTES.SETTINGS, { state: { from: ROUTES.HOME } });

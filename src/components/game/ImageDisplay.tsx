@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { FALLBACK_IMAGE_URL, TRANSPARENT_IMAGE_URL } from "./imageFallbacks";
 import styles from "./ImageDisplay.module.css";
 
@@ -46,14 +46,19 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
     }
   }, []);
 
-  useEffect(() => {
+  // Layout effects: under a route view transition React defers useEffect
+  // until the animation finishes, which would start the scene image load
+  // only after the cross-fade (the card grids load the same way via
+  // useLazyNodeImage). Creating the object URL and starting the decode in
+  // the commit begins it while the transition still runs.
+  useLayoutEffect(() => {
     const initialSrc = prevBaseSrcRef.current;
     if (initialSrc.startsWith("blob:")) {
       blobUrlsRef.current.add(initialSrc);
     }
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const urls = blobUrlsRef.current;
     return () => {
       urls.forEach((u) => URL.revokeObjectURL(u));
@@ -61,7 +66,7 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
     };
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const prev = prevBaseSrcRef.current;
     prevBaseSrcRef.current = baseSrc;
     if (prev !== baseSrc) {
@@ -69,7 +74,7 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
     }
   }, [baseSrc, revokeBlobUrl]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     let objectUrl: string | null = null;
     let cancelled = false;
 

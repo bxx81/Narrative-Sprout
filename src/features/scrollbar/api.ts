@@ -1,0 +1,1 @@
+export { initializeDocumentScrollbar } from "./documentScrollbar";
