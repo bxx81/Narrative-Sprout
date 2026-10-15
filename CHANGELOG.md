@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.1](https://github.com/bxx81/Narrative-Sprout/compare/narrative-sprout-v2.2.0...narrative-sprout-v2.2.1) (2026-10-15)
+
+
+### Bug Fixes
+
+* Use Fluent overlay scrollbars in Tauri ([#92](https://github.com/bxx81/Narrative-Sprout/issues/92)) ([6825722](https://github.com/bxx81/Narrative-Sprout/commit/68257221e5ca89e528eb84fab7e32fefd26bfbfc))
+
 ## [2.2.0](https://github.com/bxx81/Narrative-Sprout/compare/narrative-sprout-v2.1.1...narrative-sprout-v2.2.0) (2026-10-14)
 
 
