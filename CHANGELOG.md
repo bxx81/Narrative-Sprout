@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.1](https://github.com/bxx81/Narrative-Sprout/compare/narrative-sprout-v2.3.0...narrative-sprout-v2.3.1) (2026-10-19)
+
+
+### Bug Fixes
+
+* restore card grid depth and scroll on browser-back ([#96](https://github.com/bxx81/Narrative-Sprout/issues/96)) ([f77e091](https://github.com/bxx81/Narrative-Sprout/commit/f77e091bbe379802f879b6b7516b97e330d89e6a))
+
 ## [2.3.0](https://github.com/bxx81/Narrative-Sprout/compare/narrative-sprout-v2.2.1...narrative-sprout-v2.3.0) (2026-10-15)
 
 
