@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
+const visibleCountsByHistoryKey = new Map<string, number>();
+
 /**
  * Bounds card-grid rendering to a visible window that grows on demand.
  *
@@ -7,10 +9,21 @@ import { useEffect, useRef, useState } from "react";
  * scrolls into view (or via the returned `showMore`). Keeps per-card
  * `IntersectionObserver`s, IndexedDB reads, and DOM nodes proportional to
  * what the user actually scrolled to instead of the full save/branch count.
+ *
+ * `windowKey` (the router history key) keeps the grown window across an
+ * unmount/remount, so browser-back can restore the scroll position against a
+ * document that is already tall enough.
  */
-export const useIncrementalList = (totalCount: number, pageSize = 24) => {
-  const [visibleCount, setVisibleCount] = useState(() => Math.min(pageSize, totalCount));
+export const useIncrementalList = (totalCount: number, pageSize = 24, windowKey?: string) => {
+  const [visibleCount, setVisibleCount] = useState(() => {
+    const savedCount = windowKey ? visibleCountsByHistoryKey.get(windowKey) : undefined;
+    return Math.min(savedCount ?? pageSize, totalCount);
+  });
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (windowKey) visibleCountsByHistoryKey.set(windowKey, visibleCount);
+  }, [windowKey, visibleCount]);
 
   useEffect(() => {
     setVisibleCount((current) =>

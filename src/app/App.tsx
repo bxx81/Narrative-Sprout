@@ -2,11 +2,13 @@ import React, { useEffect, useLayoutEffect, useRef, ViewTransition } from "react
 import {
   BrowserRouter,
   Navigate,
+  NavigationType,
   Outlet,
   Route,
   Routes,
   useLocation,
   useNavigate,
+  useNavigationType,
 } from "react-router";
 import { Toaster, useToasterStore } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
@@ -130,9 +132,14 @@ const AppLayout: React.FC = () => {
   const settings = useGameStore((s) => s.settings);
   const settingsLoaded = useGameStore((s) => s.settings !== null);
   const location = useLocation();
+  const navigationType = useNavigationType();
   const navigate = useNavigate();
   const routeWrapperRef = useRef<HTMLDivElement>(null);
   const routeNaturalHeightRef = useRef(0);
+  const scrollPositionsByHistoryKeyRef = useRef(new Map<string, number>());
+  const currentHistoryKeyRef = useRef(location.key);
+  const pendingScrollRestoreRef = useRef(0);
+  const isRestoringScrollRef = useRef(false);
 
   // Apply the UI language to i18next and the document (html lang, text
   // direction, per-language fonts). AI translation bundles are merged into
@@ -152,6 +159,38 @@ const AppLayout: React.FC = () => {
     // passed to the Intl.Segmenter word count).
     setWordCountLanguage(getLanguageCode(settings.language, settings.aiLanguageMappings));
   }, [settings, uiLanguage, aiLanguageMappings, aiTranslationTexts]);
+
+  // Browser history entries keep their own scroll offset. The browser's
+  // automatic restoration is disabled because it runs before the remounted
+  // list has grown back to its remembered depth, which would clamp the offset
+  // to the first page. The release effect below restores it explicitly.
+  useEffect(() => {
+    const previousScrollRestoration = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
+    const rememberScrollPosition = () => {
+      if (isRestoringScrollRef.current) return;
+      scrollPositionsByHistoryKeyRef.current.set(currentHistoryKeyRef.current, window.scrollY);
+    };
+    window.addEventListener("scroll", rememberScrollPosition, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", rememberScrollPosition);
+      window.history.scrollRestoration = previousScrollRestoration;
+    };
+  }, []);
+
+  // Decide where this history entry starts before the release effect runs.
+  // POP restores the remembered offset; PUSH/REPLACE is a fresh entry at top.
+  useLayoutEffect(() => {
+    if (navigationType === NavigationType.Pop) {
+      pendingScrollRestoreRef.current =
+        scrollPositionsByHistoryKeyRef.current.get(location.key) ?? 0;
+      isRestoringScrollRef.current = true;
+    } else {
+      scrollPositionsByHistoryKeyRef.current.delete(location.key);
+      pendingScrollRestoreRef.current = 0;
+      isRestoringScrollRef.current = false;
+    }
+  }, [location.key, navigationType]);
 
   // Keep the current scroll offset representable while the incoming screen
   // replaces a taller outgoing one: the browser would otherwise clamp the
@@ -201,20 +240,25 @@ const AppLayout: React.FC = () => {
     document.documentElement.style.overflowY = "hidden";
   }, [location.pathname]);
 
-  // BrowserRouter does not reset the window scroll on navigation, so leaving a
-  // scrolled screen (e.g. a long game) would carry that offset into the next
-  // one (e.g. Settings). Reset it per route change (legacy ScrollRestoration),
-  // together with the transition pins. React usually flushes this effect after
-  // the animation, but an early state update (e.g. a card image resolving)
-  // flushes it mid-transition, which would yank the scroll while the outgoing
-  // screen still fades, so wait for the transition to finish first.
+  // PUSH/REPLACE starts at the top; POP returns to the offset remembered for
+  // that history entry. The pins are released in the same frame so the
+  // restored position is what the scrollbar paints. React usually flushes this
+  // effect after the animation, but an early state update (e.g. a card image
+  // resolving) flushes it mid-transition, which would yank the scroll while
+  // the outgoing screen still fades, so wait for the transition to finish
+  // first.
   useEffect(() => {
     const wrapper = routeWrapperRef.current;
     const releaseTransitionPins = () => {
       wrapper?.style.removeProperty("height");
       wrapper?.style.removeProperty("padding-top");
       wrapper?.style.removeProperty("min-height");
-      window.scrollTo({ top: 0, behavior: "auto" });
+      currentHistoryKeyRef.current = location.key;
+      const targetScrollTop =
+        navigationType === NavigationType.Pop ? pendingScrollRestoreRef.current : 0;
+      window.scrollTo({ top: targetScrollTop, behavior: "auto" });
+      scrollPositionsByHistoryKeyRef.current.set(location.key, window.scrollY);
+      isRestoringScrollRef.current = false;
       // After the scroll reset, so the scrollbar (hidden by CSS while the
       // transition runs) comes back at the reset position.
       document.documentElement.style.removeProperty("overflow-y");
@@ -230,7 +274,7 @@ const AppLayout: React.FC = () => {
       }
     }, 30);
     return () => clearInterval(timer);
-  }, [location.pathname]);
+  }, [location.key, navigationType]);
 
   // Full data wipe reloads the app with this flag set; show the completion
   // screen instead of the routed screen (bootstrap stays skipped too).
