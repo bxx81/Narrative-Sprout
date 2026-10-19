@@ -60,52 +60,65 @@ function buildNode(
   };
 }
 
-export async function seedGame(
-  page: Page,
-  options: { gameId: string; title: string; leaves: SeedLeaf[] },
-): Promise<void> {
+export interface SeedGame {
+  gameId: string;
+  title: string;
+  leaves: SeedLeaf[];
+}
+
+export async function seedGames(page: Page, games: SeedGame[]): Promise<void> {
   const timestamp = new Date().toISOString();
-  const gameId = options.gameId as GameId;
-  const rootId = `${options.gameId}-root` as StoryNodeId;
-  const nodeRecords: StoryNodeRecord[] = [
-    buildNode(rootId, gameId, null, 1, null, `${options.title} begins.`, timestamp),
-    ...options.leaves.map((leaf) =>
-      buildNode(
-        leaf.nodeId as StoryNodeId,
-        gameId,
-        rootId,
-        2,
-        leaf.choiceText,
-        leaf.sceneText,
-        timestamp,
+  const gameRecords: GameRecord[] = [];
+  const nodeRecords: StoryNodeRecord[] = [];
+
+  for (const options of games) {
+    const gameId = options.gameId as GameId;
+    const rootId = `${options.gameId}-root` as StoryNodeId;
+    const gameNodes = [
+      buildNode(rootId, gameId, null, 1, null, `${options.title} begins.`, timestamp),
+      ...options.leaves.map((leaf) =>
+        buildNode(
+          leaf.nodeId as StoryNodeId,
+          gameId,
+          rootId,
+          2,
+          leaf.choiceText,
+          leaf.sceneText,
+          timestamp,
+        ),
       ),
-    ),
-  ];
-  const gameRecord: GameRecord = {
-    id: gameId,
-    schemaVersion: 1,
-    title: options.title,
-    createdAt: timestamp,
-    lastPlayedAt: timestamp,
-    latestNodeId: nodeRecords[nodeRecords.length - 1].id,
-    attachmentTexts: [],
-  };
+    ];
+    nodeRecords.push(...gameNodes);
+    gameRecords.push({
+      id: gameId,
+      schemaVersion: 1,
+      title: options.title,
+      createdAt: timestamp,
+      lastPlayedAt: timestamp,
+      latestNodeId: gameNodes[gameNodes.length - 1].id,
+      attachmentTexts: [],
+    });
+  }
 
   await page.goto("/");
   // Absolute URL: Vite dev serves /src/*.ts as modules at runtime, while the
   // `typeof import(...)` keeps static types via the relative file path.
   await page.evaluate(
-    async ({ seededGame, seededNodes }) => {
+    async ({ seededGames, seededNodes }) => {
       const moduleUrl = new URL("/src/db/database.ts", window.location.origin).href;
       const { db } = (await import(moduleUrl)) as typeof import("../../src/db/database");
       await db.transaction("rw", [db.games, db.nodes], async () => {
-        await db.games.add(seededGame);
+        await db.games.bulkAdd(seededGames);
         await db.nodes.bulkAdd(seededNodes);
       });
     },
-    { seededGame: gameRecord, seededNodes: nodeRecords },
+    { seededGames: gameRecords, seededNodes: nodeRecords },
   );
   await page.reload();
+}
+
+export async function seedGame(page: Page, options: SeedGame): Promise<void> {
+  await seedGames(page, [options]);
 }
 
 /**

@@ -1,7 +1,7 @@
 import React, { memo, useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { useGameStore } from "../store/gameStore";
 import type { StoryNodeRecord } from "../types";
 import type { AssetRecord } from "../types/asset";
@@ -164,6 +164,7 @@ EndNodeCard.displayName = "EndNodeCard";
  */
 const HistoryScreen: React.FC = () => {
   const { t } = useTranslation();
+  const location = useLocation();
   const activeGame = useGameStore((s) => s.activeGame);
   const nodes = useGameStore((s) => s.nodes);
   const assets = useGameStore((s) => s.assets);
@@ -185,6 +186,7 @@ const HistoryScreen: React.FC = () => {
   const { visibleCount, sentinelRef, canShowMore, showMore } = useIncrementalList(
     endNodes.length,
     CARD_PAGE_SIZE,
+    location.key,
   );
   const visibleNodes = useMemo(() => endNodes.slice(0, visibleCount), [endNodes, visibleCount]);
 

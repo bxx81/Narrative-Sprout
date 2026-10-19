@@ -1,5 +1,5 @@
 import React, { memo, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { useGameStore } from "../store/gameStore";
@@ -176,6 +176,7 @@ GameLogCard.displayName = "GameLogCard";
  */
 const LoadScreen: React.FC = () => {
   const { t } = useTranslation();
+  const location = useLocation();
   const games = useGameStore((s) => s.games);
   const importSaveFromFile = useGameStore((s) => s.importSaveFromFile);
   // ISO-8601 timestamps sort lexicographically; avoids N log N Date parsing.
@@ -186,6 +187,7 @@ const LoadScreen: React.FC = () => {
   const { visibleCount, sentinelRef, canShowMore, showMore } = useIncrementalList(
     sortedGames.length,
     CARD_PAGE_SIZE,
+    location.key,
   );
   const visibleGames = useMemo(
     () => sortedGames.slice(0, visibleCount),
