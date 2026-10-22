@@ -135,9 +135,9 @@ export async function startGame(
 
   let scene: import("../../types").SceneContent;
   let memoryDelta: import("../../types").MemoryDelta;
-  let generationCost: number | null = null;
-  let modelName: string | null = null;
-  let notesDraft = "";
+  let generationCost: number | null;
+  let modelName: string | null;
+  let notesDraft: string;
 
   options?.onTextGenerationStart?.();
   if (strategy === "single") {
@@ -330,8 +330,8 @@ export async function choosePath(
 
   let scene: import("../../types").SceneContent;
   let memoryDelta: import("../../types").MemoryDelta;
-  let generationCost: number | null = null;
-  let modelName: string | null = null;
+  let generationCost: number | null;
+  let modelName: string | null;
 
   options?.onTextGenerationStart?.();
   if (strategy === "single") {
@@ -550,8 +550,8 @@ export async function refineScene(
 
   let scene: import("../../types").SceneContent;
   let memoryDelta: import("../../types").MemoryDelta;
-  let generationCost: number | null = null;
-  let modelName: string | null = null;
+  let generationCost: number | null;
+  let modelName: string | null;
 
   options?.onTextGenerationStart?.();
   if (strategy === "single") {

@@ -84,7 +84,7 @@ describe("SseIdleTimer", () => {
 
   test("disposal via using suppresses the pending timeout", async () => {
     const state: ReaderStubState = { cancelCalls: 0, releaseCalls: 0, throwOnRelease: false };
-    let timeoutPromise: Promise<never> | null = null;
+    let timeoutPromise: Promise<never>;
     {
       using idleTimer = new SseIdleTimer(createReaderStub(state), 10);
       timeoutPromise = idleTimer.timeoutPromise;

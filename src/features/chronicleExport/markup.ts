@@ -56,7 +56,7 @@ function renderProse(text: string, sceneTextClass: string): string {
   const lines = text.split("\n");
   const renderedLines = lines
     .map((line) => {
-      if (/^---+\s*$|^\*\*\*+\s*$/.test(line.trim())) {
+      if (/^-{3,}\s*$|^\*{3,}\s*$/.test(line.trim())) {
         return '<hr class="text-divider dividers-marker">';
       }
 

@@ -44,7 +44,7 @@ function insertRandomly(a: string[], b: string[]): string[] {
  * Resolves `{a|b}` placeholders and `##marker##` random-insertion patterns.
  */
 export function processRandomChoice(text: string): string {
-  const regex = /\{([^{}]*?)\}/g;
+  const regex = /\{([^{}]*)\}/g;
   const exception: Record<string, string[]> = {};
   let result = text;
   let previous: string;
@@ -71,7 +71,7 @@ export function processRandomChoice(text: string): string {
       result = mixContent.join("");
     } catch (e: unknown) {
       if ((e as Error)?.name !== "Error") throw e;
-      throw new Error("Syntax error: number of elements " + key);
+      throw new Error("Syntax error: number of elements " + key, { cause: e });
     }
   }
   return result;

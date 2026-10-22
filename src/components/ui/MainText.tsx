@@ -16,7 +16,7 @@ const MainText = ({ text, className, streamingCursor = false }: MainTextProps) =
   return (
     <div className={styles["main-text"]}>
       {lines.map((line, lineIndex) => {
-        if (/^---+\s*$|^\*\*\*+\s*$/.test(line.trim())) {
+        if (/^-{3,}\s*$|^\*{3,}\s*$/.test(line.trim())) {
           return <Divider key={lineIndex} />;
         }
 

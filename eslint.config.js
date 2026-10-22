@@ -1,9 +1,11 @@
 import js from "@eslint/js";
 import betterTailwindcss from "eslint-plugin-better-tailwindcss";
 import tseslint from "typescript-eslint";
+import regexpPlugin from "eslint-plugin-regexp";
 
 export default tseslint.config(
   { ignores: ["dist/", "node_modules/", "playwright-report/", "test-results/", "src-tauri/"] },
+  regexpPlugin.configs.recommended,
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

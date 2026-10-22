@@ -32,8 +32,9 @@ source: package.json, bun.lock
 | @vitejs/plugin-react | 5.x React plugin for Vite. |
 | @tailwindcss/vite / tailwindcss | v4 styling. |
 | vite-plugin-pwa | 1.x manifest + service worker. |
-| eslint / @eslint/js / typescript-eslint | Lint (+ record/array `.catch()` ban, Tailwind rules via `eslint-plugin-better-tailwindcss`). |
+| eslint / @eslint/js / typescript-eslint | ESLint 10.x / @eslint/js 10.x / typescript-eslint 8.x. Lint (+ record/array `.catch()` ban, regexp rules via `eslint-plugin-regexp`). |
 | eslint-plugin-better-tailwindcss | Tailwind v4 class lint: order, duplicates, unknown/conflicting classes (`recommended`; line-wrapping off, see [Linting](/configuration/linting.md)). |
+| eslint-plugin-regexp | Regex best practices: invalid/ReDoS-prone patterns, useless lazy/quantifiers/flags, unused capturing groups (`recommended`). |
 | prettier | Formatting (`format:check` in CI). |
 | prettier-plugin-tailwindcss | Class sorting on `--write` (`tailwindStylesheet: ./src/index.css`). |
 | fake-indexeddb | Dexie tests under `bun test`. |

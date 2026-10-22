@@ -46,7 +46,7 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.0.0",
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/cli": "^4.3.3",
     "@tailwindcss/vite": "^4.0.0",
@@ -56,8 +56,9 @@
     "@typescript/native": "npm:typescript@^7.0.2",
     "@vitejs/plugin-react": "^5.0.0",
     "bun-types": "latest",
-    "eslint": "^9.0.0",
+    "eslint": "^10.13.0",
     "eslint-plugin-better-tailwindcss": "^4.7.0",
+    "eslint-plugin-regexp": "^3.3.1",
     "fake-indexeddb": "^6.2.5",
     "happy-dom": "^20.0.0",
     "prettier": "^3.0.0",

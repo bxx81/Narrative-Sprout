@@ -5,6 +5,7 @@ export function parseJsonConfig<T>(json: string, label: string): T {
   } catch (error) {
     throw new Error(
       `Invalid ${label} JSON config: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
     );
   }
 }

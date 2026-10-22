@@ -13,7 +13,7 @@ CI (`ci.yml` `check` job) runs `bun run lint` → `bunx tsc --noEmit` → `bun t
 
 # ESLint
 
-Flat config (`eslint.config.js`): `js.configs.recommended` + `typescript-eslint` recommended, ignoring `dist/`, `node_modules/`, `playwright-report/`, and `test-results/`. Plus one project-specific rule (AGENTS.md rule 4):
+Flat config (`eslint.config.js`): `js.configs.recommended` + `typescript-eslint` recommended + `eslint-plugin-regexp` recommended, ignoring `dist/`, `node_modules/`, `playwright-report/`, and `test-results/`. The regexp preset is kept as-is (its Best Practices rules are errors); rewrite findings rather than disabling them. Plus one project-specific rule (AGENTS.md rule 4):
 
 - `no-restricted-syntax`: **`.catch()` on `z.record(…)` / `z.array(…)` results is an error** — validate element-wise instead. (Selector targets `CallExpression[callee.property.name="catch"][callee.object.callee.property.name=/^(record|array)$/]`.)
 
