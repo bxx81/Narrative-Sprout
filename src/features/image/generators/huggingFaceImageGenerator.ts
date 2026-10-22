@@ -17,7 +17,7 @@ const DEFAULT_CONFIG = {
 const MAX_SIGNED_INT32 = 0x7fffffff;
 const GENERATION_TIMEOUT_MS = 600_000;
 const GRADIO_FILE_URL_PREFIX = "/gradio_api";
-const IMAGE_EXTENSION_PATTERN = /\.(png|jpe?g|webp|gif|bmp|avif)([?#]|$)/i;
+const IMAGE_EXTENSION_PATTERN = /\.(?:png|jpe?g|webp|gif|bmp|avif)(?:[?#]|$)/i;
 const PLACEHOLDER_PATTERN = new RegExp(
   `${escapeRegExp(REPLACE_WORD)}|${escapeRegExp(NEGATIVE_REPLACE_WORD)}`,
   "g",
@@ -239,7 +239,7 @@ export class HuggingFaceImageGenerator implements IImageGenerator {
     }
     const fallback =
       imageEndpoints.find(([name]) => name === DEFAULT_API_NAME) ??
-      imageEndpoints.find(([name]) => /(infer|generate|predict)/i.test(name)) ??
+      imageEndpoints.find(([name]) => /infer|generate|predict/i.test(name)) ??
       imageEndpoints[0];
     console.warn(
       `HuggingFace endpoint "${requestedApiName}" was not found; using "${fallback[0]}" instead.`,

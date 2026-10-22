@@ -62,7 +62,7 @@ export function scanSceneText(raw: string): { text: string; complete: boolean } 
           break;
         case "u": {
           const hex = raw.slice(i, i + 4);
-          if (/^[0-9a-fA-F]{4}$/.test(hex)) {
+          if (/^[0-9a-f]{4}$/i.test(hex)) {
             out += String.fromCharCode(Number.parseInt(hex, 16));
             i += 4;
           }

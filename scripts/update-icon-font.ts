@@ -11,13 +11,13 @@ const fontOutputPath = new URL("../public/s/font.woff2", import.meta.url);
 
 const cssEndpoint =
   "https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,300,0,0";
-const woff2UrlPattern = /url\((https:\/\/fonts\.gstatic\.com\/[^)]+?)\)\s*format\((['"])woff2\2\)/;
+const woff2UrlPattern = /url\((https:\/\/fonts\.gstatic\.com\/[^)]+)\)\s*format\((['"])woff2\2\)/;
 const requestUserAgent =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 
 const iconFileSource = await Bun.file(iconFilePath).text();
 
-const unionMatch = iconFileSource.match(/export type IconName =([^;]+);/s);
+const unionMatch = iconFileSource.match(/export type IconName =([^;]+);/);
 if (!unionMatch) {
   console.error("Icon.tsx に export type IconName が見つかりませんでした。");
   Bun.exit(1);

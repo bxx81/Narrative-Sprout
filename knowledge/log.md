@@ -1,5 +1,8 @@
 # Knowledge Bundle Update Log
 
+## 2026-10-22
+* **Change**: ESLint moved to 10.x with matching `@eslint/js` 10.x, and `eslint-plugin-regexp` recommended is now part of the flat config (devDependency, not a runtime dependency). The initial run's findings were all behavior-preserving: useless lazy quantifiers and redundant quantifier concatenations rewritten (`-{3,}`, `\*{3,}`), unused capturing groups converted to non-capturing, a redundant `s` flag removed, and `[0-9a-fA-F]` folded into the `i` flag. ESLint 10's new recommended rules also added `{ cause }` to two rethrown errors and removed three unused variable initializations. Documented in [Linting](/configuration/linting.md) and [Key Dependencies](/references/key-dependencies.md).
+
 ## 2026-10-19
 * **Fix**: Load/History no longer lose their incremental depth on browser-back. The window state is remembered per router history key (`useIncrementalList(totalCount, pageSize, location.key)`, module-level map), and `AppLayout` owns scroll restoration (`history.scrollRestoration = "manual"`, per-key `window.scrollY`, PUSH/REPLACE → top, POP → saved offset at the existing view-transition release point). Previously the remounted screen started at one page and the browser restored the old offset against that short document, clamping to the first page while the sentinel added just one more. New `e2e/scrollRestoration.spec.ts` (both engines) drives Settings → browser-back on both grids; `e2e/helpers/seed.ts` gained `seedGames` for the multi-save case. Documented in [History & Saves](/features/history-and-saves.md) (List Rendering) and [Route Transitions](/features/route-transitions.md) (release semantics); test counts in `operations/testing.md`.
 

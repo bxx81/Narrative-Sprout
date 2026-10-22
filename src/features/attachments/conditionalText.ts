@@ -36,7 +36,7 @@ function isTruthy(value: string | undefined): boolean {
 
 type BlockKind = "flag" | "flag-not" | "if" | "if-not";
 
-const OPEN_TAG = /<(flag|flag-not|if|if-not):[^>]*?>/;
+const OPEN_TAG = /<(?:flag|flag-not|if|if-not):[^>]*>/;
 
 export function resolveConditionalText(source: string, flags: FlagMap): string {
   return parseBlock(source, flags);

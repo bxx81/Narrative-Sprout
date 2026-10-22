@@ -193,7 +193,7 @@ export async function getTranslateLanguageCode(params: {
       },
     );
     const languageCode = response.choices?.[0]?.message?.content?.trim().toLowerCase();
-    if (languageCode && /^[a-z]{2,3}(-[a-z]{2,4})?$/.test(languageCode)) {
+    if (languageCode && /^[a-z]{2,3}(?:-[a-z]{2,4})?$/.test(languageCode)) {
       return languageCode;
     }
     console.warn("[i18n] unusual language code from AI:", languageCode);

@@ -4,7 +4,7 @@ import { createFlagMap, resolveConditionalText } from "./conditionalText";
 import type { MemoryState } from "../../types";
 
 /** Extensions handled as text attachments; `.b64` is decoded before parsing. */
-const TEXT_ATTACHMENT_PATTERN = /\.(txt|md|b64)$/i;
+const TEXT_ATTACHMENT_PATTERN = /\.(?:txt|md|b64)$/i;
 
 /**
  * Result of processing a batch of user-provided attachment files.
