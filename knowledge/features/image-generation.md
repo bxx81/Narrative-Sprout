@@ -3,7 +3,7 @@ type: Feature
 title: Image Generation
 description: Scene image generation with pluggable backends, WebP storage, and per-node regeneration in v2.
 tags: [image, webp, generators]
-timestamp: 2026-09-08T00:00:00Z
+timestamp: 2026-10-23T00:00:00Z
 source: src/features/image/generateImage.ts, buildImageGenConfig.ts, assetHelpers.ts, imageGeneratorFactory.ts, generators/
 ---
 
@@ -20,8 +20,10 @@ Selected by `settings.imageGenerator`; config comes from `buildImageGenConfig(se
 | Disabled | `disabled` (default) | No network call — the turn flow skips generation entirely; the UI layer renders a transparent placeholder. (`DisabledImageGenerator.generate` itself returns the fallback SVG but is never reached.) A failed generation ends in exactly the same state (no asset stored). |
 | Hugging Face Spaces | `huggingface` | Cloud Space (`huggingFaceSpaceId`, default `mrfakename/Z-Image-Turbo`) via `@gradio/client`, lazily imported. Token from `credentials`. |
 | AUTOMATIC1111 | `a1111` | Local endpoint (default `http://127.0.0.1:7860`) + config JSON (`steps`, `sampler_name`, `cfg_scale`, `width`/`height`, `{prompt}` / `{negative_prompt}` placeholders). Progress callback for the loading bar. |
-| ComfyUI | `comfyui` | Local endpoint (default `http://127.0.0.1:8188`) + workflow JSON (`##prompt##` / `##negative_prompt##` placeholders). Workflow queued via POST `/prompt`; progress/execution tracked over a WebSocket (`/ws?clientId=…`), not polling. Progress callback. |
+| ComfyUI | `comfyui` | Local endpoint (default `http://127.0.0.1:8188`) + workflow JSON (`##prompt##` / `##negative_prompt##` placeholders). Workflow queued via POST `/prompt`; progress/execution tracked over a WebSocket (`/ws?clientId=…`), not polling. Progress spans the whole workflow: sampler `steps × denoise` are weighted, other nodes count 1, and `execution_cached` nodes leave the denominator — so multi-sampler workflows never restart at 0%. |
 | NVIDIA NIM | `nvidia_nim` | Cloud endpoint (Flux default) + config JSON. Token from `credentials`. |
+
+ComfyUI's `1234567890` seed placeholder is replaced with a random integer in `[0, 2^53−1]` (the core seed range). Custom nodes with a narrower seed input (e.g. `Seed (rgthree)`, max 2^50) reject it with `value_bigger_than_max`; that is a workflow-authoring constraint — use a core seed input in such workflows.
 
 Per-generator timeouts abort with descriptive errors. The image prompt follows a 4-step recipe (decisive instant, cinematic framing, in-frame only, atmosphere) consistent with `char:*` + `status:*` memory.
 
@@ -48,6 +50,6 @@ The A1111 (`GET /` — the Gradio root always exists), ComfyUI (`GET /system_sta
 
 # Regeneration
 
-`regenerateImage(nodeId)` re-renders the same scene's `imagePrompt` and overwrites the same asset key (`updatedAt` bumped), tracked as `imageRegeneration: AsyncOperation`. A1111/ComfyUI report progress % into `imageGenerationProgress`. The loading overlay follows `generationStage === "image"`.
+`regenerateImage(nodeId)` re-renders the same scene's `imagePrompt` and overwrites the same asset key (`updatedAt` bumped), tracked as `imageRegeneration: AsyncOperation`. A1111/ComfyUI report progress % into `imageGenerationProgress` (ComfyUI reports whole-workflow progress, not per-sampler). The loading overlay follows `generationStage === "image"`.
 
 Regeneration is user-cancellable: `regenerateImage` passes a store-module `imageRegenerationAbortController.signal` to `generateSceneImage` (which races the abort against the generator call), and the shared Stop button (`cancelGeneration`) aborts it, returns `imageRegeneration` to `idle` immediately, and clears progress. The aborted run settles silently (no `ErrorDialog`); its own `AbortError` handler verifies controller identity first, so a cancel-and-restart never clobbers the newer run. A cancelled regeneration writes nothing.

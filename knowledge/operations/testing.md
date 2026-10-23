@@ -3,7 +3,7 @@ type: Playbook
 title: Testing Strategy (v2)
 description: Test framework, conventions, and CI for Narrative Sprout v2.
 tags: [testing, bun-test, happy-dom, playwright]
-timestamp: 2026-09-09T00:00:00Z
+timestamp: 2026-10-23T00:00:00Z
 source: bunfig.toml, src/db/installFakeIndexedDb.ts, src/features/backup/testsupport/records.ts, .github/workflows/ci.yml, playwright.config.ts, e2e/
 ---
 
@@ -11,7 +11,7 @@ source: bunfig.toml, src/db/installFakeIndexedDb.ts, src/features/backup/testsup
 
 Unit runner: `bun test` with happy-dom. `bunfig.toml` `[test] preload` loads `src/db/installFakeIndexedDb.ts`, so Dexie tests run against a fake IndexedDB (note: after `db.delete()`, tests must `db.open()` explicitly — Dexie won't auto-reopen inside transactions).
 
-68 unit files (365 tests) colocate with sources (`*.test.ts`, one `.test.tsx` for the navigation hook). `bun test` excludes `e2e/**` via `--path-ignore-patterns` (quoted in `package.json`, otherwise the shell glob-expands it) — bun's runner picks up `*.spec.ts`, which would collide with Playwright specs.
+70 unit files (374 tests) colocate with sources (`*.test.ts`, one `.test.tsx` for the navigation hook). `bun test` excludes `e2e/**` via `--path-ignore-patterns` (quoted in `package.json`, otherwise the shell glob-expands it) — bun's runner picks up `*.spec.ts`, which would collide with Playwright specs.
 
 E2E runner: Playwright (`bun run test:e2e`), 9 spec files × 2 browser projects = 50 tests (47 pass + 3 engine-gated skips: `sample.spec.ts` needs chromium-only Blob storage, the two touch long-press cases need CDP touch input). CI has three jobs: `check` (lint → `tsc --noEmit` → `bun test` → prettier check), `e2e` (chromium/webkit matrix, browsers installed with `--with-deps`, HTML report uploaded per browser), `secret-scan` (gitleaks).
 

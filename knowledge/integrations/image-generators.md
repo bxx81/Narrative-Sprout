@@ -3,7 +3,7 @@ type: Integration
 title: Image Generator Backends (v2)
 description: Hugging Face Spaces, AUTOMATIC1111, ComfyUI, NVIDIA NIM, and disabled backends in v2.
 tags: [image, backends, hf, a1111, comfyui, nim]
-timestamp: 2026-09-02T00:00:00Z
+timestamp: 2026-10-23T00:00:00Z
 source: src/features/image/generators/, imageGeneratorFactory.ts, buildImageGenConfig.ts
 ---
 
@@ -15,7 +15,7 @@ source: src/features/image/generators/, imageGeneratorFactory.ts, buildImageGenC
 |---------|--------|------|-----|-------|
 | Hugging Face Spaces (cloud) | Easy | Free tier varies | None local | Space id + config JSON; `@gradio/client` lazily imported. |
 | AUTOMATIC1111 (local) | Medium | Free | Local GPU | Endpoint + config JSON (`steps/sampler_name/cfg_scale/width/height`, `{prompt}` placeholders); progress callback. |
-| ComfyUI (local) | Medium | Free | Local GPU | Endpoint + workflow JSON (`##prompt##` placeholders); `/prompt` polling; progress callback. |
+| ComfyUI (local) | Medium | Free | Local GPU | Endpoint + workflow JSON (`##prompt##` placeholders); `/prompt` queue + `/ws` progress; whole-workflow progress callback. |
 | NVIDIA NIM (cloud) | Easy | Key required | None local | Endpoint + config JSON; Bearer token. |
 | Disabled | — | — | — | Transparent placeholder; no network. A generation failure ends in the same state (no asset stored). |
 
