@@ -1,4 +1,5 @@
 import type { GenerateParams, IImageGenerator } from "../types";
+import { ComfyUIProgressTracker } from "./comfyUIProgress";
 import { blobToDataUrl, escapePromptWeights } from "./utils";
 
 const SEED_PLACEHOLDER = 1234567890;
@@ -13,6 +14,10 @@ interface ComfyUINodeOutput {
   images: ComfyUIImageOutput[];
 }
 
+function toNodeId(value: unknown): string | null {
+  return typeof value === "string" || typeof value === "number" ? String(value) : null;
+}
+
 export class ComfyUIImageGenerator implements IImageGenerator {
   async unloadModel(): Promise<void> {
     return;
@@ -24,6 +29,7 @@ export class ComfyUIImageGenerator implements IImageGenerator {
     if (!comfyuiEndpoint) throw new Error("Empty endpoint.");
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
     const workflow = this.buildWorkflow(comfyuiWorkflow, prompt, negativePrompt);
+    onProgress(0);
     const imageUrl = await this.runWorkflow(comfyuiEndpoint, workflow, onProgress, signal);
     return this.fetchImageAsDataUrl(imageUrl, onProgress, signal);
   }
@@ -79,6 +85,7 @@ export class ComfyUIImageGenerator implements IImageGenerator {
     const clientId = crypto.randomUUID();
     const wsEndpoint = endpoint.replace(/^http/, "ws");
     const ws = new WebSocket(`${wsEndpoint}/ws?clientId=${clientId}`);
+    const progressTracker = new ComfyUIProgressTracker(workflow, onProgress);
     return new Promise((resolve, reject) => {
       let promptId: string | undefined;
       let finished = false;
@@ -127,12 +134,27 @@ export class ComfyUIImageGenerator implements IImageGenerator {
           return;
         }
         const { type: msgType, data: msgData = {} } = data;
+        if (promptId === undefined) {
+          const incomingPromptId = msgData["prompt_id"];
+          if (typeof incomingPromptId === "string") promptId = incomingPromptId;
+        }
         if (msgData["prompt_id"] !== promptId) return;
         switch (msgType) {
+          case "execution_cached": {
+            const cachedNodeIds = msgData["nodes"];
+            if (Array.isArray(cachedNodeIds)) progressTracker.onCachedNodeIds(cachedNodeIds);
+            break;
+          }
+          case "executing": {
+            progressTracker.onExecutingNode(toNodeId(msgData["node"]));
+            break;
+          }
           case "progress": {
-            const value = msgData["value"] as number;
-            const max = msgData["max"] as number;
-            if (max > 0) onProgress(value / max);
+            const value = msgData["value"];
+            const max = msgData["max"];
+            if (typeof value === "number" && typeof max === "number") {
+              progressTracker.onNodeProgress(toNodeId(msgData["node"]), value, max);
+            }
             break;
           }
           case "executed": {
