@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.2](https://github.com/bxx81/Narrative-Sprout/compare/narrative-sprout-v2.3.1...narrative-sprout-v2.3.2) (2026-10-23)
+
+
+### Bug Fixes
+
+* report whole-workflow progress for ComfyUI generation ([#99](https://github.com/bxx81/Narrative-Sprout/issues/99)) ([3688d90](https://github.com/bxx81/Narrative-Sprout/commit/3688d903045b9a689669edb7ce927e7f1a4581d4))
+
 ## [2.3.1](https://github.com/bxx81/Narrative-Sprout/compare/narrative-sprout-v2.3.0...narrative-sprout-v2.3.1) (2026-10-19)
 
 
