@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.3](https://github.com/bxx81/Narrative-Sprout/compare/narrative-sprout-v2.3.2...narrative-sprout-v2.3.3) (2026-11-08)
+
+
+### Documentation
+
+* log the Dependabot security triage ([#104](https://github.com/bxx81/Narrative-Sprout/issues/104)) ([789b9d7](https://github.com/bxx81/Narrative-Sprout/commit/789b9d777f94a4377937fcbb431fdb904517b56f))
+
 ## [2.3.2](https://github.com/bxx81/Narrative-Sprout/compare/narrative-sprout-v2.3.1...narrative-sprout-v2.3.2) (2026-10-23)
 
 
