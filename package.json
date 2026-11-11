@@ -71,6 +71,9 @@
     "vite-plugin-pwa": "^1.0.0"
   },
   "overrides": {
-    "@parcel/watcher": "2.6.0"
+    "@parcel/watcher": "2.6.0",
+    "deepmerge": "4.1.2",
+    "glob": "14.0.4",
+    "minimatch": "11.0.1"
   }
 }
