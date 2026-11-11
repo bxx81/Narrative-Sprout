@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.4](https://github.com/bxx81/Narrative-Sprout/compare/narrative-sprout-v2.3.3...narrative-sprout-v2.3.4) (2026-11-11)
+
+
+### Miscellaneous Chores
+
+* **deps:** clear all bun audit advisories ([#106](https://github.com/bxx81/Narrative-Sprout/issues/106)) ([da19f22](https://github.com/bxx81/Narrative-Sprout/commit/da19f22c11a097452f685f287bc3bf1d88aa0cc2))
+
 ## [2.3.3](https://github.com/bxx81/Narrative-Sprout/compare/narrative-sprout-v2.3.2...narrative-sprout-v2.3.3) (2026-11-08)
 
 
