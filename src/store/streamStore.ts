@@ -19,6 +19,13 @@ export interface StreamState {
   wordCount: number;
   /** Whether the closing quote of the sceneText value has been received. */
   sceneTextComplete: boolean;
+  /**
+   * Offset of the adopted `"sceneText"` key in the accumulated output, or -1
+   * before the key arrives. Changes when a later occurrence (a draft quoted in
+   * reasoning, a retried field, ...) replaces the one being previewed, so the
+   * screen can tell a restart apart from normal growth.
+   */
+  sceneTextKeyStart: number;
 }
 
 const FLUSH_INTERVAL_MS = 100;
@@ -26,16 +33,22 @@ const FLUSH_INTERVAL_MS = 100;
 /**
  * Extracts the value of the LAST `"sceneText"` key occurrence using a small
  * escape-aware scanner. `complete` reports whether the closing quote was
- * seen (i.e. the value is final).
+ * seen (i.e. the value is final); `keyStart` is the offset of the adopted key
+ * (-1 when absent) so callers can detect a switch to a later occurrence.
  */
-export function scanSceneText(raw: string): { text: string; complete: boolean } {
+export function scanSceneText(raw: string): {
+  text: string;
+  complete: boolean;
+  keyStart: number;
+} {
   const pattern = /"sceneText"\s*:\s*"/g;
-  // Adopt the LAST occurrence so key mentions in prose are ignored.
+  // Adopt the LAST occurrence so a draft quoted before the real field is
+  // replaced as soon as the response's own key arrives.
   let match: RegExpExecArray | null = null;
   for (const m of raw.matchAll(pattern)) {
     match = m;
   }
-  if (!match) return { text: "", complete: false };
+  if (!match) return { text: "", complete: false, keyStart: -1 };
 
   let i = match.index + match[0].length;
   let out = "";
@@ -74,13 +87,13 @@ export function scanSceneText(raw: string): { text: string; complete: boolean } 
       continue;
     }
     if (ch === '"') {
-      return { text: out, complete: true };
+      return { text: out, complete: true, keyStart: match.index };
     }
     out += ch;
     i++;
   }
   // No closing quote yet: the value is still arriving.
-  return { text: out, complete: false };
+  return { text: out, complete: false, keyStart: match.index };
 }
 
 const IDLE_STATE: StreamState = {
@@ -88,6 +101,7 @@ const IDLE_STATE: StreamState = {
   sceneText: "",
   wordCount: 0,
   sceneTextComplete: false,
+  sceneTextKeyStart: -1,
 };
 
 let state: StreamState = IDLE_STATE;
@@ -103,7 +117,7 @@ function notify(): void {
 function flush(): void {
   flushTimer = null;
   if (state.status !== "streaming") return;
-  const { text: sceneText, complete } = scanSceneText(latestRaw);
+  const { text: sceneText, complete, keyStart } = scanSceneText(latestRaw);
   if (
     sceneText.length === 0 &&
     state.sceneText.length === 0 &&
@@ -116,11 +130,18 @@ function flush(): void {
   if (
     sceneText === state.sceneText &&
     wordCount === state.wordCount &&
-    complete === state.sceneTextComplete
+    complete === state.sceneTextComplete &&
+    keyStart === state.sceneTextKeyStart
   ) {
     return;
   }
-  state = { status: "streaming", sceneText, wordCount, sceneTextComplete: complete };
+  state = {
+    status: "streaming",
+    sceneText,
+    wordCount,
+    sceneTextComplete: complete,
+    sceneTextKeyStart: keyStart,
+  };
   notify();
 }
 
@@ -150,6 +171,7 @@ export const streamStore = {
       sceneText: "",
       wordCount: 0,
       sceneTextComplete: false,
+      sceneTextKeyStart: -1,
     };
     acquireWakeLock("generation");
     notify();
