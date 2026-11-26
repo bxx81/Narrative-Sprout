@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.5](https://github.com/bxx81/Narrative-Sprout/compare/narrative-sprout-v2.3.4...narrative-sprout-v2.3.5) (2026-11-26)
+
+
+### Bug Fixes
+
+* return to live preview start when sceneText restarts ([#108](https://github.com/bxx81/Narrative-Sprout/issues/108)) ([5a8c45a](https://github.com/bxx81/Narrative-Sprout/commit/5a8c45a9d294b026aa651e96c88226ccec17314b))
+
 ## [2.3.4](https://github.com/bxx81/Narrative-Sprout/compare/narrative-sprout-v2.3.3...narrative-sprout-v2.3.4) (2026-11-11)
 
 
