@@ -106,6 +106,58 @@ jobs:
           tauriScript: bun run tauri
           uploadUpdaterJson: false
 
+      # Regression guard for the vertdll.dll startup crash (white window, then
+      # STATUS_ACCESS_VIOLATION on current Windows builds). stronghold-runtime's
+      # old `windows` crate used to smuggle a vertdll.dll import into the exe;
+      # the shim in src-tauri/vendor/windows-0.36.1-kernel32-shim removes it.
+      # Walks the PE import table of the freshly linked exe and fails the run if
+      # vertdll.dll shows up again (the installer is already uploaded at this
+      # point — a failing run is the signal, and the retry run replaces the
+      # asset because stale installers are deleted up front).
+      - name: Verify the built exe does not import vertdll.dll
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $path = 'src-tauri/target/release/narrative-sprout.exe'
+          if (-not (Test-Path $path)) { throw "Built exe not found at $path" }
+          $bytes = [IO.File]::ReadAllBytes($path)
+          $peOffset = [BitConverter]::ToInt32($bytes, 0x3C)
+          $coff = $peOffset + 4
+          $sectionCount = [BitConverter]::ToUInt16($bytes, $coff + 2)
+          $optionalSize = [BitConverter]::ToUInt16($bytes, $coff + 16)
+          $optional = $coff + 20
+          # PE32+ data directories start at optional+112; index 1 = import table
+          $importRva = [BitConverter]::ToUInt32($bytes, $optional + 120)
+          $sectionsStart = $optional + $optionalSize
+          function Convert-RvaToOffset([uint32]$rva) {
+            for ($i = 0; $i -lt $sectionCount; $i++) {
+              $entry = $sectionsStart + 40 * $i
+              $virtualAddress = [BitConverter]::ToUInt32($bytes, $entry + 12)
+              $span = [Math]::Max(
+                [BitConverter]::ToUInt32($bytes, $entry + 8),
+                [BitConverter]::ToUInt32($bytes, $entry + 16))
+              if ($rva -ge $virtualAddress -and $rva -lt ($virtualAddress + $span)) {
+                return [BitConverter]::ToUInt32($bytes, $entry + 20) + ($rva - $virtualAddress)
+              }
+            }
+            throw ("RVA 0x{0:X} does not fall inside any section" -f $rva)
+          }
+          $dllNames = @()
+          $descriptor = Convert-RvaToOffset $importRva
+          while ($true) {
+            $nameRva = [BitConverter]::ToUInt32($bytes, $descriptor + 12)
+            if ($nameRva -eq 0) { break }
+            $nameOffset = Convert-RvaToOffset $nameRva
+            $end = $nameOffset
+            while ($bytes[$end] -ne 0) { $end++ }
+            $dllNames += [Text.Encoding]::ASCII.GetString($bytes, $nameOffset, $end - $nameOffset)
+            $descriptor += 20
+          }
+          if ($dllNames | Where-Object { $_ -ieq 'vertdll.dll' }) {
+            throw "vertdll.dll is back in the import table of $path - see src-tauri/vendor/windows-0.36.1-kernel32-shim/README.md"
+          }
+          Write-Host "Import table clean: $($dllNames.Count) DLLs, no vertdll.dll"
+
       # cargo owns the narrative-sprout version line in Cargo.lock: it rewrites
       # the file on every run and drops comments, so release-please cannot
       # bump it and a local build after the release-PR merge would otherwise
