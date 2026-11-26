@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.6](https://github.com/bxx81/Narrative-Sprout/compare/narrative-sprout-v2.3.5...narrative-sprout-v2.3.6) (2026-11-26)
+
+
+### Bug Fixes
+
+* stop importing vertdll.dll (startup access violation) ([#110](https://github.com/bxx81/Narrative-Sprout/issues/110)) ([3afc318](https://github.com/bxx81/Narrative-Sprout/commit/3afc318619cb5ebcd3e7b43ebc2909312e2b649e))
+
 ## [2.3.5](https://github.com/bxx81/Narrative-Sprout/compare/narrative-sprout-v2.3.4...narrative-sprout-v2.3.5) (2026-11-26)
 
 
