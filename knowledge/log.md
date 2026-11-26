@@ -1,5 +1,9 @@
 # Knowledge Bundle Update Log
 
+## 2026-11-25
+
+* **Fix**: The live streaming preview no longer keeps growing off-screen when the model drafts a `sceneText` value in its reasoning before emitting the real JSON. `streamStore` now reports the adopted key's offset (`sceneTextKeyStart`, from `scanSceneText`), and `GameScreen` treats a change of that offset during a running generation as a preview restart: when the scene `article` start has scrolled above the viewport, it scrolls back into view before tail-follow resumes instead of leaving the viewport parked at the old tail. The check also covers the first preview (page scrolled down during long reasoning), and is skipped while follow is paused (the user scrolled up manually) or when the scene start is already visible. `streamStore.test.ts` covers the key-offset switch, including a replacement value that starts empty.
+
 ## 2026-11-11
 
 * **Change**: The `bun audit` wave (14 advisories across 6 packages) is resolved to zero. Only one was production-reachable: `zod` 4.5.4 → 4.6.6 (CVE-2023-54404 / GHSA-mrhx-c7xc-m3w5 — `$ZodArray` accumulates an issue object per failing element, so an unconstrained array schema can exhaust memory; reachable only through backup/import parsing, availability-only). `bun audit fix` also took `vite` 7.3.6 → 7.3.7 (the high is `launch-editor`'s Windows `fs.existsSync` bypass — dev server only), `fast-uri` 3.1.8 → 3.1.9 and `serialize-javascript` 7.1.2 → 7.1.3.

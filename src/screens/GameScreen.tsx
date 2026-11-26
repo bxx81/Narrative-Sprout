@@ -100,6 +100,10 @@ const GameScreen: React.FC = () => {
   const [refineOpen, setRefineOpen] = useState(false);
   const [isEditingScene, setIsEditingScene] = useState(false);
   const sceneEditRef = useRef<HTMLTextAreaElement>(null);
+  // Scene start sentinel: the live preview may restart mid-generation (e.g. a
+  // draft quoted in the model's reasoning is followed by the real JSON), and
+  // the page is usually still scrolled past the old tail at that moment.
+  const mainTextRef = useRef<HTMLElement>(null);
   // Streaming tail-follow: anchor sits right after the generated text so the
   // skeleton choices below never count as the bottom. Scrolling above the
   // anchor pauses follow; scrolling back to (or below) it resumes follow.
@@ -197,11 +201,11 @@ const GameScreen: React.FC = () => {
   isStreamingLiveRef.current = isStreamingLive;
   useEffect(() => {
     const handleTailScroll = () => {
-      if (!isStreamingLiveRef.current) return;
       if (programmaticScrollRef.current) {
         programmaticScrollRef.current = false;
         return;
       }
+      if (!isStreamingLiveRef.current) return;
       const tailAnchor = tailAnchorRef.current;
       if (!tailAnchor) return;
       const distanceToTail = tailAnchor.getBoundingClientRect().bottom - window.innerHeight;
@@ -219,7 +223,31 @@ const GameScreen: React.FC = () => {
   // flushes ~10fps and smooth scrolls would queue up and jank. When the user
   // sits below the tail (e.g. scrolled all the way down), stay put and wait
   // until the growing text catches up instead of yanking back up.
+  //
+  // A later `"sceneText"` occurrence (a draft quoted in reasoning, a retried
+  // field, ...) replaces the previewed one and restarts the text at zero.
+  // The page is still scrolled past the old tail then, which would leave the
+  // new preview growing off-screen, so jump back to the scene start first.
+  const previousSceneTextKeyStartRef = useRef(-1);
   useLayoutEffect(() => {
+    const previousKeyStart = previousSceneTextKeyStartRef.current;
+    const currentKeyStart = stream.sceneTextKeyStart;
+    previousSceneTextKeyStartRef.current = currentKeyStart;
+    if (
+      loading &&
+      currentKeyStart >= 0 &&
+      currentKeyStart !== previousKeyStart &&
+      followTailRef.current
+    ) {
+      const sceneStart = mainTextRef.current;
+      // Only when the start is above the viewport: the user is parked below
+      // the new preview (or above it on purpose — then leave the scroll alone).
+      if (sceneStart && sceneStart.getBoundingClientRect().top < 0) {
+        programmaticScrollRef.current = true;
+        sceneStart.scrollIntoView({ behavior: "auto", block: "start" });
+        return;
+      }
+    }
     if (!isStreamingLive || !followTailRef.current) return;
     const tailAnchor = tailAnchorRef.current;
     if (!tailAnchor) return;
@@ -227,7 +255,7 @@ const GameScreen: React.FC = () => {
     if (distanceToTail < -STREAMING_TAIL_FOLLOW_THRESHOLD_PX) return;
     programmaticScrollRef.current = true;
     tailAnchor.scrollIntoView({ behavior: "auto", block: "end" });
-  }, [isStreamingLive, stream.sceneText]);
+  }, [isStreamingLive, loading, stream.sceneText, stream.sceneTextKeyStart]);
 
   const handleChoiceSubmit = (choice: string) => {
     if (loading || autoplay) return;
@@ -338,7 +366,10 @@ const GameScreen: React.FC = () => {
         .trim();
 
   const mainText = (
-    <article className="animate-fade-in w-full max-w-2xl md:min-w-[20rem]">
+    <article
+      ref={mainTextRef}
+      className="animate-fade-in w-full max-w-2xl scroll-mt-24 md:min-w-[20rem]"
+    >
       {isLandscape && (
         <div className="dividers-style text-[9pt]" aria-hidden="true">
           - Narrative Sprout -

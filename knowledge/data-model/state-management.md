@@ -36,4 +36,4 @@ Actions set `generation: running`, compute streaming enablement, `streamStore.be
 
 # Streaming Display Store
 
-`streamStore` (`src/store/streamStore.ts`) is a separate `useSyncExternalStore` module (not part of `gameStore`) so high-frequency deltas don't churn the app store. Details: see [Streaming](/features/streaming.md). Status `idle` / `streaming` / `generating`; `scanSceneText` extracts partial prose; 100 ms trailing flush; `end()` returns to idle so finals always render through the success path.
+`streamStore` (`src/store/streamStore.ts`) is a separate `useSyncExternalStore` module (not part of `gameStore`) so high-frequency deltas don't churn the app store. Details: see [Streaming](/features/streaming.md). Status `idle` / `streaming` / `generating`; `scanSceneText` extracts partial prose plus the adopted key offset (`sceneTextKeyStart`); 100 ms trailing flush; `end()` returns to idle so finals always render through the success path.

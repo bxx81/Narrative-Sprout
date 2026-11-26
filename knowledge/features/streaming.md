@@ -37,7 +37,7 @@ The store computes this per generation flow (start/choose/refine/redo/rootRedo) 
 `src/store/streamStore.ts` is a `useSyncExternalStore` display-only store that deliberately bypasses `gameStore` (deltas arrive many times per second):
 
 - `begin(streamingEnabled)`: `"streaming"` shows live text; `"generating"` shows the spinner only.
-- `pushDelta(accumulatedText)` → 100 ms trailing-flush batch → `scanSceneText` extracts the LAST `"sceneText"` value with an escape-aware scanner (`complete` = closing quote seen).
+- `pushDelta(accumulatedText)` → 100 ms trailing-flush batch → `scanSceneText` extracts the LAST `"sceneText"` value with an escape-aware scanner (`complete` = closing quote seen, `keyStart` = offset of the adopted key).
 - `end()` / `cancel()` return to idle; `getSignal()` supplies the `AbortSignal` so Stop cancels generation.
 - Final data always renders through the regular success path, never from the stream store.
 
@@ -46,5 +46,7 @@ The store computes this per generation flow (start/choose/refine/redo/rootRedo) 
 # Tail Follow
 
 `GameScreen` follows the growing text chatbot-style: a sentinel `div` sits right after `MainText` (before the divider, skeleton choices, and model credit, so those never count as the bottom) and each `sceneText` update calls `scrollIntoView({ behavior: "auto", block: "end" })` on it — instant, not smooth, since the store flushes ~10 fps. Own scrolls are told apart from manual ones via a single-shot programmatic flag, and a live-mirror guard keeps the scene-change top-scroll from tripping detection. Scrolling above the sentinel (anchor bottom more than `STREAMING_TAIL_FOLLOW_THRESHOLD_PX = 120` below the viewport) pauses follow; scrolling back to or below it resumes. While sitting below the tail the page stays put until the growing text catches up instead of yanking back up. Each new generation re-arms follow.
+
+A later `"sceneText"` occurrence — typically a draft quoted in the model's reasoning before the real JSON — replaces the previewed one and restarts the text at zero. `streamStore` exposes the adopted key's offset (`sceneTextKeyStart`); when it changes while a generation is running and the scene start has scrolled above the viewport (the page is parked below the preview), `GameScreen` scrolls the scene start (the `article` with `scroll-mt-24`) back into view before tail-follow resumes, so the new preview cannot keep growing off-screen. The same check covers the first occurrence, so a page scrolled down during a long reasoning phase also returns to the preview start. The reset is skipped while follow is paused (the user scrolled up manually) or when the scene start is already visible.
 
 `StartingScreen` also renders a word-count pseudo progress bar while `stream.status === "streaming"`: `min(0.9, wordCount / minWordsTarget(sceneTextLength))` (no numeric label). Tail behavior — with a progress-reporting image generator (A1111/ComfyUI) the bar continues as `0.9 + 0.1 × imageGenerationProgress` (monotonic; the word-based cap is 90%); with no image generator configured it jumps to 100% at `sceneTextComplete`; generators without progress reporting hold at 90%. The label message follows `generationStage` (`loadingWeavingScene` → `loadingPaintingScene`).
