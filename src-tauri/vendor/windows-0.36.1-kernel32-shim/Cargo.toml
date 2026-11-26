@@ -1,0 +1,18 @@
+[package]
+name = "windows"
+version = "0.36.1"
+edition = "2021"
+license = "MIT"
+description = "Minimal, link-safe stand-in for the `windows` crate 0.36.1 (see README.md)"
+publish = false
+
+# `stronghold-runtime` 2.0.1 enables exactly these features. They are declared
+# (empty) so Cargo accepts the dependency; only the APIs actually used by
+# `stronghold-runtime` are implemented below.
+[features]
+default = []
+Win32_Foundation = []
+Win32_Security = []
+Win32_System_Diagnostics_Debug = []
+Win32_System_Memory = []
+Win32_System_SystemInformation = []

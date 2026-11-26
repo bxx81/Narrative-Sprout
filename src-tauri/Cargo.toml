@@ -49,3 +49,12 @@ hex = "0.4"
 # be written by two processes at once (concurrent first launches can orphan
 # the snapshot with a clobbered password). Second instances focus the first.
 tauri-plugin-single-instance = "2"
+
+# `stronghold-runtime` 2.0.1 (via `iota_stronghold`) is the only user of the
+# ancient `windows` 0.36.1 crate, whose combined `windows.lib` makes the exe
+# import `vertdll.dll` (VSM enclave runtime) for WaitOnAddress/WakeByAddressAll.
+# Loading that DLL in a normal process crashes with STATUS_ACCESS_VIOLATION on
+# current Windows builds. The shim below exposes the same API surface bound to
+# kernel32 instead. See vendor/windows-0.36.1-kernel32-shim/README.md.
+[patch.crates-io]
+windows = { path = "vendor/windows-0.36.1-kernel32-shim" }
